@@ -53,6 +53,7 @@
       "hosts/common/optional/nvtop.nix" # GPU monitor (not available in home-manager)
       "hosts/common/optional/obsidian.nix" # wiki
       "hosts/common/optional/plymouth.nix" # fancy boot screen
+      "hosts/common/optional/protonvpn.nix" # vpn
       "hosts/common/optional/scanning.nix" # SANE and simple-scan
       "hosts/common/optional/thunar.nix" # file manager
       "hosts/common/optional/vlc.nix" # media player
