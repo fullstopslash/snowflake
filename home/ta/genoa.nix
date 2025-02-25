@@ -38,7 +38,7 @@
   #    ------
   monitors = [
     {
-      name = "DP-1";
+      name = "eDP-1";
       width = 1920;
       height = 1080;
       refreshRate = 60;
