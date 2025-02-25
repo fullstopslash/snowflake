@@ -1,3 +1,4 @@
+{ config, ... }:
 {
   # Let it try to start a few more times
   systemd.user.services.waybar = {
@@ -17,13 +18,9 @@
         layer = "top";
         position = "top";
         height = 36; # 36 is the minimum height required by the modules
-        #FIXME(hyprland): make use of monitors module
-        output = [
-          "DP-1"
-          "DP-2"
-          "DP-3"
-          "HDMI-A-1"
-        ];
+
+        output = (map (m: "${m.name}") (config.monitors));
+
         modules-left = [
           "hyprland/workspaces"
         ];
