@@ -173,5 +173,7 @@
       url = "git+ssh://git@gitlab.com/emergentmind/nix-secrets.git?ref=main&shallow=1";
       inputs = { };
     };
+
+    nixos-hardware-genoa.url = "github:emergentmind/nixos-hardware";
   };
 }
