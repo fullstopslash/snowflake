@@ -16,7 +16,8 @@
     #
     # ========== Hardware ==========
     #
-    #inputs.nixos-hardware.nixosModules.lenovo-thinkpad-e14
+
+    #inputs.nixos-hardware.nixosModules.lenovo-thinkpad-e15-intel
     ./hardware-configuration.nix
 
     #
@@ -82,6 +83,10 @@
     networkmanager.enable = true;
     enableIPv6 = false;
   };
+
+  #Firmwareupdate
+  #  $ fwupdmgr update
+  services.fwupd.enable = true;
 
   #  services.backup = {
   #    enable = true;
