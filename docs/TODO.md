@@ -4,6 +4,7 @@
 
 ## Short Term
 
+- consider switching back to i3 on X because wayland is still too half-baked
 - setup backup for 'extra' drive
 - start using issues more than fixmes
 - consider tagging with version numbers that match roadmap
@@ -20,7 +21,8 @@
 
 6.1
 - ~~bootstrap genoa~~
-- sort out Thinkpad E15 hardware
+- ~~sort out Thinkpad E15 hardware~~
+    - sent PR upstream and using fork for now
 - issues:
     - knownhosts not written
 - enable backup
@@ -216,7 +218,7 @@ Set up separate, stripped-down and simplified nix-config for new comers
 Add laptop support to the mix to handle stuff like power, lid state, wifi, and the like.
 
 ##### 6.1 Laptops
-- nixify genoa
+- ~~nixify genoa~~
 - add laptop utils
 
 ##### 6.2 Improved network handling
