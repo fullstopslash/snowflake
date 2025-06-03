@@ -38,7 +38,7 @@ in
         EmailTracking = true;
         # Exceptions = ["https://example.com"]
       };
-      ExtensionUpdate = false;
+      ExtensionUpdate = true;
 
       # To copy extensions from an existing profile you can do something like this:
       # cat ~/.mozilla/firefox/fb8sickr.default/extensions.json | jq '.addons[] | [.defaultLocale.name, .id]'

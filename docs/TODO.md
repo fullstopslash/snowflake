@@ -299,6 +299,8 @@ The following has to happen on bare metal because I can't seem to get the yubike
 
 #### 9. Ricing
 
+- check out Kanshi (arandr for wayland).
+
 - gui dev
   - host specific colours (terminal in particular) via stylix or nix-colors
   - centralize color palette
