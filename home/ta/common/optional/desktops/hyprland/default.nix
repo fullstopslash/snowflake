@@ -102,6 +102,7 @@
         movefocus_cycles_fullscreen = false; # If enabled, when on a fullscreen window, movefocus will cycle fullscreen, if not, it will move the focus in a direction.
       };
       input = {
+        numlock_by_default = true; # numlock key disabled via keyd in nixos.nix
         follow_mouse = 2;
         # follow_mouse options:
         # 0 - Cursor movement will not change focus.
@@ -109,6 +110,9 @@
         # 2 - Cursor focus will be detached from keyboard focus. Clicking on a window will move keyboard focus to that window.
         # 3 - Cursor focus will be completely separate from keyboard focus. Clicking on a window will not change keyboard focus.
         mouse_refocus = false;
+        touchpad = {
+          disable_while_typing = true;
+        };
       };
       cursor.inactive_timeout = 10;
       misc = {
