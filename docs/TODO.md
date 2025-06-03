@@ -21,7 +21,7 @@
 5.5
 - Setup starter repo
 
-6.1
+6.1 - genoa
 - ~~bootstrap genoa~~
 - ~~sort out Thinkpad E15 hardware~~
     - ~~sent PR upstream and using fork for now~~
