@@ -51,6 +51,7 @@
       "hosts/common/optional/hyprland.nix" # window manager
       "hosts/common/optional/msmtp.nix" # for sending email notifications
       "hosts/common/optional/nvtop.nix" # GPU monitor (not available in home-manager)
+      "hosts/common/optional/amdgpu_top.nix" # GPU monitor (not available in home-manager)
       "hosts/common/optional/obsidian.nix" # wiki
       "hosts/common/optional/plymouth.nix" # fancy boot screen
       "hosts/common/optional/protonvpn.nix" # vpn
