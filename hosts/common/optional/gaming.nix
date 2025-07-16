@@ -1,6 +1,7 @@
 { pkgs, ... }:
 {
   hardware.xone.enable = true; # xbox controller
+  #hardware.xpadneo.enable = true; #TODO alternate xbox controller to try
 
   programs = {
     steam = {
@@ -52,7 +53,7 @@
           inhibit_screensaver = 1;
         };
         gpu = {
-          apply_gpu_optimisations = "accept-responsibility";
+          #apply_gpu_optimisations = "accept-responsibility";
           gpu_device = 1; # The DRM device number on the system (usually 0), ie. the number in /sys/class/drm/card0/
           amd_performance_level = "high";
         };

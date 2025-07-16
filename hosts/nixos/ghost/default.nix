@@ -172,12 +172,31 @@
   #hyprland border override example
   #  wayland.windowManager.hyprland.settings.general."col.active_border" = lib.mkForce "rgb(${config.stylix.base16Scheme.base0E});
 
-  boot.kernelPackages = pkgs.unstable.linuxPackages_latest;
-  hardware.graphics.enable = true;
+  boot = {
+    kernelModules = [
+      "amdgpu-i2c"
+    ];
+    kernelPackages = pkgs.unstable.linuxPackages_latest;
+
+    initrd.kernelModules = [ "amdgpu" ];
+    kernelParams = [
+      "amdgpu.ppfeaturemask=0xfffd3fff" # https://kernel.org/doc/html/latest/gpu/amdgpu/module-parameters.html#ppfeaturemask-hexint
+      "amdgpu.dcdebugmask=0x400" # Allegedly might help with some crashes
+      "split_lock_detect=off" # Alleged gaming perf increase
+    ];
+    # Fix for XBox controller disconnects
+    extraModprobeConfig = ''options bluetooth disable_ertm=1 '';
+  };
+
+  hardware = {
+    #   graphics.enable = true;
+    graphics.package = pkgs.unstable.mesa;
+  };
+
   #hardware.graphics.package = lib.mkForce pkgs.unstable.mesa.drivers;
-  hardware.amdgpu.initrd.enable = true; # load amdgpu kernelModules in stage 1.
-  hardware.amdgpu.opencl.enable = true; # OpenCL support - general compute API for gpu
-  hardware.amdgpu.amdvlk.enable = true; # additional, alternative drivers
+  #hardware.amdgpu.initrd.enable = true; # load amdgpu kernelModules in stage 1.
+  #hardware.amdgpu.opencl.enable = true; # OpenCL support - general compute API for gpu
+  #hardware.amdgpu.amdvlk.enable = true; # additional, alternative drivers
 
   environment.systemPackages = builtins.attrValues {
     inherit (pkgs)
