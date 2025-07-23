@@ -76,7 +76,7 @@
         # workspace structure to build "[workspace], monitor:[name], default:[bool], persistent:[bool]"
         map (
           ws:
-          # map over workspace IDs first, then map over monitors to check for entries, and contact the empty
+          # map over workspace IDs first, then map over monitors to check for entries, and concat the empty
           # string elements created for ws and m combinations that don't match our actual conditions
           lib.concatMapStrings (
             m:
@@ -217,6 +217,7 @@
         "float, title:^(Save As)(.*)$"
         "float, title:^(Library)(.*)$"
         "float, title:^(Accounts)(.*)$"
+        "float, title:^(Text Import)(.*)$"
       ];
       windowrulev2 = [
         "float, class:^(galculator)$"
