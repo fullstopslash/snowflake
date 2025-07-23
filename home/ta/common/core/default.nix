@@ -21,6 +21,7 @@ in
     ./nixvim
     ./bash.nix
     ./bat.nix
+    ./btop.nix
     ./direnv.nix
     ./fonts.nix
     ./git.nix
@@ -134,7 +135,6 @@ in
       inherit (pkgs)
 
         # Packages that don't have custom configs go here
-        btop # resource monitor
         copyq # clipboard manager
         coreutils # basic gnu utils
         curl
