@@ -6,7 +6,7 @@
 
 - reminder to add `gamescope [other gamescope options] --force-grab-cursor -- %command%` to games where I want cursor trapped to window.
 
-- consider switching back to i3 on X because wayland is still too half-baked
+consider switching back to i3 on X because wayland is still too half-baked
 - setup backup for 'extra' drive
 - start using issues more than fixmes
 - consider tagging with version numbers that match roadmap
@@ -38,7 +38,7 @@
 
 - Tools to try
   - wezterm
-  - tmux or zellij
+  - zellij
   - https://github.com/dandavison/delta
 
 - NeoVim stuff to look at and integrate
@@ -328,9 +328,10 @@ Inspirational sets:
 - [nix-colors](https://github.com/Misterio77/nix-colors)
 
 
-#### 8. tbd
+#### 10. tbd
 
 - Re-implement modules to make use of options for enablement
+- Nixify floater laptop
 
 ---
 
