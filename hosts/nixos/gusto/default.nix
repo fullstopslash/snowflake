@@ -8,7 +8,6 @@
 {
   inputs,
   lib,
-  pkgs,
   ...
 }:
 {
@@ -56,6 +55,7 @@
       "hosts/common/optional/xfce.nix" # window manager
       "hosts/common/optional/audio.nix" # pipewire and cli controls
       "hosts/common/optional/smbclient.nix" # mount the ghost mediashare
+      "hosts/common/optional/stylix.nix" # quickrice
       "hosts/common/optional/vlc.nix" # media player
     ])
   ];
@@ -68,6 +68,9 @@
     hostName = "gusto";
     useYubikey = lib.mkForce true;
     persistFolder = "/persist"; # added for "completion" because of the disko spec that was used even though impermanence isn't actually enabled here yet.
+
+    #TODO: style for gusto: Need to refactor hostSpec
+    #base16Scheme = "${pkgs.base16-schemes}/share/themes/rose-pine-moon.yaml";
   };
 
   # Enable some basic X server options
@@ -94,21 +97,6 @@
 
   boot.initrd = {
     systemd.enable = true;
-  };
-
-  #TODO(stylix): move this stuff to separate file but define theme itself per host
-  # host-wide styling
-  stylix = {
-    enable = true;
-    image = (lib.custom.relativeToRoot "assets/wallpapers/zen-01.png");
-    base16Scheme = "${pkgs.base16-schemes}/share/themes/rose-pine-moon.yaml";
-    opacity = {
-      applications = 1.0;
-      terminal = 1.0;
-      desktop = 1.0;
-      popups = 0.8;
-    };
-    polarity = "dark";
   };
 
   # https://wiki.nixos.org/wiki/FAQ/When_do_I_update_stateVersion
