@@ -127,13 +127,10 @@
       #
       # ========== Appearance ==========
       #
-      #FIXME-rice colors conflict with stylix
       general = {
         gaps_in = 6;
         gaps_out = 6;
         border_size = 0;
-        #col.inactive-border = "0x00000000";
-        #col.active-border = "0x0000000";
         resize_on_border = true;
         hover_icon_on_border = true;
         allow_tearing = true; # used to reduce latency and/or jitter in games
@@ -153,9 +150,9 @@
         shadow = {
           enabled = true;
           range = 12;
-          offset = "3 3";
-          #color = "0x88ff9400";
-          #color_inactive = "0x8818141d";
+          #offset = "3 3";
+          color = lib.mkForce "0xffff9400";
+          color_inactive = lib.mkForce "0xff2d2d30";
         };
       };
       # group = {
@@ -236,6 +233,10 @@
         "opaque, class:^([Ss]team)$"
         "opaque, class:^([Ss]team_app_*)$"
         "opaque, class:^([Vv]lc)$"
+        "opaque, title:^(btop)(.*)$"
+        "opaque, title:^(amdgpu_top)(.*)$"
+        "opaque, title:^(Dashboard | glass*)(.*)$"
+        "opaque, title:^(Live video from*)(.*)$"
 
         # Remove transparency from video
         "opaque, title:^(Netflix)(.*)$"
