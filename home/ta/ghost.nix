@@ -21,6 +21,7 @@
     common/optional/atuin.nix
     common/optional/xdg.nix # file associations
     common/optional/sops.nix
+    common/optional/zellij.nix
   ];
 
   services.yubikey-touch-detector.enable = true;
