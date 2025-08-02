@@ -33,6 +33,9 @@
     ];
 
     settings = {
+      debug = {
+        disable_logs = false;
+      };
       #
       # ========== Environment Vars ==========
       #
@@ -170,22 +173,39 @@
           [
             ''${pkgs.waypaper}/bin/waypaper --restore''
             ''${pkgs.networkmanagerapplet}/bin/nm-applet --indicator''
-            ''[workspace 8 silent]${pkgs.virt-manager}/bin/virt-manager''
-            ''[workspace 8 silent]${pkgs.obsidian}/bin/obsidian''
-            ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
-            ''[workspace 0 silent]${pkgs.copyq}/bin/copyq''
+            #''[workspace 8 silent]${pkgs.virt-manager}/bin/virt-manager''
+            ''/bin/virt-manager''
+            #''[workspace 8 silent]${pkgs.obsidian}/bin/obsidian''
+            ''${pkgs.obsidian}/bin/obsidian''
+            #''[workspace 8 silent]${pkgs.kitty}/bin/kitty -e btop''
+            ''${pkgs.kitty}/bin/kitty -e btop''
+            #''[workspace 0 silent]${pkgs.kitty}/bin/kitty -e amdgpu_top --dark''
+            ''${pkgs.kitty}/bin/kitty -e amdgpu_top --dark''
+            #''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
+            ''/bin/signal-desktop''
+            #''[workspace 0 silent]${pkgs.copyq}/bin/copyq''
+            ''/bin/copyq''
             ''[workspace 0 silent]${pkgs.spotify}/bin/spotify''
-            ''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
-            ''[workspace special silent]${pkgs.keymapp}/bin/keymapp''
+            #''[workspace 0 silent]/run/current-system/sw/bin/protonvpn-app''
+            ''/run/current-system/sw/bin/protonvpn-app''
+            #''[workspace special silent]${pkgs.keymapp}/bin/keymapp''
+            ''${pkgs.keymapp}/bin/keymapp''
+            #''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
+            ''${pkgs.yubioath-flutter}/bin/yubioath-flutter''
+            #''[workspace special silent]${pkgs.keymapp}/bin/keymapp''
+            ''${pkgs.keymapp}/bin/keymapp''
           ]
         else if config.hostSpec.isMobile then
           [
             ''${pkgs.waypaper}/bin/waypaper --restore''
             ''${pkgs.networkmanagerapplet}/bin/nm-applet --indicator''
             ''${pkgs.blueman}/bin/blueman-applet''
-            ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
-            ''[workspace 0 silent]${pkgs.copyq}/bin/copyq''
-            ''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
+            #''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
+            ''${pkgs.signal-desktop}/bin/signal-desktop''
+            #''[workspace 0 silent]${pkgs.copyq}/bin/copyq''
+            ''${pkgs.copyq}/bin/copyq''
+            #''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
+            ''${pkgs.yubioath-flutter}/bin/yubioath-flutter''
           ]
         else
           [
@@ -276,9 +296,11 @@
         "workspace 8, class:^(obsidian)$"
         "workspace 9, class:^(brave-browser)$"
         "workspace 9, class:^(signal)$"
-        "workspace 9, class:^(org.telegram.desktop)$"
         "workspace 9, class:^(discord)$"
         "workspace 0, title:^([Ss]potify*)$"
+        "workspace 0, class:^(CopyQ)$"
+
+        #"workspace 9, class:^(org.telegram.desktop)$"
       ];
 
       # load at the end of the hyperland set
