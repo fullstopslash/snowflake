@@ -76,7 +76,7 @@ in
     extraConfig = {
 
       # FIXME(git): better place for this?
-      save.directory = "${config.home.homeDirectory}/sync/obsidian-vault-01/wiki";
+      safe.directory = "${config.home.homeDirectory}/sync/obsidian-vault-01/wiki";
 
       log.showSignature = "true";
       init.defaultBranch = "main";
