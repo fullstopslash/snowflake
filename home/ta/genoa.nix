@@ -46,5 +46,13 @@
       primary = true;
       #vrr = 1;
     }
+    {
+      name = "HDMI-A-1";
+      width = 1920;
+      height = 1080;
+      refreshRate = 60;
+      x = 1920;
+      workspace = "9";
+    }
   ];
 }
