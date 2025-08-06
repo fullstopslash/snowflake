@@ -47,11 +47,12 @@ let
           mesa = prev.mesa.overrideAttrs (
             _:
             let
-              version = "25.1.6";
+              version = "25.1.2";
               hashes = {
-                "25.1.6" = "sha256-shyyezt2ez9awviatec6wvmzmujusoyxxlugs1q6q7u=";
-                "25.1.5" = "sha256-azad1/wiz8d0lxpim9obp6/k7ysp12rgfe8jzrc9gl0=";
+                "25.1.5" = "sha256-AZAd1/wiz8d0lXpim9obp6/K7ySP12rGFe8jZrc9Gl0=";
                 "25.1.4" = "sha256-DA6fE+Ns91z146KbGlQldqkJlvGAxhzNdcmdIO0lHK8=";
+                "25.1.3" = "sha256-BFncfkbpjVYO+7hYh5Ui6RACLq7/m6b8eIJ5B5lhq5Y=";
+                "25.1.2" = "sha256-oE1QZyCBFdWCFq5T+Unf0GYpvCssVNOEQtPQgPbatQQ=";
               };
             in
             rec {
