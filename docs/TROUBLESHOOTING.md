@@ -11,6 +11,11 @@
 
 ---
 
+## Wayland crashes back to login after auth
+
+Use Ctrl+Alt+f# to oopen a terminal and inspect Wayland logs during boot up and crash
+
+
 ## The user systemd session is degraded
 
 This issue was encountered during a home-manager switch without any substantial changes to the config.

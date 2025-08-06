@@ -173,39 +173,25 @@
           [
             ''${pkgs.waypaper}/bin/waypaper --restore''
             ''${pkgs.networkmanagerapplet}/bin/nm-applet --indicator''
-            #''[workspace 8 silent]${pkgs.virt-manager}/bin/virt-manager''
-            ''/bin/virt-manager''
-            #''[workspace 8 silent]${pkgs.obsidian}/bin/obsidian''
-            ''${pkgs.obsidian}/bin/obsidian''
-            #''[workspace 8 silent]${pkgs.kitty}/bin/kitty -e btop''
-            ''${pkgs.kitty}/bin/kitty -e btop''
-            #''[workspace 0 silent]${pkgs.kitty}/bin/kitty -e amdgpu_top --dark''
-            ''${pkgs.kitty}/bin/kitty -e amdgpu_top --dark''
-            #''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
-            ''/bin/signal-desktop''
-            #''[workspace 0 silent]${pkgs.copyq}/bin/copyq''
-            ''/bin/copyq''
+            ''[workspace 0 silent]${pkgs.kitty}/bin/kitty -e btop''
+            ''[workspace 0 silent]${pkgs.kitty}/bin/kitty -e amdgpu_top --dark''
+            ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
+            ''[workspace 8 silent]${pkgs.obsidian}/bin/obsidian''
             ''[workspace 0 silent]${pkgs.spotify}/bin/spotify''
-            #''[workspace 0 silent]/run/current-system/sw/bin/protonvpn-app''
-            ''/run/current-system/sw/bin/protonvpn-app''
-            #''[workspace special silent]${pkgs.keymapp}/bin/keymapp''
-            ''${pkgs.keymapp}/bin/keymapp''
-            #''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
-            ''${pkgs.yubioath-flutter}/bin/yubioath-flutter''
-            #''[workspace special silent]${pkgs.keymapp}/bin/keymapp''
-            ''${pkgs.keymapp}/bin/keymapp''
+            ''[workspace 8 silent]${pkgs.virt-manager}/bin/virt-manager''
+            ''[workspace 0 silent]${pkgs.copyq}/bin/copyq''
+            ''[workspace special silent]/run/current-system/sw/bin/protonvpn-app''
+            ''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
+            ''[workspace special silent]${pkgs.keymapp}/bin/keymapp''
           ]
         else if config.hostSpec.isMobile then
           [
             ''${pkgs.waypaper}/bin/waypaper --restore''
             ''${pkgs.networkmanagerapplet}/bin/nm-applet --indicator''
             ''${pkgs.blueman}/bin/blueman-applet''
-            #''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
-            ''${pkgs.signal-desktop}/bin/signal-desktop''
-            #''[workspace 0 silent]${pkgs.copyq}/bin/copyq''
-            ''${pkgs.copyq}/bin/copyq''
-            #''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
-            ''${pkgs.yubioath-flutter}/bin/yubioath-flutter''
+            ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
+            ''[workspace 1 silent]${pkgs.copyq}/bin/copyq''
+            ''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
           ]
         else
           [
@@ -237,10 +223,30 @@
         "float, title:^(Text Import)(.*)$"
       ];
       windowrulev2 = [
+        #
+        # ========== Workspace Assignments ==========
+        #
+        # to determine class and title for all active windows, run `hyprctl clients`
+        "workspace 8, class:^(.virt-manager-wrapped)$"
+        "workspace 8, class:^(obsidian)$"
+        "workspace 9, class:^(brave-browser)$"
+        "workspace 9, class:^(signal)$"
+        "workspace 9, class:^(discord)$"
+        "workspace 0, class:^(spotify)$"
+        "workspace 0, class:^(CopyQ)$"
+        "workspace special, title:^(Proton VPN)$"
+        "workspace special, class:^(yubioath-flutter)$"
+        "workspace special, class:^(keymapp)$"
+
+        #NOTE: can't assign these because the initial class and title are both kitty
+        #"workspace 0, class:^(kitty), title:^(btop)(.*)$"
+        #"workspace 0, class:^(kitty), title:^(amdgpu_top)(.*)$"
+
+        #
+        # ========== Float on launch ==========
+        #
         "float, class:^(galculator)$"
         "float, class:^(waypaper)$"
-        #"float, class:^(keymapp)$"
-        #"float, class:^(yubioath-flutter)$"
 
         #
         # ========== Always opaque ==========
@@ -262,6 +268,7 @@
         "opaque, title:^(Netflix)(.*)$"
         "opaque, title:^(.*YouTube.*)$"
         "opaque, title:^(Picture-in-Picture)$"
+
         #
         # ========== Scratch rules ==========
         #
@@ -271,8 +278,6 @@
         #
         # ========== Steam rules ==========
         #
-        #FIXME(steam): testing with stayfocused disabled.
-        #"stayfocused, title:^()$,class:^([Ss]team)$"
         "minsize 1 1, title:^()$,class:^([Ss]team)$"
         "immediate, class:^([Ss]team_app_*)$"
         "workspace 7, class:^([Ss]team_app_*)$"
@@ -288,19 +293,6 @@
         #"move 0 0, class:^([Ff]lameshot)$"
         #"suppressevent fullscreen, class:^([Ff]lameshot)$"
         # "monitor:DP-1, ${flameshot}"
-
-        #
-        # ========== Workspace Assignments ==========
-        #
-        "workspace 8, class:^(virt-manager)$"
-        "workspace 8, class:^(obsidian)$"
-        "workspace 9, class:^(brave-browser)$"
-        "workspace 9, class:^(signal)$"
-        "workspace 9, class:^(discord)$"
-        "workspace 0, title:^([Ss]potify*)$"
-        "workspace 0, class:^(CopyQ)$"
-
-        #"workspace 9, class:^(org.telegram.desktop)$"
       ];
 
       # load at the end of the hyperland set
