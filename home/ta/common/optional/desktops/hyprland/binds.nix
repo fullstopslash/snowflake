@@ -53,7 +53,6 @@
     bind =
       let
         workspaces = [
-          "0"
           "1"
           "2"
           "3"
@@ -63,6 +62,7 @@
           "7"
           "8"
           "9"
+          "10"
           "F1"
           "F2"
           "F3"
@@ -152,8 +152,8 @@
         "ALT,f,fullscreenstate,2 -1" # `internal client`, where `internal` and `client` can be -1 - current, 0 - none, 1 - maximize, 2 - fullscreen, 3 - maximize and fullscreen
         # Float
         "SHIFTALT,F,togglefloating"
-        # Pin Active Floatting window
-        "SHIFTALT, p, pin, active" # pins a floating window (i.e. show it on all workspaces)
+        # Pin Active Floating window
+        "SHIFTALT,p, pin, active" # pins a floating window (i.e. show it on all workspaces)
 
         # Splits groups
         "ALT,v,hy3:makegroup,v" # make a vertical split
@@ -171,14 +171,22 @@
         # ========== Workspaces ==========
         #
         # Change workspace
-        (map (n: "ALT,${n},workspace,name:${n}") workspaces)
+        (map (
+          n: if n == "10" then "ALT,0,workspace,name:10" else "ALT,${n},workspace,name:${n}"
+        ) workspaces)
 
         # Special/scratch
         "ALT,y, togglespecialworkspace"
         "SHIFTALT,y,movetoworkspace,special"
 
         # Move window to workspace
-        (map (n: "SHIFTALT,${n},hy3:movetoworkspace,name:${n}") workspaces)
+        (map (
+          n:
+          if n == "10" then
+            "SHIFTALT,0,hy3:movetoworkspace,name:10"
+          else
+            "SHIFTALT,${n},hy3:movetoworkspace,name:${n}"
+        ) workspaces)
 
         # Move focus from active window to window in specified direction
         #(lib.mapAttrsToList (key: direction: "ALT,${key}, exec, customMoveFocus ${direction}") directions)

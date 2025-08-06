@@ -63,7 +63,7 @@
       height = 2880;
       refreshRate = 60;
       x = 3840;
-      workspace = "0";
+      workspace = "10";
     }
     {
       name = "HDMI-A-1";

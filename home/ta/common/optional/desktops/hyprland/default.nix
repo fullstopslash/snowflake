@@ -72,7 +72,7 @@
       workspace = (
         let
           workspaceIDs = lib.flatten [
-            (lib.range 0 9) # workspaces 0 through 9
+            (lib.range 1 10) # workspaces 1 through 10, Hyprland does not allow ws 0 :/
             "special" # add the special/scratchpad ws
           ];
         in
@@ -90,7 +90,8 @@
             # workspace 1 is persistent on the primary monitor
             if (ws == 1 || ws == "special") && m.primary == true then
               "${toString ws}, monitor:${m.name}, default:true, persistent:true"
-            # FIXME(monitors): need logic to set primary as default monitor for workspaces that don't match above conditions but because we're limited to 'map' it seems to add more complexity than it's worth
+            else if m.primary == true then
+              "${toString ws}, monitor:${m.name}, default:true"
             else
               ""
           ) config.monitors
@@ -173,13 +174,13 @@
           [
             ''${pkgs.waypaper}/bin/waypaper --restore''
             ''${pkgs.networkmanagerapplet}/bin/nm-applet --indicator''
-            ''[workspace 0 silent]${pkgs.kitty}/bin/kitty -e btop''
-            ''[workspace 0 silent]${pkgs.kitty}/bin/kitty -e amdgpu_top --dark''
+            ''[workspace 10 silent]${pkgs.kitty}/bin/kitty -e btop''
+            ''[workspace 10 silent]${pkgs.kitty}/bin/kitty -e amdgpu_top --dark''
             ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
             ''[workspace 8 silent]${pkgs.obsidian}/bin/obsidian''
-            ''[workspace 0 silent]${pkgs.spotify}/bin/spotify''
+            ''[workspace 10 silent]${pkgs.spotify}/bin/spotify''
             ''[workspace 8 silent]${pkgs.virt-manager}/bin/virt-manager''
-            ''[workspace 0 silent]${pkgs.copyq}/bin/copyq''
+            ''[workspace 10 silent]${pkgs.copyq}/bin/copyq''
             ''[workspace special silent]/run/current-system/sw/bin/protonvpn-app''
             ''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
             ''[workspace special silent]${pkgs.keymapp}/bin/keymapp''
@@ -192,6 +193,7 @@
             ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
             ''[workspace 1 silent]${pkgs.copyq}/bin/copyq''
             ''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
+            ''[workspace special silent]/run/current-system/sw/bin/protonvpn-app''
           ]
         else
           [
@@ -212,17 +214,6 @@
       # ========== Window Rules ==========
       #
       windowrule = [
-        # Dialogs
-        "float, title:^(Open File)(.*)$"
-        "float, title:^(Select a File)(.*)$"
-        "float, title:^(Choose wallpaper)(.*)$"
-        "float, title:^(Open Folder)(.*)$"
-        "float, title:^(Save As)(.*)$"
-        "float, title:^(Library)(.*)$"
-        "float, title:^(Accounts)(.*)$"
-        "float, title:^(Text Import)(.*)$"
-      ];
-      windowrulev2 = [
         #
         # ========== Workspace Assignments ==========
         #
@@ -232,21 +223,36 @@
         "workspace 9, class:^(brave-browser)$"
         "workspace 9, class:^(signal)$"
         "workspace 9, class:^(discord)$"
-        "workspace 0, class:^(spotify)$"
-        "workspace 0, class:^(CopyQ)$"
+        "workspace 10, class:^(spotify)$"
+        "workspace 10, class:^(CopyQ)$"
         "workspace special, title:^(Proton VPN)$"
         "workspace special, class:^(yubioath-flutter)$"
         "workspace special, class:^(keymapp)$"
 
         #NOTE: can't assign these because the initial class and title are both kitty
-        #"workspace 0, class:^(kitty), title:^(btop)(.*)$"
-        #"workspace 0, class:^(kitty), title:^(amdgpu_top)(.*)$"
+        #"workspace 10, class:^(kitty), title:^(btop)(.*)$"
+        #"workspace 10, class:^(kitty), title:^(amdgpu_top)(.*)$"
+
+        #
+        # ========== Tile on launch ==========
+        #
+        "tile, title:^(Proton VPN)$"
 
         #
         # ========== Float on launch ==========
         #
         "float, class:^(galculator)$"
         "float, class:^(waypaper)$"
+
+        # Dialog windows
+        "float, title:^(Open File)(.*)$"
+        "float, title:^(Select a File)(.*)$"
+        "float, title:^(Choose wallpaper)(.*)$"
+        "float, title:^(Open Folder)(.*)$"
+        "float, title:^(Save As)(.*)$"
+        "float, title:^(Library)(.*)$"
+        "float, title:^(Accounts)(.*)$"
+        "float, title:^(Text Import)(.*)$"
 
         #
         # ========== Always opaque ==========
