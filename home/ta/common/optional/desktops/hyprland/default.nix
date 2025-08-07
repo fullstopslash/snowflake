@@ -15,7 +15,7 @@
 
   wayland.windowManager.hyprland = {
     enable = true;
-    #    package = pkgs.unstable.hyprland;
+    #package = pkgs.unstable.hyprland;
     systemd = {
       enable = true;
       variables = [ "--all" ]; # fix for https://wiki.hyprland.org/Nix/Hyprland-on-Home-Manager/#programs-dont-work-in-systemd-services-but-do-on-the-terminal
@@ -75,29 +75,24 @@
             (lib.range 1 10) # workspaces 1 through 10, Hyprland does not allow ws 0 :/
             "special" # add the special/scratchpad ws
           ];
+          isPrimary = x: x ? primary && x.primary;
+          primary = lib.lists.findFirst isPrimary { } config.monitors;
         in
         # workspace structure to build "[workspace], monitor:[name], default:[bool], persistent:[bool]"
         map (
-          ws:
-          # map over workspace IDs first, then map over monitors to check for entries, and concat the empty
-          # string elements created for ws and m combinations that don't match our actual conditions
-          lib.concatMapStrings (
-            m:
-            # workspaces with a config.monitors assignment
-            if toString ws == m.workspace then
-              "${toString ws}, monitor:${m.name}, default:true, persistent:true"
-            else
-            # workspace 1 is persistent on the primary monitor
-            if (ws == 1 || ws == "special") && m.primary == true then
-              "${toString ws}, monitor:${m.name}, default:true, persistent:true"
-            else if m.primary == true then
-              "${toString ws}, monitor:${m.name}, default:true"
-            else
-              ""
-          ) config.monitors
+          id:
+          let
+            id_as_string = toString id;
+            # determine if the monitor is intended to display a specific workspace
+            monitor = lib.lists.findFirst (
+              x: x ? "workspace" && id_as_string == x.workspace
+            ) primary config.monitors;
+            # workspace 1 and any workspaces specific to the non-primary monitors are persistent
+            persistent = if (id == 1 || !(isPrimary monitor)) then ", persistent:true" else "";
+          in
+          "${id_as_string}, monitor:${monitor.name}, default:true" + persistent
         ) workspaceIDs
       );
-
       #
       # ========== Behavior ==========
       #

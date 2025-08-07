@@ -22,7 +22,7 @@ consider switching back to i3 on X because wayland is still too half-baked
 
 5.5
 - Setup starter repo
-    - finish adding NOTE and FIXMEs for (starter)
+    - ~~finish adding NOTE and FIXMEs for (starter)~~
     - document basic usage for README
 
 6.1 - genoa
