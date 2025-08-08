@@ -24,6 +24,7 @@ in
     ./btop.nix
     ./direnv.nix
     ./fonts.nix
+    ./ghostty.nix
     ./git.nix
     ./kitty.nix
     ./screen.nix
@@ -46,8 +47,8 @@ in
     sessionVariables = {
       FLAKE = "$HOME/src/nix/nix-config";
       SHELL = "zsh";
-      TERM = "kitty";
-      TERMINAL = "kitty";
+      TERM = "ghostty";
+      TERMINAL = "ghostty";
       VISUAL = "nvim";
       EDITOR = "nvim";
       MANPAGER = "batman"; # see ./cli/bat.nix

@@ -169,8 +169,8 @@
           [
             ''${pkgs.waypaper}/bin/waypaper --restore''
             ''${pkgs.networkmanagerapplet}/bin/nm-applet --indicator''
-            ''[workspace 10 silent]${pkgs.kitty}/bin/kitty -e btop''
-            ''[workspace 10 silent]${pkgs.kitty}/bin/kitty -e amdgpu_top --dark''
+            ''[workspace 10 silent]${pkgs.ghostty}/bin/ghostty -e btop''
+            ''[workspace 10 silent]${pkgs.ghostty}/bin/ghostty -e amdgpu_top --dark''
             ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
             ''[workspace 8 silent]${pkgs.obsidian}/bin/obsidian''
             ''[workspace 10 silent]${pkgs.spotify}/bin/spotify''
@@ -224,9 +224,9 @@
         "workspace special, class:^(yubioath-flutter)$"
         "workspace special, class:^(keymapp)$"
 
-        #NOTE: can't assign these because the initial class and title are both kitty
-        #"workspace 10, class:^(kitty), title:^(btop)(.*)$"
-        #"workspace 10, class:^(kitty), title:^(amdgpu_top)(.*)$"
+        #NOTE: can't assign these because the initial class and title are both ghostty
+        #"workspace 10, class:^(ghostty), title:^(btop)(.*)$"
+        #"workspace 10, class:^(ghostty), title:^(amdgpu_top)(.*)$"
 
         #
         # ========== Tile on launch ==========
