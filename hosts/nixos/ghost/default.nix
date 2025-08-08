@@ -130,8 +130,8 @@
   };
 
   hardware = {
-    #graphics.package = pkgs.unstable.mesa; # pinned in overlays
-    graphics.package = pkgs.stable.mesa;
+    graphics.package = pkgs.unstable.mesa;
+    #graphics.package = pkgs.stable.mesa;
     #amdgpu.initrd.enable = true; # load amdgpu kernelModules in stage 1.
     #amdgpu.opencl.enable = true; # OpenCL support - general compute API for gpu
     #amdgpu.amdvlk.enable = true; # additional, alternative drivers

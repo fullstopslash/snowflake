@@ -43,30 +43,30 @@ let
       inherit (final) system;
       config.allowUnfree = true;
       overlays = [
-        (final: prev: {
-          mesa = prev.mesa.overrideAttrs (
-            _:
-            let
-              version = "25.1.2";
-              hashes = {
-                "25.1.5" = "sha256-AZAd1/wiz8d0lXpim9obp6/K7ySP12rGFe8jZrc9Gl0=";
-                "25.1.4" = "sha256-DA6fE+Ns91z146KbGlQldqkJlvGAxhzNdcmdIO0lHK8=";
-                "25.1.3" = "sha256-BFncfkbpjVYO+7hYh5Ui6RACLq7/m6b8eIJ5B5lhq5Y=";
-                "25.1.2" = "sha256-oE1QZyCBFdWCFq5T+Unf0GYpvCssVNOEQtPQgPbatQQ=";
-              };
-            in
-            rec {
-              inherit version;
-              src = _prev.fetchFromGitLab {
-                domain = "gitlab.freedesktop.org";
-                owner = "mesa";
-                repo = "mesa";
-                rev = "mesa-${version}";
-                sha256 = if hashes ? ${version} then hashes.${version} else "";
-              };
-            }
-          );
-        })
+        #        (final: prev: {
+        #          mesa = prev.mesa.overrideAttrs (
+        #            _:
+        #            let
+        #              version = "25.1.2";
+        #              hashes = {
+        #                "25.1.5" = "sha256-AZAd1/wiz8d0lXpim9obp6/K7ySP12rGFe8jZrc9Gl0=";
+        #                "25.1.4" = "sha256-DA6fE+Ns91z146KbGlQldqkJlvGAxhzNdcmdIO0lHK8=";
+        #                "25.1.3" = "sha256-BFncfkbpjVYO+7hYh5Ui6RACLq7/m6b8eIJ5B5lhq5Y=";
+        #                "25.1.2" = "sha256-oE1QZyCBFdWCFq5T+Unf0GYpvCssVNOEQtPQgPbatQQ=";
+        #              };
+        #            in
+        #            rec {
+        #              inherit version;
+        #              src = _prev.fetchFromGitLab {
+        #                domain = "gitlab.freedesktop.org";
+        #                owner = "mesa";
+        #                repo = "mesa";
+        #                rev = "mesa-${version}";
+        #                sha256 = if hashes ? ${version} then hashes.${version} else "";
+        #              };
+        #            }
+        #          );
+        #        })
       ];
     };
   };
