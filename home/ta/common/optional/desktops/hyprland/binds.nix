@@ -133,10 +133,9 @@
         # Input
         ", XF86AudioMute, exec, ${pactl} set-source-mute @DEFAULT_SOURCE@ toggle"
         # Player
-        #FIXME For some reason these key pressings aren't firing from Moonlander. Nothing shows when running wev
-        ", XF86AudioPlay, exec, 'playerctl --ignore-player=firefox,chromium,brave play-pause'"
-        ", XF86AudioNext, exec, 'playerctl --ignore-player=firefox,chromium,brave next'"
-        ", XF86AudioPrev, exec, 'playerctl --ignore-player=firefox,chromium,brave previous'"
+        ", XF86AudioPlay, exec, playerctl --ignore-player=firefox,chromium,brave play-pause"
+        ", XF86AudioNext, exec, playerctl --ignore-player=firefox,chromium,brave next"
+        ", XF86AudioPrev, exec, playerctl --ignore-player=firefox,chromium,brave previous"
 
         #
         # ========== Windows and Groups ==========
