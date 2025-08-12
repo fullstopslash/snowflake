@@ -17,7 +17,7 @@ let
   linuxModifications = final: prev: prev.lib.mkIf final.stdenv.isLinux { };
 
   modifications = final: prev: {
-    # example = prev.example.overrideAttrs (oldAttrs: let ... in {
+    # example = prev.example.overrideAttrs (previousAttrs: let ... in {
     # ...
     # });
 
@@ -29,7 +29,7 @@ let
     #    };
   };
 
-  stable-packages = final: _prev: {
+  stable-packages = final: prev: {
     stable = import inputs.nixpkgs-stable {
       inherit (final) system;
       config.allowUnfree = true;
@@ -38,14 +38,14 @@ let
     };
   };
 
-  unstable-packages = final: _prev: {
+  unstable-packages = final: prev: {
     unstable = import inputs.nixpkgs-unstable {
       inherit (final) system;
       config.allowUnfree = true;
       overlays = [
-        #        (final: prev: {
-        #          mesa = prev.mesa.overrideAttrs (
-        #            _:
+        #        (unstable_final: unstable_prev: {
+        #          mesa = unstable_prev.mesa.overrideAttrs (
+        #            previousAttrs:
         #            let
         #              version = "25.1.2";
         #              hashes = {
@@ -57,7 +57,7 @@ let
         #            in
         #            rec {
         #              inherit version;
-        #              src = _prev.fetchFromGitLab {
+        #              src = prev.fetchFromGitLab {
         #                domain = "gitlab.freedesktop.org";
         #                owner = "mesa";
         #                repo = "mesa";
