@@ -43,8 +43,10 @@ in
         layer = "top";
         position = "top";
         height = 36; # 36 is the minimum height required by the modules
-
-        output = (map (m: "${m.name}") (config.monitors));
+        #NOTE: Defining output here is problematic on laptops that may or may not have an external monitor plugged in.
+        # If all potential monitors are defined here but not all of them are plugged in, waybar doesn't display on any monitor.
+        # with `output` unspecified, waybar will output to all plugged in monitors
+        #output = (map (m: "${m.name}") (config.monitors));
 
         modules-left = [
           "hyprland/workspaces"
