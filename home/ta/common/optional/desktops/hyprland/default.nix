@@ -224,10 +224,6 @@
         "workspace special, class:^(yubioath-flutter)$"
         "workspace special, class:^(keymapp)$"
 
-        #NOTE: can't assign these because the initial class and title are both ghostty
-        #"workspace 10, class:^(ghostty), title:^(btop)(.*)$"
-        #"workspace 10, class:^(ghostty), title:^(amdgpu_top)(.*)$"
-
         #
         # ========== Tile on launch ==========
         #
@@ -248,6 +244,8 @@
         "float, title:^(Library)(.*)$"
         "float, title:^(Accounts)(.*)$"
         "float, title:^(Text Import)(.*)$"
+        "float, title:^(File Operation Progress)(.*)$"
+        "float, focus 0, title:^()$, class:^([Ff]irefox)"
 
         #
         # ========== Always opaque ==========
