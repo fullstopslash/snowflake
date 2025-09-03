@@ -3,12 +3,8 @@
 [README](../README.md) > Roadmap of TODOs
 
 ## Short Term
+- Fix Hyprland and Aquamarine issues
 
-- Video on mucking with overlays and overrides
-
-- reminder to add `gamescope [other gamescope options] --force-grab-cursor -- %command%` to games where I want cursor trapped to window.
-
-consider switching back to i3 on X because wayland is still too half-baked
 - setup backup for 'extra' drive
 - start using issues more than fixmes
 - consider tagging with version numbers that match roadmap
