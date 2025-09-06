@@ -1,0 +1,26 @@
+# NixOS build artifacts
+result
+result-*
+
+# SOPS secrets (unencrypted)
+secrets.yaml.unencrypted
+!secrets.yaml
+
+# Age keys (keep private)
+*.age
+
+# Editor files
+.vscode/
+.idea/
+.quickemu/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp 
