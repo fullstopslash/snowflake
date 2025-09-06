@@ -72,15 +72,7 @@
     vulkan-tools
 
     # Dwarf Fortress
-    # TODO: Re-enable
-    # (pkgs.dwarf-fortress-packages.dwarf-fortress-full.override {
-    #   enableSoundSense = true;
-    #   enableDwarfTherapist = true;
-    #   enableSound = true;
-    #   enableDFHack = true;
-    #   enableIntro = false;
-    #   enableFPS = true;
-    # })
+    pkgs.stable.dwarf-fortress
 
     # Game development
     godot3

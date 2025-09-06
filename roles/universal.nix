@@ -5,7 +5,6 @@
   ...
 }: {
   # System-specific settings
-  system.stateVersion = "24.11";
 
   services = {
     fstrim.enable = true;
@@ -44,11 +43,12 @@
     libgcc
     gnumake
     just
-    jujutsu
+    stable.jujutsu
 
     # Common terminal tools
     jjui
-    lazyjj
+    # TODO: add back in
+    stable.lazyjj
     lazygit
     tree
     home-assistant-cli
@@ -152,7 +152,7 @@
     # ];
     openssh = {
       authorizedKeys.keys = [
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSsv1OF/iAmRKdNbjAP5qf9u3qTqZXq3oBotI0hR6ea"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSsv1OF/iAmRKdNbjAP5qf9u3qTqZXq3oBotI0hR6ea"
         "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDQ0/3qVS6Z7FA4wbhbNTKQzXxF5GcwupnYAMj9LTWsR3mvrz9Uo2yhp/sjOh37OBWyMjmLvnz1utPRtjCx2Pt3s7vT/B3aWmICcWDo3e0pbA/bCkMhSKQzcmiSO8dQCqVJOLCnOekX9JsMrr8KXjedFjFz2HpR8j6nYO7CH8nOj3inYRm2gWJkFHEENly4FOaRq+FLBZcskD1k0EQ5ABH8XPpzcS/YCuRqtqGEF4Cq5/k8oSO98Hx1drABokh0C4SLTFhTcLIj9OOKAoKgrWUk/Skf1wsoCctZllIsrIfaC8CkFuMvAIn0+Rm8KBNc4UZjssjSR7lU28gx0fEBaoc++LN80B70LKK17Wlf9I3QGrf4YcLmepcmNXNvGWF6dn2+C5dn4d92P+quz28L2NwvLro+4wsgtaEu2mfPsaOpAP3Ulu422qi8CcRn8hgz3QGYRn51fardcA9UxE3YcGHjUCKfxvwYTqiubA1XtPfXrjo8t0xFhKKzSuC1ckNw0lGn6C0BJRFXZG4OeDzqwAbpwTQDhF4Ss4xBLdWfKos8vonapz9rpADzkMUqhbN6oAEcTUciYPc4JRvd0UuEOZWDV2qjTyl0hfywiiwgD6AeO59ahCyD2uPrlml6aeBLrKkxlqtNtlakOZR7iJH3pPD48AJrMXRuZymD+OG+AELPqQ=="
         "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC1E5omJkBoYqdLgjNu9x5XSCAJzX8PHXBb08RYmh3DHmH2sF5Ece6rXi+UX/UiuUr0ez9032CGYaaOnyFtqfhj8PPNZnIKLukJ+jTrTARyiS1+AJC4n8Fl9ju87jLzW5cQlLGc2uTVL8dSGLPDbdAaALmJmJMmACBGRm8ekjz9lHP+PrXeQFRYZYDbD+B7aF5QRswRVtF2VSEZuPZfWcRlyN1BCa+fgF1w5c7X7gxQS2rNMemFRw29Y+cG1x3V9l4BS4wAVjXLcUI98CQ44v1RbQ9k1jAHFXT05oYhcLxbX0WySWURkZXMXopp8mzR7w/o+W/HfMzUl0jvuFuJVVtUYCBMnkvsC1Clhte3YmHhZrajgZ4LQW3sgWPUDcogPl40itBUsAC6KkfZ4cIzb2QDAdUZrTFiswYGWhuexekpGnjxoKI6ti05/k4ZAQduY03O5xr20pdUC6qWin8Q31yGKs1wt0D18oSrojwZgAiJ5VcVlz7P9fovvHo7O4xfSzs="
         "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDEp/Qb34n+5RN1IzDq/IqgHKwn0GjPRLN8luzFd66K+1plgHHRbu8BZLHIDbt6mWdGecFNzCbL6EE0dlAnIz5TTceaxRWP/JwKg3gFFpXPn3cDtkJYKwIDbNTzdc0Kfk4MDDNWuEpkShrCGFw44SrOvny4sJX50TZy9PNXAcsqGEgop6rQTwYNZufmYwoy+HO/WDOqYfHDs+D4MDqlM2zXgQflKxn2Pptcd/y3rNef9+kCAGWVHYyfXhIVRvUBPbtdCf7tJrI2Lt3ah6DRmAO0rrh8rH7Yh1w7SD/Ggskz1SB5iPDNN2vcVhP9o1l9peDv6K/w8HPEZTZqgbuX/1c3JS3O7DXaP6iOFXWf8Hg5YgyLZRNhtbvsGLW2iul9gR6Ag1YLpZppKSGUf6b3vWughVyrm8auuFFZMxH9Lgg422HB3vWImZoPHy7kzMnHcpvG50b312bl/jVC54+quON1XOpUN4PqwoO2qokvuA/4X7DIzpAHMjJxPc9UgzGpkss= openpgp:0x0F4E55A5"

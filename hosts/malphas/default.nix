@@ -55,7 +55,6 @@
   # Hostname is set by the flake.nix mkHost function
 
   # System-specific settings
-  system.stateVersion = "24.11";
 
   # Hardware-specific settings
   hardware.system76.enableAll = true;

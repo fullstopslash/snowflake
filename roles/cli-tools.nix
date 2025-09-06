@@ -13,6 +13,7 @@
     tmux-sessionizer
     tmuxp
     wezterm
+    managarr
 
     qrencode
     fortune-kind

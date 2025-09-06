@@ -108,32 +108,6 @@
     fi
   '';
 
-  # Create a script to store the master password in KDE Wallet (exposed via systemPackages)
-  store-bitwarden-password = pkgs.writeShellScript "store-bitwarden-password" ''
-    #!/usr/bin/env sh
-    set -eu
-
-    echo "Storing Bitwarden master password in KDE Wallet..."
-    echo "This will prompt you for your KDE Wallet password and then the Bitwarden master password."
-
-        # Create the bitwarden folder in KDE Wallet if it doesn't exist
-    echo "Creating bitwarden folder in KDE Wallet..."
-    ${pkgs.kdePackages.kwallet}/bin/kwallet-query -f bitwarden -c bitwarden-master-password >/dev/null 2>&1 || true
-
-    # Store the password
-    echo "Please enter your Bitwarden master password:"
-    read -s MASTER_PASSWORD
-
-    if [ -n "$MASTER_PASSWORD" ]; then
-      echo "$MASTER_PASSWORD" | ${pkgs.kdePackages.kwallet}/bin/kwallet-query -f bitwarden -w bitwarden-master-password
-      echo "Password stored successfully in KDE Wallet!"
-      echo "You can now run the automation service and it will unlock automatically."
-    else
-      echo "No password entered, exiting."
-      exit 1
-    fi
-  '';
-
   # Create a simple sync script for rbw
   rbw-sync = pkgs.writeShellScript "rbw-sync" ''
     #!/usr/bin/env sh

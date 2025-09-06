@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-25.05";
     deploy-rs = {
       url = "github:serokell/deploy-rs";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -34,6 +34,11 @@
       url = "github:nix-community/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Fix Dolphin OpenURI behavior via overlay
+    # dolphin-overlay = {
+    #   url = "github:rumboon/dolphin-overlay";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
   };
 
   outputs = {
@@ -43,6 +48,8 @@
   } @ inputs: let
     # System configuration
     system = "x86_64-linux";
+    # Centralized NixOS state version
+    stateVersion = "25.05";
 
     # Dynamically discover all hosts from the hosts/ directory
     hostsDir = self + "/hosts";
@@ -72,6 +79,7 @@
                   config = {allowUnfree = true;};
                 };
               })
+              # inputs.dolphin-overlay.overlays.default
             ];
           }
           # Host-specific configuration
@@ -79,6 +87,9 @@
 
           # Dynamic hostname setting
           {networking.hostName = hostname;}
+
+          # Centralize stateVersion for all hosts
+          {system.stateVersion = stateVersion;}
 
           # Note: Do not define system.build.installTest here to avoid conflicts
           # with nixos-anywhere --vm-test which also defines this option.
@@ -114,7 +125,11 @@
         iso-installer = inputs.nixos-generators.nixosGenerate {
           inherit system;
           format = "iso";
-          modules = [./iso/installer.nix];
+          modules = [
+            ./iso/installer.nix
+            # Centralize stateVersion for the installer ISO
+            {system.stateVersion = stateVersion;}
+          ];
         };
       };
     };

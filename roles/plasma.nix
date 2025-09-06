@@ -12,6 +12,7 @@
     kdePackages.akonadi-contacts
     kdePackages.akonadi-calendar
     kdePackages.qtmultimedia
+    kdePackages.kio
     sddm-astronaut
     catppuccin-sddm
     where-is-my-sddm-theme

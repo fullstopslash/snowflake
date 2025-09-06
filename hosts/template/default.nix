@@ -10,7 +10,7 @@
     ./disko-config.nix
   ];
 
-  system.stateVersion = "24.11";
+  # system.stateVersion set centrally in flake.nix
 
   boot.loader = {
     systemd-boot.enable = true;

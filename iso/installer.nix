@@ -7,7 +7,6 @@
   repoSrc = pkgs.nix-gitignore.gitignoreSource [] (../.);
 in {
   # Minimal installer ISO config: SSH + essentials + NetworkManager + serial console
-  system.stateVersion = "25.11";
   services.getty.autologinUser = "nixos";
   services.openssh = {
     enable = true;

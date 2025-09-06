@@ -54,6 +54,15 @@ install_host() {
   printf '%s\n' "[2/2] Running nixos-install for ${HOSTNAME}..."
   nixos-install --no-root-passwd --flake "$FLAKE_ROOT#$HOSTNAME"
 
+  # Ensure sops-nix key location exists; copy a user key if present
+  if [ ! -f /mnt/var/lib/sops-nix/key.txt ]; then
+    mkdir -p /mnt/var/lib/sops-nix
+    if [ -f "$HOME/.config/sops/age/keys.txt" ]; then
+      cp "$HOME/.config/sops/age/keys.txt" /mnt/var/lib/sops-nix/key.txt || true
+      chmod 600 /mnt/var/lib/sops-nix/key.txt || true
+    fi
+  fi
+
   printf '%s\n' "Done. You can now reboot or power off." 
 }
 

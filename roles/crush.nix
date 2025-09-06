@@ -4,9 +4,9 @@
   inputs,
   ...
 }: {
-  environment.systemPackages = with pkgs; [
-    # Crush from nix-ai-tools flake
-    inputs.nix-ai-tools.packages.x86_64-linux.crush
+  # Crush from nix-ai-tools flake
+  environment.systemPackages = with inputs.nix-ai-tools.packages.${pkgs.system}; [
+    crush
   ];
 
   # Optional: Add any system-wide configuration if needed

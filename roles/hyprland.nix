@@ -2,15 +2,14 @@
 {pkgs, ...}: {
   programs.hyprland = {
     enable = true;
+    portalPackage = pkgs.kdePackages.xdg-desktop-portal-kde;
     xwayland.enable = true;
   };
 
-  # KDE environment for Hyprland
+  # Environment for Hyprland
   environment.sessionVariables = {
     # Color management for gamescope HDR support
     # HYPRLAND_DEBUG_FULL_CM_PROTO = "1";
-    # KDE environment (suppress Hyprland warning)
-    # XDG_CURRENT_DESKTOP = "KDE";
     # QT_QPA_PLATFORMTHEME = "kde";
     # QT_STYLE_OVERRIDE = "Breeze";
     # GTK_THEME = "Breeze";
@@ -28,6 +27,26 @@
     # QT_ENABLE_GLYPH_CACHE_WORKAROUND = "1";
     # Suppress Hyprland warnings
     # HYPRLAND_NO_WARN = "1";
+  };
+
+  # xdg-desktop-portal configuration
+  xdg.portal = {
+    enable = true;
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-hyprland
+      xdg-desktop-portal-gtk
+      kdePackages.xdg-desktop-portal-kde
+    ];
+    # Common fallback so behavior is sane even if desktop detection differs
+    config.common = {
+      default = ["hyprland" "kde" "gtk"];
+      "org.freedesktop.impl.portal.FileChooser" = "kde";
+      "org.freedesktop.impl.portal.OpenURI" = "gtk";
+    };
+    # Restrict default order, prefer KDE chooser, but use GTK for OpenURI
+    config.hyprland = {
+      default = ["hyprland" "gtk"];
+    };
   };
 
   environment.systemPackages = with pkgs; [
@@ -61,10 +80,31 @@
     # Tray/dbusmenu helpers for Waybar
     libdbusmenu-gtk3
     libayatana-appindicator
+    # KDE runtime deps to make Dolphin behave outside Plasma
+    kdePackages.kio
+    kdePackages.kio-extras
+    kdePackages.kde-cli-tools
+    kdePackages.kdialog
+    kdePackages.xdg-desktop-portal-kde
   ];
 
   # Systemd user services
   systemd.user.services = {
+    # Ensure portal environment is correct for Hyprland session only
+    portal-env = {
+      description = "Set portal environment for Hyprland";
+      wantedBy = ["hyprland-session.target"];
+      partOf = ["hyprland-session.target"];
+      before = ["xdg-desktop-portal.service" "xdg-desktop-portal-hyprland.service"];
+      serviceConfig = {
+        Type = "oneshot";
+        Environment = "XDG_CURRENT_DESKTOP=Hyprland:KDE";
+        ExecStart = [
+          "${pkgs.systemd}/bin/systemctl --user import-environment XDG_CURRENT_DESKTOP WAYLAND_DISPLAY"
+          "${pkgs.dbus}/bin/dbus-update-activation-environment --systemd XDG_CURRENT_DESKTOP WAYLAND_DISPLAY"
+        ];
+      };
+    };
     hyprpaper = {
       description = "Hyprland wallpaper daemon";
       wantedBy = ["hyprland-session.target"];

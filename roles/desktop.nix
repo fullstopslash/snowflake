@@ -2,8 +2,8 @@
 {pkgs, ...}: {
   # Allow insecure packages specifically required for the desktop role
   nixpkgs.config.permittedInsecurePackages = [
-    "ventoy-1.1.05"
-    "ventoy-qt5-1.1.05"
+    "ventoy-1.1.07"
+    "ventoy-qt5-1.1.07"
   ];
 
   # Display manager and desktop services
@@ -99,8 +99,8 @@
     lua
     wev
     karakeep
-    ventoy-full-qt
-    ventoy
+    # ventoy-full-qt
+    # ventoy
 
     #Development utils for Desktop
     meld
@@ -123,9 +123,8 @@
 
     # Office
     obsidian
-    # FIX: Running from stable
-    stable.anki
-    stable.anki-sync-server
+    anki
+    anki-sync-server
 
     # Package managers
   ];
