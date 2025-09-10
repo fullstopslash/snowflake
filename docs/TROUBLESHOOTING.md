@@ -4,12 +4,19 @@
 
 ## TOC
 
+- [Mesa package fails to apply opencl.patch](#mesa-package-fails-to-apply-opencl.patch)
 - [The user systemd session is degraded](#the-user-systemd-session-is-degraded)
 - [Pre-commit shit](#pre-commit-shit)
 - [sops](#sops)
 - [couldn't find efi system partition](#couldnt-find-efi-system-partition)
 
 ---
+
+## Mesa package fails to apply opencl.patch
+This issue occurs when pinning a version of mesa that happens to include a patch file. The way the patch is applied conflicts with the overlay.
+Fortunately, opencl is optional and I don't need it.
+In this particular instance the version I was pinning happened to also be the latest unstable version so I was able to circumvent the issue by disabling the overlay and simply enabling the unstable package.
+However, if you do need to retain the overlay due to needing a specific, non-latest version, you would have to modify the overlay to _also_ override the problematic patch with patch that does nothing.
 
 ## Wayland crashes back to login after auth
 

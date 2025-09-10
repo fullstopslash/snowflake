@@ -139,7 +139,7 @@
 
   environment.systemPackages = builtins.attrValues {
     inherit (pkgs)
-      clinfo # opencl testing
+      #clinfo # opencl testing
       vulkan-tools # vulkaninfo
       ;
   };
