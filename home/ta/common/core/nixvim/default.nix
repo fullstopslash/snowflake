@@ -155,11 +155,11 @@
            let wiki_0.links_space_char = '_'
 
            let wiki_1 = {}
-           let wiki_1.path = '~/doc/foundry/thefoundry.wiki/'
+           let wiki_1.path = '~/src/abbot-wiki/'
            let wiki_1.index = 'home'
            let wiki_1.syntax = 'markdown'
-
            let wiki_1.ext = '.md'
+
            " fill spaces in page names with _ in pathing
            let wiki_1.links_space_char = '_'
 
