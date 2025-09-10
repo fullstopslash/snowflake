@@ -39,7 +39,7 @@
     ];
     # Common fallback so behavior is sane even if desktop detection differs
     config.common = {
-      default = ["hyprland" "kde" "gtk"];
+      default = ["hyprland" "gtk"];
       "org.freedesktop.impl.portal.FileChooser" = "hyprland";
       "org.freedesktop.impl.portal.OpenURI" = "hyprland";
     };
