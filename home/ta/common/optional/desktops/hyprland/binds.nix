@@ -39,7 +39,6 @@
         "Control_L&Shift_L&Alt_L, k, resizeactive, 0 -5"
         "Control_L&Shift_L&Alt_L, l, resizeactive, 5 0"
 
-        #FIXME: repeat is not working for these
         # Volume - Output
         ", XF86AudioRaiseVolume, exec, ${pactl} set-sink-volume @DEFAULT_SINK@ +5%"
         ", XF86AudioLowerVolume, exec, ${pactl} set-sink-volume @DEFAULT_SINK@ -5%"
@@ -90,15 +89,6 @@
         pactl = lib.getExe' pkgs.pulseaudio "pactl"; # installed via /hosts/common/optional/audio.nix
         terminal = config.home.sessionVariables.TERM;
         editor = config.home.sessionVariables.EDITOR;
-        #playerctl = lib.getExe pkgs.playerctl; # installed via /home/common/optional/desktops/playerctl.nix
-        #swaylock = "lib.getExe pkgs.swaylock;
-        #makoctl = "${config.services.mako.package}/bin/makoctl";
-        #gtk-play = "${pkgs.libcanberra-gtk3}/bin/canberra-gtk-play";
-        #notify-send = "${pkgs.libnotify}/bin/notify-send";
-        #gtk-launch = "${pkgs.gtk3}/bin/gtk-launch";
-        #xdg-mime = "${pkgs.xdg-utils}/bin/xdg-mime";
-        #defaultApp = type: "${gtk-launch} $(${xdg-mime} query default ${type})";
-        #browser = defaultApp "x-scheme-handler/https";
 
       in
       lib.flatten [
