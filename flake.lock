@@ -118,11 +118,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1757255839,
-        "narHash": "sha256-XH33B1X888Xc/xEXhF1RPq/kzKElM0D5C9N6YdvOvIc=",
+        "lastModified": 1757508292,
+        "narHash": "sha256-7lVWL5bC6xBIMWWDal41LlGAG+9u2zUorqo3QCUL4p4=",
         "owner": "nix-community",
         "repo": "disko",
-        "rev": "c8a0e78d86b12ea67be6ed0f7cae7f9bfabae75a",
+        "rev": "146f45bee02b8bd88812cfce6ffc0f933788875a",
         "type": "github"
       },
       "original": {
@@ -150,6 +150,26 @@
         "owner": "nix-community",
         "ref": "master",
         "repo": "disko",
+        "type": "github"
+      }
+    },
+    "dolphin-overlay": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1743892246,
+        "narHash": "sha256-AHeavUWjnDPT/hffE5hM8RIew+mZJSSr9tUEiSvZW30=",
+        "owner": "rumboon",
+        "repo": "dolphin-overlay",
+        "rev": "55fec3268972876890d6081d3d76a701c37c01d7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "rumboon",
+        "repo": "dolphin-overlay",
         "type": "github"
       }
     },
@@ -362,11 +382,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1757386383,
-        "narHash": "sha256-L8sT9E4+SMI4UZCL5jeezDPo2T6SxribegixSUsefQ4=",
+        "lastModified": 1757473050,
+        "narHash": "sha256-Sp2DXIuWCtoq8zNiu0Fhewrh0e1Q8/NC9kmN+WgBkJ0=",
         "owner": "numtide",
         "repo": "nix-ai-tools",
-        "rev": "161c82bed05e3f111b3cc3cd7fe1ef261ff4bc76",
+        "rev": "e7cc52a4a0155f24ed5bde700993bdd65446389f",
         "type": "github"
       },
       "original": {
@@ -549,11 +569,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1757068644,
-        "narHash": "sha256-NOrUtIhTkIIumj1E/Rsv1J37Yi3xGStISEo8tZm3KW4=",
+        "lastModified": 1757347588,
+        "narHash": "sha256-tLdkkC6XnsY9EOZW9TlpesTclELy8W7lL2ClL+nma8o=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "8eb28adfa3dc4de28e792e3bf49fcf9007ca8ac9",
+        "rev": "b599843bad24621dcaa5ab60dac98f9b0eb1cabe",
         "type": "github"
       },
       "original": {
@@ -608,6 +628,7 @@
       "inputs": {
         "deploy-rs": "deploy-rs",
         "disko": "disko",
+        "dolphin-overlay": "dolphin-overlay",
         "hardware": "hardware",
         "mcp-hub": "mcp-hub",
         "mcphub-nvim": "mcphub-nvim",
@@ -627,11 +648,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1754988908,
-        "narHash": "sha256-t+voe2961vCgrzPFtZxha0/kmFSHFobzF00sT8p9h0U=",
+        "lastModified": 1757503115,
+        "narHash": "sha256-S9F6bHUBh+CFEUalv/qxNImRapCxvSnOzWBUZgK1zDU=",
         "owner": "Mic92",
         "repo": "sops-nix",
-        "rev": "3223c7a92724b5d804e9988c6b447a0d09017d48",
+        "rev": "0bf793823386187dff101ee2a9d4ed26de8bbf8c",
         "type": "github"
       },
       "original": {

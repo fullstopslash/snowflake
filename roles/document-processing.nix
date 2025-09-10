@@ -7,7 +7,7 @@
     # Poppler tools - PDF utilities (pdfinfo, pdftoppm, etc.)
     poppler_utils
     # Tectonic - Modern LaTeX compiler
-    stable.tectonic
+    tectonic
     texlive.combined.scheme-full
     # Explicitly include LuaLaTeX math package
     texlivePackages.lualatex-math

@@ -35,19 +35,6 @@
     claude-code
     gemini-cli
 
-    # Rust toolchain (centralized in universal.nix)
-
-    # Development tools (centralized in universal.nix)
-
-    # Package managers (centralized in universal.nix)
-
-    # Text/terminal tools (keep host-specific ones only)
-
-    # Communication and news
-    neomutt
-    newsboat
-    # rmpc moved to media role
-    weechat
     discord
     discordo
 

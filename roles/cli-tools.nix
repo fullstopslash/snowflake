@@ -19,12 +19,18 @@
     fortune-kind
     # personal management
     khard
-    stable.khal
-    stable.vdirsyncer
+    khal
+    vdirsyncer
 
     # pinentry variants
     pinentry-all
     pinentry-qt
+
+    # Communication and news
+    neomutt
+    procmail
+    newsboat
+    weechat
 
     # desktop tool previously in desktop role
     python312Packages.samsungctl
@@ -33,4 +39,8 @@
     lynx
     w3m
   ];
+  programs = {
+    mosh.enable = true;
+  };
+  services.eternal-terminal.enable = true;
 }

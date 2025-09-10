@@ -35,10 +35,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Fix Dolphin OpenURI behavior via overlay
-    # dolphin-overlay = {
-    #   url = "github:rumboon/dolphin-overlay";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
+    dolphin-overlay = {
+      url = "github:rumboon/dolphin-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -79,7 +79,7 @@
                   config = {allowUnfree = true;};
                 };
               })
-              # inputs.dolphin-overlay.overlays.default
+              inputs.dolphin-overlay.overlays.default
             ];
           }
           # Host-specific configuration

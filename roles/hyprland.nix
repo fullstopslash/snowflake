@@ -2,7 +2,7 @@
 {pkgs, ...}: {
   programs.hyprland = {
     enable = true;
-    portalPackage = pkgs.kdePackages.xdg-desktop-portal-kde;
+    portalPackage = pkgs.xdg-desktop-portal-hyprland;
     xwayland.enable = true;
   };
 
@@ -35,13 +35,13 @@
     extraPortals = with pkgs; [
       xdg-desktop-portal-hyprland
       xdg-desktop-portal-gtk
-      kdePackages.xdg-desktop-portal-kde
+      # kdePackages.xdg-desktop-portal-kde
     ];
     # Common fallback so behavior is sane even if desktop detection differs
     config.common = {
       default = ["hyprland" "kde" "gtk"];
-      "org.freedesktop.impl.portal.FileChooser" = "kde";
-      "org.freedesktop.impl.portal.OpenURI" = "gtk";
+      "org.freedesktop.impl.portal.FileChooser" = "hyprland";
+      "org.freedesktop.impl.portal.OpenURI" = "hyprland";
     };
     # Restrict default order, prefer KDE chooser, but use GTK for OpenURI
     config.hyprland = {
@@ -85,7 +85,7 @@
     kdePackages.kio-extras
     kdePackages.kde-cli-tools
     kdePackages.kdialog
-    kdePackages.xdg-desktop-portal-kde
+    # kdePackages.xdg-desktop-portal-kde
   ];
 
   # Systemd user services
@@ -98,7 +98,7 @@
       before = ["xdg-desktop-portal.service" "xdg-desktop-portal-hyprland.service"];
       serviceConfig = {
         Type = "oneshot";
-        Environment = "XDG_CURRENT_DESKTOP=Hyprland:KDE";
+        Environment = "XDG_CURRENT_DESKTOP=Hyprland";
         ExecStart = [
           "${pkgs.systemd}/bin/systemctl --user import-environment XDG_CURRENT_DESKTOP WAYLAND_DISPLAY"
           "${pkgs.dbus}/bin/dbus-update-activation-environment --systemd XDG_CURRENT_DESKTOP WAYLAND_DISPLAY"

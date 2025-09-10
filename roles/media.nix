@@ -5,10 +5,12 @@
     # Media servers
     jellyfin
     jellyfin-tui
+    jftui
+    jellycli
 
     jellyfin-web
     jellyfin-ffmpeg
-    stable.jellyfin-mpv-shim
+    jellyfin-mpv-shim
     feishin
     ffmpeg-full
     libcec
@@ -28,7 +30,7 @@
     easyeffects
 
     # Audio/Video tools
-    stable.vcv-rack
+    vcv-rack
     cardinal
   ];
 
