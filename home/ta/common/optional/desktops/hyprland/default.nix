@@ -169,8 +169,8 @@
           [
             ''${pkgs.waypaper}/bin/waypaper --restore''
             ''${pkgs.networkmanagerapplet}/bin/nm-applet --indicator''
-            ''[workspace 10 silent]${pkgs.ghostty}/bin/ghostty -e btop''
-            ''[workspace 10 silent]${pkgs.ghostty}/bin/ghostty -e amdgpu_top --dark''
+            ''[workspace 10 silent]${pkgs.ghostty}/bin/ghostty --title=btop -e btop''
+            ''[workspace 10 silent]${pkgs.ghostty}/bin/ghostty --title=amdgpu_top -e amdgpu_top --dark''
             ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
             ''[workspace 8 silent]${pkgs.obsidian}/bin/obsidian''
             ''[workspace 10 silent]${pkgs.spotify}/bin/spotify''
@@ -245,7 +245,8 @@
         "float, title:^(Accounts)(.*)$"
         "float, title:^(Text Import)(.*)$"
         "float, title:^(File Operation Progress)(.*)$"
-        "float, focus 0, title:^()$, class:^([Ff]irefox)"
+        #"float, focus 0, title:^()$, class:^([Ff]irefox)"
+        "float, noinitialfocus, title:^()$, class:^([Ff]irefox)"
 
         #
         # ========== Always opaque ==========
