@@ -10,7 +10,7 @@
 # https://github.com/Defelo/nixos/blob/main/system/networking.nix
 {
   environment.systemPackages = [
-    pkgs.networkmanagerapplet
+    pkgs.unstable.networkmanagerapplet
   ];
 
   networking.networkmanager.dispatcherScripts = [
