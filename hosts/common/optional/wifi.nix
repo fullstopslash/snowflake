@@ -9,10 +9,6 @@
 # FIXME(wifi): Auto connect VPN when on untrusted wifi network:
 # https://github.com/Defelo/nixos/blob/main/system/networking.nix
 {
-  environment.systemPackages = [
-    pkgs.unstable.networkmanagerapplet
-  ];
-
   networking.networkmanager.dispatcherScripts = [
     {
       type = "basic";
