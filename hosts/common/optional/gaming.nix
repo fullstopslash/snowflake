@@ -10,39 +10,39 @@
         enable = true;
         package = pkgs.protontricks;
       };
-      package = pkgs.steam.override {
-        extraPkgs =
-          pkgs:
-          (builtins.attrValues {
-            inherit (pkgs.xorg)
-              libXcursor
-              libXi
-              libXinerama
-              libXScrnSaver
-              ;
-
-            inherit (pkgs.stdenv.cc.cc)
-              lib
-              ;
-
-            inherit (pkgs)
-              libpng
-              libpulseaudio
-              libvorbis
-              libkrb5
-              keyutils
-              gperftools
-              ;
-          });
-      };
+      #      package = pkgs.steam.override {
+      #        extraPkgs =
+      #          pkgs:
+      #          (builtins.attrValues {
+      #            inherit (pkgs.xorg)
+      #              libXcursor
+      #              libXi
+      #              libXinerama
+      #              libXScrnSaver
+      #              ;
+      #
+      #            inherit (pkgs.stdenv.cc.cc)
+      #              lib
+      #              ;
+      #
+      #            inherit (pkgs)
+      #              libpng
+      #              libpulseaudio
+      #              libvorbis
+      #              libkrb5
+      #              keyutils
+      #              gperftools
+      #              ;
+      #          });
+      #      };
       extraCompatPackages = [ pkgs.unstable.proton-ge-bin ];
     };
     #gamescope launch args set dynamically in home/<user>/common/optional/gaming
     #to trap cursor to the game window add `gamescope [other gamescope options] --force-grab-cursor -- %command%` to the game's properties within steam.
-    gamescope = {
-      enable = true;
-      capSysNice = true;
-    };
+    #    gamescope = {
+    #      enable = true;
+    #      capSysNice = true;
+    #    };
     # to run steam games in game mode, add the following to the game's properties within steam
     # `gamemoderun %command%`
     gamemode = {
