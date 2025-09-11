@@ -39,25 +39,58 @@
   };
 
   systemd = {
-    services.post-sleep = {
-      description = "Post-sleep script";
-      after = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
-      wantedBy = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.curl}/bin/curl https://ntfy.chimera-micro.ts.net/waterbug-alerts -d 'Resumed: \"post sleep\"' -H 'Tags: skull' ";
-        User = "rain";
+    services = {
+      post-sleep = {
+        description = "Post-sleep script";
+        after = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
+        wantedBy = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.curl}/bin/curl https://ntfy.chimera-micro.ts.net/waterbug-alerts -d 'Resumed: \"post sleep\"' -H 'Tags: skull' ";
+          User = "rain";
+        };
       };
-    };
 
-    services.post-sleep-samsung = {
-      description = "Post-sleep script";
-      after = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
-      wantedBy = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.home-assistant-cli}/bin/hass-cli ";
-        User = "rain";
+      post-sleep-samsung = {
+        description = "Post-sleep script";
+        after = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
+        wantedBy = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.home-assistant-cli}/bin/hass-cli ";
+          User = "rain";
+        };
+      };
+
+      # Fix audio routing after resume (restart PipeWire/WirePlumber and prefer HDMI/DP)
+      "audio-fix-after-sleep" = {
+        description = "Fix PipeWire audio routing after suspend/resume";
+        after = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
+        wantedBy = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
+        serviceConfig = {
+          Type = "oneshot";
+          User = "rain";
+          ExecStart = "${pkgs.writeShellScript "hypr-audio-resume" ''
+            #!/usr/bin/env sh
+            set -eu
+            # Restart user audio daemons
+            systemctl --user restart wireplumber.service pipewire.service pipewire-pulse.service >/dev/null 2>&1 || true
+            # Allow devices to reappear
+            ${pkgs.coreutils}/bin/sleep 1
+            # Choose an HDMI/DP sink if present and set it as default
+            SINK_ID=$(\
+              ${pkgs.wireplumber}/bin/wpctl status |
+              ${pkgs.gawk}/bin/awk 'f{if($0 ~ /^\\s*[0-9]+\\./){print}} /Sinks:/{f=1} /Sources:/{f=0}' |
+              ${pkgs.gnugrep}/bin/grep -iE 'hdmi|display|monitor|dp' |
+              ${pkgs.gnused}/bin/sed -n 's/^\\s*\\([0-9]\\+\\)\\..*/\\1/p' |
+              ${pkgs.coreutils}/bin/head -n1
+            ) || true
+            if [ -n ''${SINK_ID:-} ]; then
+              ${pkgs.wireplumber}/bin/wpctl set-default "$SINK_ID" >/dev/null 2>&1 || true
+            fi
+            exit 0
+          ''}";
+        };
       };
     };
 
