@@ -20,6 +20,11 @@
     # QT_SCALE_FACTOR = "2.0";
     # QT_SCREEN_SCALE_FACTOR = "2.0";
     QT_ENABLE_HIGHDPI_SCALING = "1";
+    # Ensure Hyprland picks the Stylix cursor theme/colors
+    XCURSOR_THEME = "Nordzy-catppuccin-mocha-dark";
+    XCURSOR_SIZE = "24";
+    HYPRCURSOR_THEME = "Nordzy-catppuccin-mocha-dark";
+    HYPRCURSOR_SIZE = "24";
     # GDK_SCALE = "2";
     # GDK_DPI_SCALE = "2";
     # Performance optimizations
@@ -51,6 +56,9 @@
 
   environment.systemPackages = with pkgs; [
     # KDE theming for Hyprland
+
+    hyprlock
+    hyprpicker
     kdePackages.breeze-icons
     kdePackages.breeze-gtk
     kdePackages.breeze
@@ -86,6 +94,32 @@
     kdePackages.kde-cli-tools
     kdePackages.kdialog
     # kdePackages.xdg-desktop-portal-kde
+
+    # Anki wrapper with Wayland-safe flags (Hyprland)
+    (writeShellScriptBin "anki-wayland" ''
+      #!/usr/bin/env sh
+      ANKI_WAYLAND=1 \
+      QT_QPA_PLATFORM=wayland \
+      QTWEBENGINE_CHROMIUM_FLAGS="--disable-gpu --disable-gpu-compositing --in-process-gpu" \
+      exec ${anki}/bin/anki "$@"
+    '')
+
+    # Desktop entry shown only in Hyprland sessions
+    (writeTextFile {
+      name = "anki-wayland-desktop";
+      destination = "/share/applications/anki-wayland.desktop";
+      text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=Anki (Wayland)
+        Comment=Anki with Wayland-safe flags for Hyprland
+        Exec=anki-wayland %U
+        Icon=anki
+        Terminal=false
+        Categories=Education;
+        OnlyShowIn=Hyprland;
+      '';
+    })
   ];
 
   # Systemd user services
@@ -140,7 +174,7 @@
         ExecStart = "${pkgs.waybar}/bin/waybar";
         Restart = "on-failure";
         RestartSec = 1;
-        Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.hyprland pkgs.rofi pkgs.networkmanager pkgs.playerctl pkgs.helvum pkgs.brightnessctl pkgs.wireplumber pkgs.dunst]}";
+        Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.hyprland pkgs.wofi pkgs.rofi pkgs.pavucontrol pkgs.blueman pkgs.networkmanager pkgs.playerctl pkgs.helvum pkgs.brightnessctl pkgs.wireplumber pkgs.dunst]}";
         # Add delay to ensure Wayland is ready
         # ExecStartPre = "${pkgs.coreutils}/bin/sleep 2";
       };

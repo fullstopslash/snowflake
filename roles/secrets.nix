@@ -14,6 +14,6 @@
     bitwarden-cli
     bitwarden-desktop
     bitwarden
-    bws
+    # bws
   ];
 }
