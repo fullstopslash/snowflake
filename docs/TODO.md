@@ -3,16 +3,15 @@
 [README](../README.md) > Roadmap of TODOs
 
 ## Short Term
-- Fix Hyprland and Aquamarine issues
+- Stop calendar notifications from stealing focus... sort of dealt with using 'noinitialfocus' dispatcher but it happens immediately after focus has already been stolen
 
-- setup backup for 'extra' drive
-- start using issues more than fixmes
-- consider tagging with version numbers that match roadmap
+- Setup backup for 'extra' drive
+- Start using issues more than fixmes
+- Consider tagging with version numbers that match roadmap
 
-- ticket for refactor yubikey module to include u2f stuff
-- is magicmirror in nixpkgs? Add items to package it and build a host
+- Ticket for refactor yubikey module to include u2f stuff
 
-- declarative audio output device for gusto if possible
+- Declarative audio output device for gusto if possible
 
 ### Current roadmap focus items
 
@@ -42,21 +41,21 @@
   - https://github.com/dandavison/delta
 
 - NeoVim stuff to look at and integrate
-    - go through existing plugins, a few are enabled but binds are disabled etc
-    - refine linting and fixing in nvim
-    - hardtime # training tool to stop bad vim habits # https://github.com/m4xshen/hardtime.nvim
-    - lint # not sure if this is redundant with all the other language stuff
-    - conform # meant to make lsp less disruptive to the buffer #https://github.com/stevearc/conform.nvim
-    - lspsaga # meant to improve the lsps experience for nvim #https://github.com/nvimdev/lspsaga.nvim
-    - trouble # side or bottom list of all 'trouble' items in your code.#https://github.com/folke/trouble.nvim/
-    - none-ls # inject LSP diagnostics, code actions, and more via LUA #https://github.com/nvimtools/none-ls.nvim
-    - harpoon #file nav
-    - ultimate-autopair #https://github.com/altermo/ultimate-autopair.nvim
-        works with nvim-surround
-    - nvim-surround #https://github.com/kylechui/nvim-surround
-         or tim popes surround
-    - vim-grepper
-    - toggle-term #https://github.com/akinsho/toggleterm.nvim
+  - go through existing plugins, a few are enabled but binds are disabled etc
+  - refine linting and fixing in nvim
+  - hardtime # training tool to stop bad vim habits # https://github.com/m4xshen/hardtime.nvim
+  - lint # not sure if this is redundant with all the other language stuff
+  - conform # meant to make lsp less disruptive to the buffer #https://github.com/stevearc/conform.nvim
+  - lspsaga # meant to improve the lsps experience for nvim #https://github.com/nvimdev/lspsaga.nvim
+  - trouble # side or bottom list of all 'trouble' items in your code.#https://github.com/folke/trouble.nvim/
+  - none-ls # inject LSP diagnostics, code actions, and more via LUA #https://github.com/nvimtools/none-ls.nvim
+  - harpoon #file nav
+  - ultimate-autopair #https://github.com/altermo/ultimate-autopair.nvim
+      works with nvim-surround
+  - nvim-surround #https://github.com/kylechui/nvim-surround
+       or tim popes surround
+  - vim-grepper
+  - toggle-term #https://github.com/akinsho/toggleterm.nvim
 
 ## Long Term
 
