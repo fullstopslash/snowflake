@@ -1,4 +1,4 @@
 { pkgs, ... }:
 {
-  environment.systemPackages = [ pkgs.obsidian ];
+  environment.systemPackages = [ pkgs.unstable.obsidian ];
 }
