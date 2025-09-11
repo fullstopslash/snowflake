@@ -30,7 +30,7 @@
     easyeffects
 
     # Audio/Video tools
-    vcv-rack
+    stable.vcv-rack
     cardinal
   ];
 

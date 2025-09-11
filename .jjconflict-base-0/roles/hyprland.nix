@@ -208,5 +208,27 @@
         Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.kdePackages.kdeconnect-kde]}";
       };
     };
+
+    xwaylandvideobridge-hide = {
+      description = "Hide xwayland video bridge utility window";
+      wantedBy = ["hyprland-session.target"];
+      partOf = ["hyprland-session.target"];
+      after = ["hyprland-session.target"];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = pkgs.writeShellScript "hide-xwaylandvideobridge" ''
+          #!/usr/bin/env sh
+          set -eu
+          # Apply runtime rules to hide and prevent focus on the bridge window
+          ${pkgs.hyprland}/bin/hyprctl keyword windowrulev2 "opacity 0.0 override,class:^(xwaylandvideobridge)$"
+          ${pkgs.hyprland}/bin/hyprctl keyword windowrulev2 "nofocus,class:^(xwaylandvideobridge)$"
+          ${pkgs.hyprland}/bin/hyprctl keyword windowrulev2 "noanim,class:^(xwaylandvideobridge)$"
+          # Also match by common window title just in case
+          ${pkgs.hyprland}/bin/hyprctl keyword windowrulev2 "opacity 0.0 override,title:^(Wayland to X.*bridge)$"
+          ${pkgs.hyprland}/bin/hyprctl keyword windowrulev2 "nofocus,title:^(Wayland to X.*bridge)$"
+          ${pkgs.hyprland}/bin/hyprctl keyword windowrulev2 "noanim,title:^(Wayland to X.*bridge)$"
+        '';
+      };
+    };
   };
 }

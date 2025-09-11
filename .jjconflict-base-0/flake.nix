@@ -79,6 +79,12 @@
                   config = {allowUnfree = true;};
                 };
               })
+              # Disable upstream tailscale test suite (fails in sandbox); build binary only
+              (_: prev: {
+                tailscale = prev.tailscale.overrideAttrs (_: {
+                  doCheck = false;
+                });
+              })
               inputs.dolphin-overlay.overlays.default
             ];
           }
