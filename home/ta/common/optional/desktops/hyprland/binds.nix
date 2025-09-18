@@ -2,7 +2,6 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 {
@@ -28,24 +27,20 @@
     #
     # ========== Repeat Binds ==========
     #
-    binde =
-      let
-        pactl = lib.getExe' pkgs.pulseaudio "pactl"; # installed via /hosts/common/optional/audio.nix
-      in
-      [
-        # Resize active window 5 pixels in direction
-        "Control_L&Shift_L&Alt_L, h, resizeactive, -5 0"
-        "Control_L&Shift_L&Alt_L, j, resizeactive, 0 5"
-        "Control_L&Shift_L&Alt_L, k, resizeactive, 0 -5"
-        "Control_L&Shift_L&Alt_L, l, resizeactive, 5 0"
+    binde = [
+      # Resize active window 5 pixels in direction
+      "Control_L&Shift_L&Alt_L, h, resizeactive, -5 0"
+      "Control_L&Shift_L&Alt_L, j, resizeactive, 0 5"
+      "Control_L&Shift_L&Alt_L, k, resizeactive, 0 -5"
+      "Control_L&Shift_L&Alt_L, l, resizeactive, 5 0"
 
-        # Volume - Output
-        ", XF86AudioRaiseVolume, exec, ${pactl} set-sink-volume @DEFAULT_SINK@ +5%"
-        ", XF86AudioLowerVolume, exec, ${pactl} set-sink-volume @DEFAULT_SINK@ -5%"
-        # Volume - Input
-        ", XF86AudioRaiseVolume, exec, ${pactl} set-source-volume @DEFAULT_SOURCE@ +5%"
-        ", XF86AudioLowerVolume, exec, ${pactl} set-source-volume @DEFAULT_SOURCE@ -5%"
-      ];
+      # Volume - Output
+      ", XF86AudioRaiseVolume, exec, pactl set-sink-volume @DEFAULT_SINK@ +5%"
+      ", XF86AudioLowerVolume, exec, pactl set-sink-volume @DEFAULT_SINK@ -5%"
+      # Volume - Input
+      ", XF86AudioRaiseVolume, exec, pactl set-source-volume @DEFAULT_SOURCE@ +5%"
+      ", XF86AudioLowerVolume, exec, pactl set-source-volume @DEFAULT_SOURCE@ -5%"
+    ];
     #
     # ========== One-shot Binds ==========
     #
@@ -86,7 +81,7 @@
           k = up;
           j = down;
         };
-        pactl = lib.getExe' pkgs.pulseaudio "pactl"; # installed via /hosts/common/optional/audio.nix
+        #        pactl = lib.getExe' pkgs.pulseaudio "pactl"; # installed via /hosts/common/optional/audio.nix
         terminal = config.home.sessionVariables.TERM;
         editor = config.home.sessionVariables.EDITOR;
 
@@ -119,9 +114,11 @@
         #
         # see "binde" above for volume ctrls that need repeat binding
         # Output
-        ", XF86AudioMute, exec, ${pactl} set-sink-mute @DEFAULT_SINK@ toggle"
+        #", XF86AudioMute, exec, ${pactl} set-sink-mute @DEFAULT_SINK@ toggle"
+        ", XF86AudioMute, exec, pactl set-sink-mute @DEFAULT_SINK@ toggle"
         # Input
-        ", XF86AudioMute, exec, ${pactl} set-source-mute @DEFAULT_SOURCE@ toggle"
+        #", XF86AudioMute, exec, ${pactl} set-source-mute @DEFAULT_SOURCE@ toggle"
+        ", XF86AudioMute, exec, pactl set-source-mute @DEFAULT_SOURCE@ toggle"
         # Player
         ", XF86AudioPlay, exec, playerctl --ignore-player=firefox,chromium,brave play-pause"
         ", XF86AudioNext, exec, playerctl --ignore-player=firefox,chromium,brave next"
