@@ -89,7 +89,7 @@ in
         "hyprland/workspaces" = {
           all-outputs = false;
           disable-scroll = true;
-          on-click = "actviate";
+          on-click = "activate";
           show-special = true; # display special workspaces along side regular ones (scratch for example)
         };
         "clock#time" = {
