@@ -5,12 +5,12 @@
 ## Short Term
 - Stop calendar notifications from stealing focus... sort of dealt with using 'noinitialfocus' dispatcher but it happens immediately after focus has already been stolen
 
+Blocked:
 - Setup backup for 'extra' drive
+
 - Start using issues more than fixmes
 - Consider tagging with version numbers that match roadmap
-
 - Ticket for refactor yubikey module to include u2f stuff
-
 - Declarative audio output device for gusto if possible
 
 ### Current roadmap focus items
@@ -208,13 +208,13 @@ Some of the original parts of this stage have been split off to later stages bec
 
 ##### 5.5 Starter repo
 
-Set up separate, stripped-down and simplified nix-config for new comers
+- Set up separate, stripped-down and simplified nix-config for new comers
 
 ##### 5.x Extras
 
 - ~~move Gusto to disko~~~
 
-#### 6. Laptops and improved network handling
+#### 6. Laptops and Refactored multiuser
 
 Add laptop support to the mix to handle stuff like power, lid state, wifi, and the like.
 
@@ -223,80 +223,10 @@ Add laptop support to the mix to handle stuff like power, lid state, wifi, and t
 - ~~add laptop utils~~
 - enable backup
 
-#### 6.2 Improved network handling
-- complete services.per-network-services branch
-- add firewall module
+##### 6.2 Refactor multiuser
+- refactor how multiuser works ala fidgetingbits' changes
 
-#### 7. Squeaky clean
-
-##### 7.1 Impermanence
-
-- declare what needs to persist
-- enable impermanence
-    - make sure to include `/luks-secondary-unlock.key`
-
-  Need to sort out how to maintain /etc/ssh/ssh_host_ed25519_key and /etc/ssh/ssh_host_ed25519_key.pub
-
-##### 7.2 Secure boot
-
-- lanzaboote https://github.com/nix-community/lanzaboote
-
-Some stage 1 with systemd info for reference (not specific to lanzaboote)
-
-- https://github.com/ElvishJerricco/stage1-tpm-tailscale
-- https://youtu.be/X-2zfHnHfU0?si=HXCyJ5MpuLhWWwj3
-
-##### 7.3 Cleaning - Nice to Have
-
-- Consider nixifying bash scripts (see refs below)
-- Overhaul just file
-  - clean up
-  - add {{just.executable()}} to just entries
-- revisit scanPaths. Usage in hosts/common/core is doubled up when hosts/common/core/services is imported. Options are: declare services imports individually in services/default.nix, move services modules into parent core directory... or add a recursive variant of scanPaths.
-
-##### Stage 7 references
-
-Impermanence - These two are the references to follow and integrate. The primer list below is good review before diving into this:
-
-- [blog- setting up my machines nix style](https://aldoborrero.com/posts/2023/01/15/setting-up-my-machines-nix-style/)
-- [template repo for the above](https://github.com/aldoborrero/templates/tree/main/templates/blog/nix/setting-up-machines-nix-style)
-
-Impermanence primer info
-
-- [impermanence repo - an implementation of the below concept](https://github.com/nix-community/impermanence)
-- [blog - erase your darlings](https://grahamc.com/blog/erase-your-darlings/)
-- [blog - encrypted btrfs root with opt-in state](https://mt-caret.github.io/blog/posts/2020-06-29-optin-state.html)
-- [blog - setting up my new laptop nix style](https://bmcgee.ie/posts/2022/12/setting-up-my-new-laptop-nix-style/)
-- [blog - tmpfs as root](https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/)
-- [blog - tmpfs as home](https://elis.nu/blog/2020/06/nixos-tmpfs-as-home/)
-
-Migrating bash scripts to nix
-- https://www.youtube.com/watch?v=diIh0P12arA and https://www.youtube.com/watch?v=qRE6kf30u4g
-- Consider also the first comment "writeShellApplication over writeShellScriptBin. writeShellApplication also runs your shell script through shellcheck, great for people like me who write sloppy shell scripts. You can also specify runtime dependencies by doing runtimeInputs = [ cowsay ];, that way you can just write cowsay without having to reference the path to cowsay explicitly within the script"
-
-#### 8. Improving remote
-
-##### 8.1 Automate config deployment
-
-- Per host branch scheme
-- Automated machine update on branch release
-- Handle general auto updates as well
-
-##### 8.2 Remote luks decryption
-
-The following has to happen on bare metal because I can't seem to get the yubikey's to redirect to the VM for use with git-agecrypt.
-
-- Remote LUKS decrypt over ssh for headless hosts
-  - need to set up age-crypt keys because this happens before sops and therefore we can't use nix-secrets
-  - add initrd-ssh module that will spawn an ssh service for use during boot
-
-##### 8.x Extras
-
-- Automatic scheduled sops rotate
-- Disk usage notifier
-
-
-#### 9. Ricing
+#### 7. Ricing
 
 - check out Kanshi (arandr for wayland).
 
@@ -321,13 +251,86 @@ The following has to happen on bare metal because I can't seem to get the yubike
 Inspirational sets:
 - see FF bookmarks > Nix > Rice >
 
-##### Stage 9 References
+##### Stage 7 References
 
 - [stylix](https://github.com/danth/stylix)
 - [nix-colors](https://github.com/Misterio77/nix-colors)
 
+#### 8. Squeaky clean
 
-#### 10. tbd
+##### 8.1 Impermanence
+
+- declare what needs to persist
+- enable impermanence
+    - make sure to include `/luks-secondary-unlock.key`
+
+  Need to sort out how to maintain /etc/ssh/ssh_host_ed25519_key and /etc/ssh/ssh_host_ed25519_key.pub
+
+##### 8.2 Secure boot
+
+- lanzaboote https://github.com/nix-community/lanzaboote
+
+Some stage 1 with systemd info for reference (not specific to lanzaboote)
+
+- https://github.com/ElvishJerricco/stage1-tpm-tailscale
+- https://youtu.be/X-2zfHnHfU0?si=HXCyJ5MpuLhWWwj3
+
+##### 8.3 Cleaning - Nice to Have
+
+- Consider nixifying bash scripts (see refs below)
+- Overhaul just file
+  - clean up
+  - add {{just.executable()}} to just entries
+- revisit scanPaths. Usage in hosts/common/core is doubled up when hosts/common/core/services is imported. Options are: declare services imports individually in services/default.nix, move services modules into parent core directory... or add a recursive variant of scanPaths.
+
+##### Stage 8 references
+
+Impermanence - These two are the references to follow and integrate. The primer list below is good review before diving into this:
+
+- [blog- setting up my machines nix style](https://aldoborrero.com/posts/2023/01/15/setting-up-my-machines-nix-style/)
+- [template repo for the above](https://github.com/aldoborrero/templates/tree/main/templates/blog/nix/setting-up-machines-nix-style)
+
+Impermanence primer info
+
+- [impermanence repo - an implementation of the below concept](https://github.com/nix-community/impermanence)
+- [blog - erase your darlings](https://grahamc.com/blog/erase-your-darlings/)
+- [blog - encrypted btrfs root with opt-in state](https://mt-caret.github.io/blog/posts/2020-06-29-optin-state.html)
+- [blog - setting up my new laptop nix style](https://bmcgee.ie/posts/2022/12/setting-up-my-new-laptop-nix-style/)
+- [blog - tmpfs as root](https://elis.nu/blog/2020/05/nixos-tmpfs-as-root/)
+- [blog - tmpfs as home](https://elis.nu/blog/2020/06/nixos-tmpfs-as-home/)
+
+Migrating bash scripts to nix
+- https://www.youtube.com/watch?v=diIh0P12arA and https://www.youtube.com/watch?v=qRE6kf30u4g
+- Consider also the first comment "writeShellApplication over writeShellScriptBin. writeShellApplication also runs your shell script through shellcheck, great for people like me who write sloppy shell scripts. You can also specify runtime dependencies by doing runtimeInputs = [ cowsay ];, that way you can just write cowsay without having to reference the path to cowsay explicitly within the script"
+
+#### 9 Improved network handling
+
+- complete services.per-network-services branch
+- add firewall module
+
+#### 10 Improving remote
+
+##### 10.1 Automate config deployment
+
+- Per host branch scheme
+- Automated machine update on branch release
+- Handle general auto updates as well
+
+##### 10.2 Remote luks decryption
+
+The following has to happen on bare metal because I can't seem to get the yubikey's to redirect to the VM for use with git-agecrypt.
+
+- Remote LUKS decrypt over ssh for headless hosts
+  - need to set up age-crypt keys because this happens before sops and therefore we can't use nix-secrets
+  - add initrd-ssh module that will spawn an ssh service for use during boot
+
+##### 10.x Extras
+
+- Automatic scheduled sops rotate
+- Disk usage notifier
+
+
+#### 11. TBD
 
 - Re-implement modules to make use of options for enablement
 - Nixify floater laptop
