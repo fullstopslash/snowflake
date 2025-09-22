@@ -15,11 +15,6 @@ Blocked:
 
 ### Current roadmap focus items
 
-5.5
-- Setup starter repo
-    - ~~finish adding NOTE and FIXMEs for (starter)~~
-    - document basic usage for README
-
 6.1 - genoa
 - ~~bootstrap genoa~~
 - ~~sort out Thinkpad E15 hardware~~
@@ -181,7 +176,7 @@ Migrate primary box to NixOS
 - ~~hotkey for sleeping monitors (all or non-primary)~~
 - ~~set up copyq clipboard mgr~~
 
-#### 5. Refactoring and Refinement
+#### 5. Refactoring and Refinement - completed: 2025.09.22
 Some of the original parts of this stage have been split off to later stages because they are more Nice to Have at the moment.
 
 ##### 5.1 Reduce duplication and modularize
@@ -208,7 +203,7 @@ Some of the original parts of this stage have been split off to later stages bec
 
 ##### 5.5 Starter repo
 
-- Set up separate, stripped-down and simplified nix-config for new comers
+- ~~Set up separate, stripped-down and simplified nix-config for newcomers~~
 
 ##### 5.x Extras
 

@@ -81,6 +81,8 @@ Completed features will be added here as each stage is complete.
 
 This is a personalized configuration that has several technical requirements to build successfully. This nix-config will serve you best as a reference, learning resource, and template for crafting your own configuration. I am continuing to provide resources throughout this repository, my [YouTube channel](https://www.youtube.com/@Emergent_Mind), and [website](https://unmovedcentre.com) to help. For you to be successful, you must also experiment and learn as you go to create a nix environment that suits your needs.
 
+A stripped down and simplified version of this repository is available, however it does not have feature parity: [nix-config-starter](https://github.com/EmergentMind/nix-config-starter)
+
 ## Structure Quick Reference
 
 For details about design concepts, constraints, and how structural elements interact, see the article and/or Youtube video [Anatomy of a NixOS Config](https://unmovedcentre.com/posts/anatomy-of-a-nixos-config/) available on my website.
@@ -134,7 +136,7 @@ Secrets for this config are stored in a private repository called `nix-secrets` 
 
 For details on how this is accomplished, how to approach different scenarios, and troubleshooting for some common hurdles, please see my article and accompanying YouTube video [NixOS Secrets Management](https://unmovedcentre.com/posts/secrets-management/) available on my website. There is also a [nix-secrets-reference](https://github.com/EmergentMind/nix-secrets-reference) repository that can be used in conjunction with the article.
 
-## Support
+## Support The Project
 
 Sincere thanks to all of my generous supporters!
 
