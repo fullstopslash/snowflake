@@ -4,7 +4,7 @@
     firefox
     ungoogled-chromium
     microsoft-edge
-    floorp
+    floorp-bin
     ladybird
   ];
   programs.firefox = {

@@ -12,14 +12,12 @@
     atuin
     zoxide
     starship
-    direnv
     glow
 
     # Terminal
     ghostty
     kitty
     alacritty
-    foot
     rio
 
     # Terminal Toys
@@ -29,15 +27,23 @@
     # Shell completion
     carapace
   ];
-
-  # Nushell configuration (available as package, not as program)
-  # Nushell is installed as a package and configured via config files
-
-  # Carapace completion (available as package, not as program)
-  # Carapace is installed as a package and configured in nushell
-
-  # Shell programs configuration
   programs = {
+    foot = {
+      enable = true;
+      enableBashIntegration = true;
+      enableFishIntegration = true;
+      enableZshIntegration = true;
+    };
+    direnv.enable = true;
+
+    # Nushell configuration (available as package, not as program)
+    # Nushell is installed as a package and configured via config files
+
+    # Carapace completion (available as package, not as program)
+    # Carapace is installed as a package and configured in nushell
+
+    # Shell programs configuration
+
     starship = {
       enable = true;
       settings = {

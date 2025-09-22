@@ -102,11 +102,11 @@
     ];
   };
 
-  hardware.amdgpu.amdvlk = {
-    enable = true;
-    supportExperimental.enable = true;
-    support32Bit.enable = true;
-  };
+  # hardware.amdgpu.amdvlk = {
+  #   enable = true;
+  #   supportExperimental.enable = true;
+  #   support32Bit.enable = true;
+  # };
 
   # environment.variables.AMD_VULKAN_ICD = "RADV";
   services.lact.enable = true;

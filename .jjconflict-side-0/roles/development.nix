@@ -21,6 +21,7 @@
     luajitPackages.luarocks
     luajitPackages.magick
     jdk
+    go
 
     # Editors
     zed-editor

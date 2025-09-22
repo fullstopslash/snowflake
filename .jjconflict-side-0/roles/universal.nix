@@ -68,6 +68,7 @@
     uv
     yarn
     dotnet-sdk
+    go
 
     # Common Rust toolchain (used across multiple roles)
     rustc
@@ -96,9 +97,6 @@
     marksman
     ccache
     sccache
-
-    # KDE wallet PAM module for auto-unlock
-    kdePackages.kwallet-pam
   ];
 
   # Security settings
@@ -106,11 +104,7 @@
     polkit.enable = true;
     sudo.wheelNeedsPassword = false;
     rtkit.enable = true;
-    pam.services = {
-      login.kwallet.enable = true;
-      sddm.kwallet.enable = true;
-      sddm-greeter.kwallet.enable = true;
-    };
+    pam.services = {};
   };
 
   # Systemd configuration (consolidated to avoid repeated keys)
@@ -222,39 +216,26 @@
   };
 
   # Consolidate environment.* keys to avoid repeats flagged by statix
-  environment = {
-    variables = {
-      CC = "${pkgs.ccacheWrapper}/bin/cc";
-      CXX = "${pkgs.ccacheWrapper}/bin/c++";
-      RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
-      CCACHE_DIR = "/var/cache/ccache";
-      SCCACHE_DIR = "/var/cache/sccache";
-      CCACHE_MAXSIZE = "15G";
-      SCCACHE_CACHE_SIZE = "30G";
-      # Keep existing variables below; gaming env lives in gaming role
-    };
-
-    etc."kwalletrc".text = ''
-      [Wallet]
-      Enabled=true
-      AutoClose=false
-      AutoCloseTimeout=300
-      AutoCloseOnIdle=true
-      AutoCloseOnIdleTimeout=300
-      UseBlowfish=false
-      UseGPG=true
-      UseKSecretsService=true
-      UseKSecretsServiceTimeout=300
-      UseKSecretsServiceAutoClose=true
-      UseKSecretsServiceAutoCloseTimeout=300
-    '';
-  };
+  # environment = {
+  #   variables = {
+  #     CC = "${pkgs.ccacheWrapper}/bin/cc";
+  #     CXX = "${pkgs.ccacheWrapper}/bin/c++";
+  #     RUSTC_WRAPPER = "${pkgs.sccache}/bin/sccache";
+  #     CCACHE_DIR = "/home/rain/.cache/ccache";
+  #     SCCACHE_DIR = "/home/rain/.cache/sccache";
+  #     CCACHE_MAXSIZE = "15G";
+  #     SCCACHE_CACHE_SIZE = "30G";
+  #     # Keep existing variables below; gaming env lives in gaming role
+  #   };
+  #
+  #   # KWallet settings are configured in the Plasma role
+  # };
 
   # Ensure cache directories exist
-  systemd.tmpfiles.rules = [
-    "d /var/cache/ccache 0755 root root -"
-    "d /var/cache/sccache 0755 root root -"
-  ];
+  # systemd.tmpfiles.rules = [
+  #   "d /var/cache/ccache 0755 root root -"
+  #   "d /var/cache/sccache 0755 root root -"
+  # ];
 
   # Programs
   programs = {
@@ -312,19 +293,7 @@
         OOMScoreAdjust = 1000;
       };
     };
-    user.services.kwalletd = {
-      description = "KWallet user daemon";
-      after = ["default.target"];
-      wantedBy = ["default.target"];
-      serviceConfig = {
-        ExecStart = "${pkgs.kdePackages.kwallet}/bin/kwalletd6";
-        Restart = "on-failure";
-        RestartSec = 1;
-        Type = "simple";
-        # Ensure kwalletd starts after login
-        Environment = "DISPLAY=:0";
-      };
-    };
+    user.services = {};
   };
 
   # Power management

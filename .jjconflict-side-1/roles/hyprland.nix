@@ -1,10 +1,22 @@
 # Hyprland desktop role
-{pkgs, ...}: {
-  programs.hyprland = {
-    enable = true;
-    portalPackage = pkgs.xdg-desktop-portal-hyprland;
-    xwayland.enable = true;
+{pkgs, ...}: let
+  hypridleConf = pkgs.writeText "hypridle.conf" ''
+    general {
+      before_sleep_cmd = ${pkgs.hyprlock}/bin/hyprlock
+      after_sleep_cmd = ${pkgs.hyprland}/bin/hyprctl dispatch dpms on
+    }
+  '';
+in {
+  programs = {
+    hyprland = {
+      enable = true;
+      portalPackage = pkgs.xdg-desktop-portal-hyprland;
+      xwayland.enable = true;
+    };
+    hyprlock.enable = true;
   };
+
+  services.hypridle.enable = true;
 
   # Environment for Hyprland
   environment.sessionVariables = {
@@ -39,7 +51,7 @@
     enable = true;
     extraPortals = with pkgs; [
       xdg-desktop-portal-hyprland
-      xdg-desktop-portal-gtk
+      # xdg-desktop-portal-gtk
       # kdePackages.xdg-desktop-portal-kde
     ];
     # Common fallback so behavior is sane even if desktop detection differs
@@ -59,6 +71,10 @@
 
     hyprlock
     hyprpicker
+    hypridle
+    hyprls
+    kdePackages.kwallet
+    kdePackages.kwallet-pam
     kdePackages.breeze-icons
     kdePackages.breeze-gtk
     kdePackages.breeze
@@ -84,7 +100,6 @@
     # Additional scaling support
     xdg-utils
     xdg-desktop-portal-hyprland
-    xdg-desktop-portal-gtk
     # Tray/dbusmenu helpers for Waybar
     libdbusmenu-gtk3
     libayatana-appindicator
@@ -122,8 +137,31 @@
     })
   ];
 
+  # PAM integration for hyprlock
+  security.pam.services.hyprlock = {};
+  # Unlock KWallet at login for Hyprland sessions too
+  security.pam.services.login.kwallet.enable = true;
+
   # Systemd user services
   systemd.user.services = {
+    kwalletd = {
+      wantedBy = ["hyprland-session.target" "default.target"];
+      partOf = ["hyprland-session.target"];
+      after = ["hyprland-session.target" "dbus.service"];
+    };
+    hypridle = {
+      description = "Hypridle lock handler";
+      wantedBy = ["hyprland-session.target"];
+      partOf = ["hyprland-session.target"];
+      after = ["hyprland-session.target"];
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${pkgs.hypridle}/bin/hypridle -c ${hypridleConf}";
+        Restart = "on-failure";
+        RestartSec = 1;
+        Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.hyprland pkgs.hyprlock pkgs.coreutils]}";
+      };
+    };
     # Ensure portal environment is correct for Hyprland session only
     portal-env = {
       description = "Set portal environment for Hyprland";
@@ -174,7 +212,7 @@
         ExecStart = "${pkgs.waybar}/bin/waybar";
         Restart = "on-failure";
         RestartSec = 1;
-        Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.hyprland pkgs.wofi pkgs.rofi pkgs.pavucontrol pkgs.blueman pkgs.networkmanager pkgs.playerctl pkgs.helvum pkgs.brightnessctl pkgs.wireplumber pkgs.dunst]}";
+        Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.hyprland pkgs.kitty pkgs.networkmanager pkgs.wofi pkgs.rofi pkgs.pavucontrol pkgs.blueman pkgs.networkmanager pkgs.playerctl pkgs.helvum pkgs.brightnessctl pkgs.wireplumber pkgs.dunst]}";
         # Add delay to ensure Wayland is ready
         # ExecStartPre = "${pkgs.coreutils}/bin/sleep 2";
       };
@@ -230,5 +268,27 @@
         '';
       };
     };
+
+    # # Ensure EasyEffects sink is default at session start so Waybar controls it
+    # prefer-easyeffects-sink = {
+    #   description = "Prefer EasyEffects virtual sink as default";
+    #   wantedBy = ["hyprland-session.target"];
+    #   partOf = ["hyprland-session.target"];
+    #   after = ["hyprland-session.target" "wireplumber.service" "pipewire.service" "pipewire-pulse.service"];
+    #   serviceConfig = {
+    #     Type = "oneshot";
+    #     ExecStart = pkgs.writeShellScript "prefer-ee-sink" ''
+    #       #!/usr/bin/env sh
+    #       set -eu
+    #       # Allow pipewire graph to settle
+    #       ${pkgs.coreutils}/bin/sleep 1
+    #       EE_SINK=$(${pkgs.wireplumber}/bin/wpctl status | ${pkgs.gnugrep}/bin/grep -iE 'Sinks:' -A 50 | ${pkgs.gnugrep}/bin/grep -iE 'easy.*effects' | ${pkgs.gnused}/bin/sed -n 's/^\\s*\\([0-9]\\+\\)\\..*/\\1/p' | ${pkgs.coreutils}/bin/head -n1 || true)
+    #       if [ -n ''${EE_SINK:-} ]; then
+    #         ${pkgs.wireplumber}/bin/wpctl set-default "$EE_SINK" >/dev/null 2>&1 || true
+    #       fi
+    #       exit 0
+    #     '';
+    #   };
+    # };
   };
 }

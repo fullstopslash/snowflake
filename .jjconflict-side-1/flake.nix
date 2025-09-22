@@ -4,6 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-25.05";
+    starship-jj.url = "gitlab:lanastara_foss/starship-jj";
     deploy-rs = {
       url = "github:serokell/deploy-rs";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -35,10 +36,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Fix Dolphin OpenURI behavior via overlay
-    dolphin-overlay = {
-      url = "github:rumboon/dolphin-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # dolphin-overlay = {
+    #   url = "github:rumboon/dolphin-overlay";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
   };
 
   outputs = {
@@ -85,7 +86,7 @@
                   doCheck = false;
                 });
               })
-              inputs.dolphin-overlay.overlays.default
+              # inputs.dolphin-overlay.overlays.default
             ];
           }
           # Host-specific configuration
@@ -125,7 +126,7 @@
     # CI checks for deploy-rs
     checks.${system} = inputs.deploy-rs.lib.${system}.deployChecks self.deploy;
 
-    # ISO build outputs
+    # ISO build outputs and local packages
     packages = {
       "${system}" = {
         iso-installer = inputs.nixos-generators.nixosGenerate {

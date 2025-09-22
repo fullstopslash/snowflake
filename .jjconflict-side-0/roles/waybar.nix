@@ -60,7 +60,7 @@
           "format": "{icon} {volume}%",
           "format-muted": "",
           "format-icons": { "default": ["", "", ""] },
-          "on-click": "pavucontrol"
+          "on-click": "pavucontrol",
         },
 
         "network": {

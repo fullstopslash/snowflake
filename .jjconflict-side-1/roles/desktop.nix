@@ -74,6 +74,7 @@
             #!/usr/bin/env sh
             set -eu
             # Restart user audio daemons
+            sleep .1;
             systemctl --user restart wireplumber.service pipewire.service pipewire-pulse.service >/dev/null 2>&1 || true
             # Restart EasyEffects if available
             if systemctl --user list-unit-files | ${pkgs.gnugrep}/bin/grep -q '^easyeffects'; then
@@ -120,7 +121,7 @@
         wantedBy = ["default.target"];
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${pkgs.curl}/bin/curl https://ntfy.chimera-micro.ts.net/waterbug-alerts -d 'Resumed: \"Graphical\"' -H 'Tags: skull' ";
+          ExecStart = "${pkgs.curl}/bin/curl https://ntfy.chimera-micro.ts.net/waterbug-alerts -d 'Resumed: \"Graphical-session\"' -H 'Tags: skull' ";
           RemainAfterExit = true;
         };
       };

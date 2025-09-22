@@ -46,4 +46,40 @@
     };
     desktopManager.plasma6.enable = true;
   };
+
+  # KWallet + PAM integration scoped to Plasma/S.D.D.M.
+  security.pam.services = {
+    login.kwallet.enable = true;
+    sddm.kwallet.enable = true;
+    sddm-greeter.kwallet.enable = true;
+  };
+
+  # KWallet runtime config
+  environment.etc."kwalletrc".text = ''
+    [Wallet]
+    Enabled=true
+    AutoClose=false
+    AutoCloseTimeout=300
+    AutoCloseOnIdle=true
+    AutoCloseOnIdleTimeout=300
+    UseBlowfish=false
+    UseGPG=true
+    UseKSecretsService=true
+    UseKSecretsServiceTimeout=300
+    UseKSecretsServiceAutoClose=true
+    UseKSecretsServiceAutoCloseTimeout=300
+  '';
+
+  # kwalletd user service for Plasma sessions
+  systemd.user.services.kwalletd = {
+    description = "KWallet user daemon";
+    after = ["plasma-workspace.service" "dbus.service"];
+    wantedBy = ["plasma-workspace.target" "default.target"]; # ensure it starts in Plasma sessions
+    serviceConfig = {
+      ExecStart = "${pkgs.kdePackages.kwallet}/bin/kwalletd6";
+      Restart = "on-failure";
+      RestartSec = 1;
+      Type = "simple";
+    };
+  };
 }

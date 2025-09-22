@@ -15,8 +15,16 @@
     wezterm
     managarr
 
+    skim
+    antidote
+
+    hyperfine
+
+    asciinema_3
+
     qrencode
     fortune-kind
+    glab
     # personal management
     khard
     khal

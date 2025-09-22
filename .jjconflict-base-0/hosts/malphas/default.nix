@@ -46,6 +46,7 @@
     ../../roles/document-processing.nix
     ../../roles/cli-tools.nix
     ../../roles/containers.nix
+    ../../roles/rust-packages.nix
     # ../../roles/ollama.nix  # enable when ready
     # ../../modules/hdr.nix
     ../../modules/ssh-no-sleep.nix
@@ -68,8 +69,15 @@
       };
       efi.canTouchEfiVariables = true;
     };
+    plymouth = {
+      enable = true;
+      theme = "bgrt";
+      themePackages = [pkgs.nixos-bgrt-plymouth];
+    };
+
     kernelParams = [
       "quiet"
+      "splash"
       "systemd.show_status=0"
       "rd.systemd.show_status=0"
       "amd_pstate=active"
@@ -79,8 +87,13 @@
     kernelPackages = pkgs.linuxPackages_zen;
 
     initrd.kernelModules = ["amdgpu"];
-    kernel.sysctl."net.ipv4.conf.all.forwarding" = true;
-    kernel.sysctl."net.ipv6.conf.all.forwarding" = true;
+    kernel.sysctl = {
+      "net.ipv4.conf.all.forwarding" = true;
+      "net.ipv6.conf.all.forwarding" = true;
+      # Accept IPv6 Router Advertisements even when forwarding is enabled
+      "net.ipv6.conf.all.accept_ra" = 2;
+      "net.ipv6.conf.default.accept_ra" = 2;
+    };
   };
 
   users.mutableUsers = false;
@@ -105,4 +118,28 @@
     enableAutoLogin = true;
     syncInterval = 30;
   };
+
+  # Explicit networking preferences for this host
+  networking = {
+    # Ensure IPv6 is enabled
+    enableIPv6 = true;
+    # Use local DNS server directly instead of router DNS
+    nameservers = [
+      "192.168.86.82"
+    ];
+  };
+
+  # Prefer public fallbacks in systemd-resolved (primary set via networking.nameservers)
+  services.resolved.fallbackDns = [
+    "1.1.1.1"
+    "8.8.8.8"
+  ];
+
+  # Force systemd-resolved to use the LAN DNS for all lookups by default
+  # This prevents DHCP-provided DNS from taking precedence
+  services.resolved.extraConfig = ''
+    [Resolve]
+    DNS=192.168.86.82
+    Domains=~.
+  '';
 }
