@@ -179,5 +179,8 @@
       url = "git+ssh://git@gitlab.com/emergentmind/nix-secrets.git?ref=main&shallow=1";
       inputs = { };
     };
+    nix-assets = {
+      url = "github:emergentmind/nix-assets";
+    };
   };
 }
