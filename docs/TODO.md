@@ -3,6 +3,8 @@
 [README](../README.md) > Roadmap of TODOs
 
 ## Short Term
+- multi-user stuff
+- add nix.nix module
 - Stop calendar notifications from stealing focus... sort of dealt with using 'noinitialfocus' dispatcher but it happens immediately after focus has already been stolen
 
 Blocked:
@@ -23,6 +25,9 @@ Blocked:
     - knownhosts not written
 - enable backup
 - ~~laptop utils~~
+
+6.2 - Refactor multiuser
+- refactor how multiuser works ala fidgetingbits' changes
 
 #### General workflow improvements
 
