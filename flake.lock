@@ -319,6 +319,21 @@
         "type": "github"
       }
     },
+    "nix-assets": {
+      "locked": {
+        "lastModified": 1758663031,
+        "narHash": "sha256-/m/l0YVhO+dPswxtQoPx6R4U8bQiqNjwQB8C5+5oaPs=",
+        "owner": "emergentmind",
+        "repo": "nix-assets",
+        "rev": "7b1c77476aa7be1ed83aac5cb1d90869583ec01c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "emergentmind",
+        "repo": "nix-assets",
+        "type": "github"
+      }
+    },
     "nix-darwin": {
       "inputs": {
         "nixpkgs": [
@@ -587,6 +602,7 @@
         "disko": "disko",
         "hardware": "hardware",
         "home-manager": "home-manager",
+        "nix-assets": "nix-assets",
         "nix-darwin": "nix-darwin",
         "nix-secrets": "nix-secrets",
         "nixpkgs": "nixpkgs_2",
