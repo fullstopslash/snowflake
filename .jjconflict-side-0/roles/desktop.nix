@@ -191,7 +191,7 @@
     xfce.thunar
 
     inkscape
-    calibre
+    stable.calibre
     unrar
 
     upscayl

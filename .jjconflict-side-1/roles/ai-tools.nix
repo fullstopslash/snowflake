@@ -1,5 +1,5 @@
 # AI tools role: install mcp-nixos
-{ pkgs, ... }: {
+{pkgs, ...}: {
   environment.systemPackages = with pkgs; [
     mcp-nixos
   ];

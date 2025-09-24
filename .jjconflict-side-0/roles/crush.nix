@@ -6,7 +6,7 @@
 }: {
   # Crush from nix-ai-tools flake
   environment.systemPackages = with inputs.nix-ai-tools.packages.${pkgs.system}; [
-    crush
+    # crush
   ];
 
   # Optional: Add any system-wide configuration if needed
