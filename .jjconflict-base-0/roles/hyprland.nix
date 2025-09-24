@@ -219,7 +219,8 @@ in {
         ExecStart = "${pkgs.waybar}/bin/waybar";
         Restart = "on-failure";
         RestartSec = 1;
-        Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.hyprland pkgs.kitty pkgs.networkmanager pkgs.wofi pkgs.rofi pkgs.pavucontrol pkgs.blueman pkgs.networkmanager pkgs.playerctl pkgs.helvum pkgs.brightnessctl pkgs.wireplumber pkgs.dunst]}";
+        Environment = "PATH=/run/current-system/sw/bin:/bin:%h/.local/bin";
+        WorkingDirectory = "%h/.config/waybar";
         # Add delay to ensure Wayland is ready
         # ExecStartPre = "${pkgs.coreutils}/bin/sleep 2";
       };

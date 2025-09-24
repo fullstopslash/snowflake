@@ -63,6 +63,7 @@ in {
       neovim
       networkmanager
       iw
+      rsync
       wirelesstools
     ];
 

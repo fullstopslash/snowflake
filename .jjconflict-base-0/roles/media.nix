@@ -13,12 +13,15 @@
     jellyfin-mpv-shim
     feishin
     ffmpeg-full
-    libcec
+    stable.libcec
 
     # Media players
     vlc
     socat # for mpv-shim stuff
     mpv
+    mpd
+    mpd-mpris
+    mpd-sima
     rmpc
     spotify
 

@@ -213,6 +213,6 @@ in {
 
   environment.systemPackages = with pkgs; [
     ktailctl
-    stable.tailscale
+    tailscale
   ];
 }

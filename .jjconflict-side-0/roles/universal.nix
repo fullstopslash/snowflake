@@ -138,6 +138,7 @@
       "i2c"
       "docker"
       "uinput"
+      "dialout"
       "input"
     ];
     # packages = with pkgs; [

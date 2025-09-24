@@ -73,6 +73,8 @@
     khard
     khal
     vdirsyncer
+    sqlite
+    exiftool
 
     # pinentry variants
     pinentry-all

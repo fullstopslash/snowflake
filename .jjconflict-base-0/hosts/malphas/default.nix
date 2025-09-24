@@ -18,7 +18,7 @@
     ../../roles/flatpak.nix
     ../../roles/audio-tuning.nix
     ../../roles/gaming.nix
-    ../../roles/moondeck-buddy.nix
+    # ../../roles/moondeck-buddy.nix
     ../../roles/development.nix
     ../../roles/crush.nix
     ../../roles/media.nix
@@ -80,7 +80,8 @@
       "transparent_hugepage=madvise"
     ];
     # boot.kernelPackages = pkgs.linuxPackages_cachyos;
-    kernelPackages = pkgs.linuxPackages_zen;
+    # kernelPackages = pkgs.linuxPackages_zen;
+    kernelPackages = pkgs.linuxPackages_latest;
 
     initrd.kernelModules = ["amdgpu"];
     kernel.sysctl = {

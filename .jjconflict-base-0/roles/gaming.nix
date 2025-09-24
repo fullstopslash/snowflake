@@ -21,6 +21,8 @@
       localNetworkGameTransfers.openFirewall = true;
       extraCompatPackages = with pkgs; [
         proton-ge-bin
+        # mcpelauncher-ui-qt
+        # mcpelauncher-client
       ];
     };
   };
@@ -97,6 +99,7 @@
 
     # Gaming utilities
     mangohud
+    mangojuice
 
     # gamescope
     #   (writeShellScriptBin "gamescope-hdr" ''
@@ -125,7 +128,7 @@
   # Gaming-specific graphics env
   environment.variables = {
     RADV_PERFTEST = "aco";
-    vblank_mode = "0";
+    # vblank_mode = "0";
     MESA_SHADER_CACHE_MAX_SIZE = "4G";
     mesa_glthread = "true";
   };

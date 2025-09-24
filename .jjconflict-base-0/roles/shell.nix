@@ -24,7 +24,8 @@
       enableFishIntegration = true;
       enableZshIntegration = true;
     };
-    direnv.enable = true;
+
+    # direnv.enable = true;
 
     # Nushell configuration (available as package, not as program)
     # Nushell is installed as a package and configured via config files

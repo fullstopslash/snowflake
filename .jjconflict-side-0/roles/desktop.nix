@@ -198,7 +198,7 @@
     upscayl-ncnn
     realesrgan-ncnn-vulkan
     genxword
-    stable.gitbutler
+    # stable.gitbutler
 
     # Email and password management
     thunderbird

@@ -82,9 +82,17 @@
               })
               # Disable upstream tailscale test suite (fails in sandbox); build binary only
               (_: prev: {
-                tailscale = prev.tailscale.overrideAttrs (_: {
-                  doCheck = false;
+                tailscale = prev.stable.tailscale;
+                gamescope = prev.stable.gamescope;
+                allegro = prev.allegro.overrideAttrs (old: {
+                  cmakeFlags = (old.cmakeFlags or []) ++ ["-DCMAKE_POLICY_VERSION_MINIMUM=3.5"];
                 });
+                ucd-tools = prev.stable.ucd-tools;
+                "piper-tts" = prev.stable."piper-tts";
+                calibre = prev.stable.calibre;
+                texlive = prev.stable.texlive;
+                karakeep = prev.stable.karakeep;
+                texlivePackages = prev.stable.texlivePackages;
               })
               # inputs.dolphin-overlay.overlays.default
             ];
