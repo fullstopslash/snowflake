@@ -140,7 +140,14 @@ in {
   # PAM integration for hyprlock
   security.pam.services.hyprlock = {};
   # Unlock KWallet at login for Hyprland sessions too
-  security.pam.services.login.kwallet.enable = true;
+  security.pam.services = {
+    login.kwallet.enable = true;
+    sddm.kwallet.enable = true;
+    sddm-greeter.kwallet.enable = true;
+  };
+
+  services.dbus.enable = true;
+  programs.dconf.enable = true;
 
   # Systemd user services
   systemd.user.services = {

@@ -14,16 +14,6 @@
     starship
     glow
 
-    # Terminal
-    ghostty
-    kitty
-    alacritty
-    rio
-
-    # Terminal Toys
-    neo
-    tmatrix
-
     # Shell completion
     carapace
   ];

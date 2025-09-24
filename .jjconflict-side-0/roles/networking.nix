@@ -25,6 +25,19 @@
   # Optional: soften DNSSEC to avoid flaky captive/Wi‑Fi resumes
   # Core network services; split others into dedicated roles
   services = {
+    avahi = {
+      enable = true;
+      nssmdns4 = true;
+      publish = {
+        enable = true;
+        addresses = true;
+        domain = true;
+        hinfo = true;
+        userServices = true;
+        workstation = true;
+      };
+      allowInterfaces = ["tailscale0"]; # optimized startup
+    };
     resolved = {
       enable = true;
       dnssec = "allow-downgrade";

@@ -104,7 +104,6 @@
     polkit.enable = true;
     sudo.wheelNeedsPassword = false;
     rtkit.enable = true;
-    pam.services = {};
   };
 
   # Systemd configuration (consolidated to avoid repeated keys)

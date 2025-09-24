@@ -28,7 +28,7 @@ _: {
       "nfsvers=4.2"
       "rsize=1048576"
       "wsize=1048576"
-      "hard"
+      # "hard"
       "intr"
       "timeo=14"
       # "noatime"
@@ -66,7 +66,7 @@ _: {
         Options = [
           "noatime"
           "nfsvers=4.2"
-          "hard"
+          # "hard"
         ];
         TimeoutSec = "30";
       };

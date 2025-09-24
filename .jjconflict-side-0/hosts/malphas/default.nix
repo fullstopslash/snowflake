@@ -15,10 +15,7 @@
     ../../roles/desktop.nix
     ../../roles/plasma.nix
     ../../roles/hyprland.nix
-    ../../roles/browsers.nix
-    ../../roles/printing.nix
     ../../roles/flatpak.nix
-    ../../roles/openrgb.nix
     ../../roles/audio-tuning.nix
     ../../roles/gaming.nix
     ../../roles/moondeck-buddy.nix
@@ -30,7 +27,6 @@
     ../../roles/networking.nix
     ../../roles/vpn.nix
     ../../roles/tailscale.nix
-    ../../roles/mdns.nix
     ../../roles/syncthing.nix
     ../../roles/network-storage.nix
     ../../roles/bitwarden-automation.nix
@@ -41,10 +37,10 @@
     ../../roles/stylix.nix
     ../../roles/fonts.nix
     ../../roles/shell.nix
-    ../../roles/utilities.nix
     ../../roles/voice-assistant.nix
     ../../roles/document-processing.nix
     ../../roles/cli-tools.nix
+    ../../roles/ai-tools.nix
     ../../roles/containers.nix
     ../../roles/rust-packages.nix
     # ../../roles/ollama.nix  # enable when ready

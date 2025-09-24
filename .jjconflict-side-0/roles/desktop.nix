@@ -8,6 +8,8 @@
 
   # Display manager and desktop services
   services = {
+    hardware.openrgb.enable = true;
+    printing.enable = true;
     # Display manager / desktop moved to roles/plasma.nix and roles/hyprland.nix
     power-profiles-daemon.enable = true;
     pipewire = {
@@ -35,6 +37,12 @@
 
   # Desktop programs
   programs = {
+    firefox = {
+      enable = true;
+      nativeMessagingHosts.packages = [
+        pkgs.tridactyl-native
+      ];
+    };
     kdeconnect.enable = true;
   };
 
@@ -144,6 +152,13 @@
 
   # System packages for desktop
   environment.systemPackages = with pkgs; [
+    # Browsers
+    firefox
+    ungoogled-chromium
+    microsoft-edge
+    floorp-bin
+    ladybird
+
     # Desktop utilities
     input-leap
     pywal16
@@ -154,6 +169,16 @@
     karakeep
     # ventoy-full-qt
     # ventoy
+
+    # Terminal
+    ghostty
+    kitty
+    alacritty
+    rio
+
+    # Terminal Toys
+    neo
+    tmatrix
 
     #Development utils for Desktop
     meld
@@ -173,6 +198,14 @@
     upscayl-ncnn
     realesrgan-ncnn-vulkan
     genxword
+    stable.gitbutler
+
+    # Email and password management
+    thunderbird
+    keepassxc
+
+    # Wine with Wayland support
+    wineWowPackages.waylandFull
 
     # Office
     obsidian

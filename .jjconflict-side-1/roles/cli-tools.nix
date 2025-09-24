@@ -1,6 +1,50 @@
 # CLI tools rollup role (temporary consolidation)
 {pkgs, ...}: {
+  programs = {
+    bat.enable = true;
+    mosh.enable = true;
+  };
+  services.eternal-terminal.enable = true;
+
   environment.systemPackages = with pkgs; [
+    # Input remapping
+    kanata-with-cmd
+
+    # Node.js
+    nodejs
+
+    # File management
+    yazi
+    chezmoi
+    gnupg
+    gopass
+    ripgrep
+    ripgrep-all
+    bat-extras.batgrep
+    bat
+
+    # TUIs
+    entr
+    btop
+    btop-rocm
+    ncdu
+
+    # Compression
+    p7zip
+
+    # System tools
+    pv
+    lsof
+    fd
+    age
+    age-plugin-yubikey
+    zstd
+    jq
+    yq-go
+    rclone
+    mkpasswd
+    pwgen
+
     # developer utilities
     delta
     eza
@@ -47,8 +91,4 @@
     lynx
     w3m
   ];
-  programs = {
-    mosh.enable = true;
-  };
-  services.eternal-terminal.enable = true;
 }
