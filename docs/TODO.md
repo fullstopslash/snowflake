@@ -3,8 +3,6 @@
 [README](../README.md) > Roadmap of TODOs
 
 ## Short Term
-- multi-user stuff
-- add nix.nix module
 - Stop calendar notifications from stealing focus... sort of dealt with using 'noinitialfocus' dispatcher but it happens immediately after focus has already been stolen
 
 Blocked:

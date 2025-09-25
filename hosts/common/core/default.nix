@@ -22,11 +22,10 @@ in
       "modules/hosts/common"
       "modules/hosts/${platform}"
       "hosts/common/core/${platform}.nix"
+      "hosts/common/core/keyd.nix"
       "hosts/common/core/sops.nix" # Core because it's used for backups, mail
       "hosts/common/core/ssh.nix"
-      #"hosts/common/core/services" #not used yet
-      "hosts/common/users/primary"
-      "hosts/common/users/primary/${platform}.nix"
+      "hosts/common/users/"
     ])
   ];
 
@@ -65,39 +64,6 @@ in
     ];
     config = {
       allowUnfree = true;
-    };
-  };
-
-  #
-  # ========== Nix Nix Nix ==========
-  #
-  nix = {
-    # This will add each flake input as a registry
-    # To make nix3 commands consistent with your flake
-    registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
-
-    # This will add your inputs to the system's legacy channels
-    # Making legacy nix commands consistent as well, awesome!
-    nixPath = lib.mapAttrsToList (key: value: "${key}=${value.to.path}") config.nix.registry;
-
-    settings = {
-      # See https://jackson.dev/post/nix-reasonable-defaults/
-      connect-timeout = 5;
-      log-lines = 25;
-      min-free = 128000000; # 128MB
-      max-free = 1000000000; # 1GB
-
-      trusted-users = [ "@wheel" ];
-      # Deduplicate and optimize nix store
-      auto-optimise-store = true;
-      warn-dirty = false;
-
-      allow-import-from-derivation = true;
-
-      experimental-features = [
-        "nix-command"
-        "flakes"
-      ];
     };
   };
 

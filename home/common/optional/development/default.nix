@@ -121,11 +121,25 @@ in
     ];
   };
 
-  home.file.".ssh/allowed_signers".text = ''
-    ${publicGitEmail} ${lib.fileContents (lib.custom.relativeToRoot "hosts/common/users/primary/keys/id_maya.pub")}
-    ${publicGitEmail} ${lib.fileContents (lib.custom.relativeToRoot "hosts/common/users/primary/keys/id_mara.pub")}
-    ${publicGitEmail} ${lib.fileContents (lib.custom.relativeToRoot "hosts/common/users/primary/keys/id_manu.pub")}
-  '';
+  home.file.".ssh/allowed_signers".text =
+    let
+      #FIXME(multiuser): This would need to change if we ever have multiple developer accounts on the same box or we have work keys that aren't our own yubikeys, etc
+      keypath = "hosts/common/users/${config.hostSpec.username}/keys/";
+      genEmailKeys =
+        email: keys:
+        lib.concatMapStringsSep "\n" (
+          key: "${email} ${lib.fileContents (lib.custom.relativeToRoot "${keypath}/${key}")}\n"
+        ) keys;
+    in
+    ''
+      ${genEmailKeys publicGitEmail [
+        "id_maya.pub"
+        "id_mara.pub"
+        "id_manu.pub"
+      ]}
+      ${genEmailKeys workEmail [
+      ]}
+    '';
 
   home.file."${privateGitConfig}".text = ''
     [user]

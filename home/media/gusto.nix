@@ -1,15 +1,25 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 {
-  imports = [
-    #################### Required Configs ####################
-    common/core # required
-
-    #################### Host-specific Optional Configs ####################
-  ];
+  imports = (
+    map lib.custom.relativeToRoot (
+      #################### Required Configs ####################
+      # FIXME: remove after fixing user/home values in HM
+      [
+        "home/common/core"
+        "home/common/core/nixos.nix"
+      ]
+      #################### Host-specific Optional Configs ####################
+      ++ (map (f: "home/common/optional/${f}") [
+        # FIXME: need to setup a key first
+        # "atuin.nix"
+        "ghostty.nix"
+      ])
+    )
+  );
 
   home.packages = builtins.attrValues {
     inherit (pkgs)
-      mpv
+      mpv # secondary media player
       ;
   };
 }

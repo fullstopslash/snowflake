@@ -69,6 +69,11 @@
     useYubikey = lib.mkForce true;
     persistFolder = "/persist"; # added for "completion" because of the disko spec that was used even though impermanence isn't actually enabled here yet.
 
+    user = lib.mkForce [
+      "ta"
+      "media"
+    ];
+
     #TODO: style for gusto: Need to refactor hostSpec
     #base16Scheme = "${pkgs.base16-schemes}/share/themes/rose-pine-moon.yaml";
   };

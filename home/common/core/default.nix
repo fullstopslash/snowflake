@@ -34,8 +34,6 @@ in
 
   inherit hostSpec;
 
-  services.ssh-agent.enable = true;
-
   home = {
     username = lib.mkDefault config.hostSpec.username;
     homeDirectory = lib.mkDefault config.hostSpec.home;

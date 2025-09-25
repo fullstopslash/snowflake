@@ -14,12 +14,14 @@ let
     "gooey"
     "grief"
     "guppy"
-  ] ++ inputs.nix-secrets.networking.ssh.yubikeyHostsWithDomain;
+  ]
+  ++ inputs.nix-secrets.networking.ssh.yubikeyHostsWithDomain;
 
   yubikeyHostsWithoutDomain = [
     config.hostSpec.networking.subnets.grove.wildcard
     config.hostSpec.networking.subnets.vm-lan.wildcard
-  ] ++ inputs.nix-secrets.networking.ssh.yubikeyHosts;
+  ]
+  ++ inputs.nix-secrets.networking.ssh.yubikeyHosts;
 
   # Add domain to each host name
   genDomains = lib.map (h: "${h}.${config.hostSpec.domain}");
@@ -35,13 +37,13 @@ let
     forwardAgentHosts ++ (genDomains forwardAgentHosts)
   );
 
-  pathtokeys = lib.custom.relativeToRoot "hosts/common/users/primary/keys";
+  pathToKeys = lib.custom.relativeToRoot "hosts/common/users/${config.hostSpec.primaryUsername}/keys/";
   yubikeys =
-    lib.lists.forEach (builtins.attrNames (builtins.readDir pathtokeys))
+    lib.lists.forEach (builtins.attrNames (builtins.readDir pathToKeys))
       # Remove the .pub suffix
       (key: lib.substring 0 (lib.stringLength key - lib.stringLength ".pub") key);
   yubikeyPublicKeyEntries = lib.attrsets.mergeAttrsList (
-    lib.lists.map (key: { ".ssh/${key}.pub".source = "${pathtokeys}/${key}.pub"; }) yubikeys
+    lib.lists.map (key: { ".ssh/${key}.pub".source = "${pathToKeys}/${key}.pub"; }) yubikeys
   );
 
   identityFiles = [
@@ -144,5 +146,6 @@ in
   home.file = {
     ".ssh/config.d/.keep".text = "# Managed by Home Manager";
     ".ssh/sockets/.keep".text = "# Managed by Home Manager";
-  } // yubikeyPublicKeyEntries;
+  }
+  // yubikeyPublicKeyEntries;
 }

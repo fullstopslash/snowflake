@@ -14,8 +14,6 @@ let
     "maya"
     "mara"
     "manu"
-    "mila"
-    "meek"
   ];
   yubikeySecrets =
     # extract to default pam-u2f authfile location for passwordless sudo. see modules/common/yubikey
@@ -47,6 +45,7 @@ in
       #placeholder for tokens that I haven't gotten to yet
       #"tokens/foo" = {
       #};
-    } // yubikeySecrets;
+    }
+    // yubikeySecrets;
   };
 }

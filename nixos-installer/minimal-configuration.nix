@@ -10,8 +10,7 @@
     (map lib.custom.relativeToRoot [
       "modules/common/host-spec.nix"
       "hosts/common/core/ssh.nix"
-      "hosts/common/users/primary"
-      "hosts/common/users/primary/nixos.nix"
+      "hosts/common/users"
       "hosts/common/optional/minimal-user.nix"
     ])
   ];

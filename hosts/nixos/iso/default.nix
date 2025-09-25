@@ -14,12 +14,17 @@
     # This is overkill but I want my core home level utils if I need to use the iso environment for recovery purpose
     inputs.home-manager.nixosModules.home-manager
     (map lib.custom.relativeToRoot [
-      "modules/common/host-spec.nix"
-      # We want primary default so we get ssh authorized keys, zsh, and some basic tty tools. It also pulls in the hm spec for iso.
-      # Note that we are not pulling in "hosts/common/users/primary/nixos.nix" for the iso as it's not needed.
-      "hosts/common/users/primary/"
+      # FIXME: Switch this to just import hosts/common/core (though have to be careful to purposefully not add platform file..
       "hosts/common/optional/minimal-user.nix"
+      "hosts/common/core/keyd.nix" # FIXME: Remove if we move to hosts/common/core above
+      "modules/common/host-spec.nix"
     ])
+    (
+      let
+        path = lib.custom.relativeToRoot "hosts/common/users/${config.hostSpec.username}/default.nix";
+      in
+      lib.optional (lib.pathExists path) path
+    )
   ];
 
   hostSpec = {
