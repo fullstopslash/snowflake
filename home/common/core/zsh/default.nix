@@ -1,14 +1,36 @@
 {
-  config,
   pkgs,
   lib,
   ...
 }:
-let
-  devDirectory = "~/src";
-  devNix = "${devDirectory}/nix";
-in
 {
+  #
+  # ========= Programs integrated to zsh via option or alias =========
+  #
+
+  #Adding these packages here because the are tied to zsh
+  home.packages = [
+    pkgs.rmtrash # temporarily cache deleted files for recovery
+    pkgs.fzf # fuzzy finder used by initExtra.zsh
+    pkgs.comma # run ", command" to run a cmd in temp nix shel
+  ];
+  #required by comma above
+  programs.nix-index = {
+    enable = true;
+    enableZshIntegration = true;
+  };
+  programs.zoxide = {
+    enable = true;
+    enableBashIntegration = true;
+    enableZshIntegration = true;
+    options = [
+      "--cmd cd" # replace cd with z and zi (via cdi)
+    ];
+  };
+
+  #
+  # ========= Actual zsh options =========
+  #
   programs.zsh = {
     enable = true;
 
@@ -21,38 +43,13 @@ in
     history.size = 10000;
     history.share = true;
 
-    plugins = [
-      {
-        name = "powerlevel10k-config";
-        src = ./p10k;
-        file = "p10k.zsh.theme";
-      }
-      {
-        name = "zsh-powerlevel10k";
-        src = "${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/";
-        file = "powerlevel10k.zsh-theme";
-      }
-    ]
-    # The iso doesn't use our overlays, so don't add custom packagesa
-    #FIXME:move these to an optional custom plugins module and remove iso check
-    ++ lib.optionals (config.hostSpec.hostName != "iso") [
-      {
-        name = "zsh-term-title";
-        src = "${pkgs.zsh-term-title}/share/zsh/zsh-term-title/";
-      }
-      {
-        name = "cd-gitroot";
-        src = "${pkgs.cd-gitroot}/share/zsh/cd-gitroot";
-      }
-      {
-        name = "zhooks";
-        src = "${pkgs.zhooks}/share/zsh/zhooks";
-      }
-      {
-        name = "you-should-use";
-        src = "${pkgs.zsh-you-should-use}/share/zsh/plugins/you-should-use";
-      }
-    ];
+    # NOTE: zsh module will load *.plugin.zsh files by default if they are located in the src=<folder>, so
+    # supply the full folder path to the plugin in src=. To find the correct path, atm you must check the
+    # plugins derivation until PR XXXX (file issue) is fixed
+
+    plugins = import ./plugins.nix {
+      inherit pkgs lib;
+    };
 
     initContent = lib.mkMerge [
       (lib.mkBefore ''
@@ -81,59 +78,6 @@ in
       '';
     };
 
-    shellAliases = {
-      # Overrides those provided by OMZ libs, plugins, and themes.
-      # For a full list of active aliases, run `alias`.
-
-      #-------------Bat related------------
-      cat = "bat --paging=never";
-      diff = "batdiff";
-      rg = "batgrep";
-      man = "batman";
-
-      #------------Navigation------------
-      doc = "cd $HOME/documents";
-      scripts = "cd $HOME/scripts";
-      ts = "cd $HOME/.talon/user/fidget";
-      src = "cd $HOME/src";
-      edu = "cd $HOME/src/edu";
-      wiki = "cd $HOME/sync/obsidian-vault-01/wiki";
-      uc = "cd $HOME/src/unmoved-centre";
-      l = "eza -lah";
-      la = "eza -lah";
-      ll = "eza -lh";
-      ls = "eza";
-      lsa = "eza -lah";
-
-      #------------Nix src navigation------------
-      cnc = "cd ${devNix}/nix-config";
-      cns = "cd ${devNix}/nix-secrets";
-      cnh = "cd ${devNix}/nixos-hardware";
-      cnp = "cd ${devNix}/nixpkgs";
-
-      #-----------Nix commands----------------
-      nfc = "nix flake check";
-      ne = "nix instantiate --eval";
-      nb = "nix build";
-      ns = "nix shell";
-
-      #-------------justfiles---------------
-      jr = "just rebuild";
-      jrt = "just rebuild-trace";
-      jl = "just --list";
-      jc = "$just check";
-      jct = "$just check-trace";
-
-      #-------------Neovim---------------
-      e = "nvim";
-      vi = "nvim";
-      vim = "nvim";
-
-      #-------------SSH---------------
-      ssh = "TERM=xterm ssh";
-
-      #-------------Git Goodness-------------
-      # just reference `$ alias` and use the defaults, they're good.
-    };
+    shellAliases = import ./aliases.nix;
   };
 }

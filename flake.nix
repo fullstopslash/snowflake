@@ -139,6 +139,10 @@
     #
     # ========= Utilities =========
     #
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Declarative partitioning and formatting
     disko = {
       url = "github:nix-community/disko";

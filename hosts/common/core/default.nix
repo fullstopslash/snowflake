@@ -16,15 +16,19 @@ in
   imports = lib.flatten [
     inputs.home-manager.${platformModules}.home-manager
     inputs.sops-nix.${platformModules}.sops
+    inputs.nix-index-database.${platformModules}.nix-index
+    { programs.nix-index-database.comma.enable = true; }
 
     (map lib.custom.relativeToRoot [
       "modules/common"
       "modules/hosts/common"
       "modules/hosts/${platform}"
+
       "hosts/common/core/${platform}.nix"
       "hosts/common/core/keyd.nix"
       "hosts/common/core/sops.nix" # Core because it's used for backups, mail
       "hosts/common/core/ssh.nix"
+
       "hosts/common/users/"
     ])
   ];

@@ -29,7 +29,6 @@ in
     ./kitty.nix
     ./screen.nix
     ./ssh.nix
-    ./zoxide.nix
   ];
 
   inherit hostSpec;
@@ -141,7 +140,6 @@ in
         dust # disk usage
         fd # tree style ls
         findutils # find
-        fzf # fuzzy search
         jq # json pretty printer and manipulator
         nix-tree # nix package tree viewer
         neofetch # fancier system info than pfetch
