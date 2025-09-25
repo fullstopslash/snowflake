@@ -16,6 +16,10 @@
     # We want at least 2.30 to get the memory management improvements
     # https://discourse.nixos.org/t/nix-2-30-0-released/66449/4
     package = lib.mkForce pkgs.unstable.nixVersions.git;
+    optimise = {
+      automatic = true;
+      dates = [ "03:45" ]; # Periodically optimize the store
+    };
     settings = {
       # See https://jackson.dev/post/nix-reasonable-defaults/
       connect-timeout = 5;
@@ -25,8 +29,6 @@
       experimental-features = lib.mkDefault "nix-command flakes"; # Enable flakes and new 'nix' command
       warn-dirty = false;
       allow-import-from-derivation = true;
-      # Deduplicate and optimize nix store
-      auto-optimise-store = true;
       trusted-users = [ "@wheel" ];
       builders-use-substitutes = true;
       fallback = true; # Don't hard fail if a binary cache isn't available, since some systems roam
