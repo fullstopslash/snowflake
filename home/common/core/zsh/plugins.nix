@@ -1,5 +1,4 @@
 {
-  config,
   pkgs,
   lib,
 }:
@@ -34,9 +33,11 @@
     };
   }
 ]
-# The iso doesn't use our overlays, so don't add custom packages
-#FIXME:move these to an optional custom plugins module and remove iso check
-++ lib.optionals (config.hostSpec.hostName != "iso" && pkgs ? "zsh-term-title") [
+#FIXME(iso): previous used the following line to avoid iso problems because iso doens't use overlays so we can't add custom packages.
+# however, with plugins in a separate file we have issues access config
+# move these to an optional custom plugins module and remove iso check
+#++ lib.optionals (config.hostSpec.hostName != "iso" && pkgs ? "zsh-term-title") [
+++ lib.optionals (pkgs ? "zsh-term-title") [
   {
     name = "zsh-term-title";
     src = "${pkgs.zsh-term-title}/share/zsh/zsh-term-title/";
