@@ -34,6 +34,7 @@ in
   # ========== Core Host Specifications ==========
   #
   hostSpec = {
+    primaryUsername = "ta";
     username = "ta";
     handle = "emergentmind";
     inherit (inputs.nix-secrets)

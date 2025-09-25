@@ -1,11 +1,11 @@
-{ lib, pkgs, ... }:
+{ inputs, pkgs, ... }:
 {
   # host-wide styling
   #TODO(stylix): define themes per host via hostSpec
   stylix = {
     enable = true;
     autoEnable = true;
-    image = (lib.custom.relativeToRoot "assets/wallpapers/zen-01.png");
+    image = "${inputs.nix-assets}/images/wallpapers/zen-01.png";
     #base16Scheme = "${pkgs.base16-schemes}/share/themes/gruvbox-material-dark-medium.yaml";
     base16Scheme = "${pkgs.base16-schemes}/share/themes/gruvbox-dark-medium.yaml";
 

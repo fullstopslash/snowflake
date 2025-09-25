@@ -30,10 +30,11 @@
           type = lib.types.attrsOf lib.types.str;
           description = "The email of the user";
         };
-        work = lib.mkOption {
-          default = { };
-          type = lib.types.attrsOf lib.types.anything;
-          description = "An attribute set of work-related information if isWork is true";
+        # Sometimes we can't use pkgs.stdenv.isLinux due to infinite recursion
+        isDarwin = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Used to indicate a host that is darwin";
         };
         networking = lib.mkOption {
           default = { };
