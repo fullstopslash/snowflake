@@ -13,7 +13,7 @@
   home.packages = [
     pkgs.rmtrash # temporarily cache deleted files for recovery
     pkgs.fzf # fuzzy finder used by initExtra.zsh
-    pkgs.comma # run ", command" to run a cmd in temp nix shel
+    pkgs.comma # run ", command" to run a cmd in temp nix shell
   ];
   #required by comma above
   programs.nix-index = {
