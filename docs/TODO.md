@@ -25,7 +25,7 @@ Blocked:
 - ~~laptop utils~~
 
 6.2 - Refactor multiuser
-- refactor how multiuser works ala fidgetingbits' changes
+- ~~refactor how multiuser works ala fidgetingbits' changes~~
 
 #### General workflow improvements
 
@@ -222,7 +222,7 @@ Add laptop support to the mix to handle stuff like power, lid state, wifi, and t
 - enable backup
 
 ##### 6.2 Refactor multiuser
-- refactor how multiuser works ala fidgetingbits' changes
+- ~~refactor how multiuser works ala fidgetingbits' changes~~
 
 #### 7. Ricing
 

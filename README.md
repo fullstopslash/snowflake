@@ -91,6 +91,7 @@ For a large screenshot of the concept diagram, as well as previous iterations, s
 
 <div align="center">
 <a href="docs/anatomy.md"><img width="400" src="docs/diagrams/anatomy_v5.1.png" /></a>
+As of September 2025, we've been rethinking how to handle multiple users and the concept for Home is in a bit of flux. Some of the changes are reflected below but the latest diagram here represents the iteration prior to these changes until I have a better idea what the outcome will be and how to visually represent it.
 </div>
 
 - `flake.nix` - Entrypoint for hosts and user home configurations. Also exposes a devshell for  manual bootstrapping tasks (`nix develop` or `nix-shell`).
@@ -111,11 +112,12 @@ For a large screenshot of the concept diagram, as well as previous iterations, s
       - `guppy` - Remote Install Lab - Qemu VM
       - `gusto` - Theatre mini pc - 3.4GHz N95 (4C/4T), 16GB RAM
       - `iso` - Custom NixOS ISO that incorporates some quality of life configuration for use during installations and recovery
-- `home/<user>` - Home-manager configurations, built automatically during host rebuilds.
+- `home` - Home-manager configurations, built automatically during host rebuilds.
   - `common` - Shared home-manager configurations consumed the user's machine specific ones.
     - `core` - Home-manager configurations present for user across all machines. This is a hard rule! If something isn't core, it is optional.
     - `optional` - Optional home-manager configurations that can be added for specific machines. These can be added by category (e.g. options/media) or individually (e.g. options/media/vlc.nix) as needed.
-      The home-manager core and options are defined in host-specific .nix files housed in `home/<user>`.
+  - `<user>` - User-specific, host-specific configurations.
+    - `common` - User-specific configurations common across that user's hosts.
 - `lib` - Custom library used throughout the nix-config to make import paths more readable. Accessible via `lib.custom`.
 - `modules` - Custom modules to enable special functionality and options.
     - `common` - Custom modules that will work on either nixos or dariwn but that aren't specific to home-manager
