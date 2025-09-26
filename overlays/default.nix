@@ -21,6 +21,7 @@ let
     # ...
     # });
     hyprland = prev.hyprland.overrideAttrs {
+      package = final.stable.hyprland;
       mesa = final.unstable.mesa;
     };
     steam = prev.steam.overrideAttrs {
