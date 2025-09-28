@@ -36,7 +36,6 @@ in
     enable = true;
     systemd = {
       enable = true;
-      #      target = "hyprland-session.target"; # NOTE = hyprland/default.nix stops graphical-session.target and starts hyprland-sessionl.target
     };
     settings = {
       #
