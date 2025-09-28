@@ -5,9 +5,9 @@
   ...
 }:
 let
-  # FIXME(xdg): That should use config options and just reference whatever is configured as the default
   browser = [ "${config.hostSpec.defaultBrowser}.desktop" ];
-  editor = [ "nvim.desktop" ];
+  editor = [ "${config.hostSpec.defaultEditor}.desktop" ];
+  # FIXME(xdg): Where possible these should use config options like above to reference whatever is configured as the default
   media = [ "vlc.desktop" ];
   writer = [ "libreoffice-writer.desktop" ];
   spreadsheet = [ "libreoffice-calc.desktop" ];
@@ -119,7 +119,7 @@ let
 
   };
   removals = {
-    # Calibre steals odt association from libreoffic so need to remove
+    # Calibre steals odt association from libreoffic so need to removed
     "application/vnd.oasis.opendocument.text" = [
       "calibre-ebook-viewer.desktop"
       "calibre-ebook-edit.desktop"
