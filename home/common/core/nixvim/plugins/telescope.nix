@@ -48,6 +48,16 @@
             noremap = true;
           };
         }
+        {
+          mode = [ "n" ];
+          key = "<Leader>ft";
+          action = "<cmd>TodoTelescope<CR>";
+          options = {
+            desc = "find TODOs";
+            noremap = true;
+          };
+        }
+
       ];
     };
   };
