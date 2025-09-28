@@ -1,4 +1,9 @@
-{ config, pkgs, ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   # FIXME(xdg): That should use config options and just reference whatever is configured as the default
   browser = [ "${config.hostSpec.defaultBrowser}.desktop" ];
@@ -124,7 +129,25 @@ let
 in
 {
   xdg.mime.enable = true;
-  xdg.mimeApps.enable = true;
+  xdg.mimeApps.enable = lib.mkDefault true;
+
+  #TODO(impermanence): The following allows applications to write their own preferences, in addition to declarative.
+  # May want to persist the application files until declarative settings are complete/possible
+
+  # From https://discourse.nixos.org/t/home-manager-and-the-mimeapps-list-file-on-plasma-kde-desktops/37694/7
+  # Don't generate declarative config at the usual place.
+  # Allow desktop applications to write their file association preferences to this file.
+  xdg.configFile."mimeapps.list".enable = false;
+  # Home-manager also writes xdg-mime-apps configuration to the "deprecated" location. Desktop applications will look in this
+  # list for associations, if no association was found in the previous config file.
+  xdg.dataFile."applications/mimeapps.list".force = true;
+
+  #NOTE: this is an alternative to the previous two settings that would allow home-manager to clobber
+  # settings written to the file by apps that modify the preferesences, such as libreOffice apps
+  #  xdg.configFile."mimeapps.list" = lib.mkIf config.xdg.mimeApps.enable {
+  #    force = true;
+  #  };
+
   xdg.mimeApps.defaultApplications = associations;
   xdg.mimeApps.associations.removed = removals;
   xdg.mimeApps.associations.added = associations;
