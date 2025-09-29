@@ -13,6 +13,8 @@ in
   man = "batman";
 
   #------------Navigation------------
+  clr = "clear";
+  rst = "reset";
   doc = "cd $HOME/documents";
   scripts = "cd $HOME/scripts";
   ts = "cd $HOME/.talon/user/fidget";
