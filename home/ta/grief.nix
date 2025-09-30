@@ -1,19 +1,29 @@
-{ ... }:
+{ lib, ... }:
 {
-  imports = [
-    #
-    # ========== Required Configs ==========
-    #
-    common/core
+  imports = (
+    map lib.custom.relativeToRoot (
+      [
+        #
+        # ========== Required Configs ==========
+        #
+        #FIXME: after fixing user/home values in HM
+        "home/common/core"
+        "home/common/core/nixos.nix"
 
-    #
-    # ========== Host-specific Optional Configs ==========
-    #
-    common/optional/sops.nix
-    common/optional/helper-scripts
+        "home/ta/common/nixos.nix"
+      ]
+      ++
+        #
+        # ========== Host-specific Optional Configs ==========
+        #
+        (map (f: "home/common/optional/${f}") [
+          "helper-scripts"
 
-    #common/optional/desktops
-  ];
+          "atuin.nix"
+          "sops.nix"
+        ])
+    )
+  );
 
   services.yubikey-touch-detector.enable = true;
 }

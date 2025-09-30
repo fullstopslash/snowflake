@@ -10,7 +10,7 @@
         "home/common/core"
         "home/common/core/nixos.nix"
 
-        #"home/ta/common/nixos.nix"
+        "home/ta/common/nixos.nix"
       ]
       ++
         #
@@ -22,8 +22,9 @@
           "helper-scripts"
 
           "atuin.nix"
-          "xdg.nix" # file associations
+          "ghostty.nix"
           "sops.nix"
+          "xdg.nix" # file associations
         ])
     )
   );

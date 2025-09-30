@@ -7,6 +7,8 @@
       [
         "home/common/core"
         "home/common/core/nixos.nix"
+
+        "home/media/common/"
       ]
       #################### Host-specific Optional Configs ####################
       ++ (map (f: "home/common/optional/${f}") [

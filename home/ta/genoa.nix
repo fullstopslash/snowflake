@@ -1,27 +1,38 @@
-{ ... }:
+{ lib, ... }:
 {
-  imports = [
-    #
-    # ========== Required Configs ==========
-    #
-    common/core
+  imports = (
+    map lib.custom.relativeToRoot (
+      [
+        #
+        # ========== Required Configs ==========
+        #
+        #FIXME: after fixing user/home values in HM
+        "home/common/core"
+        "home/common/core/nixos.nix"
 
-    #
-    # ========== Host-specific Optional Configs ==========
-    #
-    common/optional/browsers
-    common/optional/desktops # default is hyprland
-    common/optional/development
-    common/optional/comms
-    common/optional/gaming
-    common/optional/helper-scripts
-    common/optional/media
-    common/optional/tools
+        "home/ta/common/nixos.nix"
+      ]
+      ++
+        #
+        # ========== Host-specific Optional Configs ==========
+        #
+        (map (f: "home/common/optional/${f}") [
+          "browsers"
+          "comms"
+          "desktops" # default is hyprland
+          "development"
+          "gaming"
+          "helper-scripts"
+          "media"
+          "tools"
 
-    common/optional/atuin.nix
-    common/optional/xdg.nix # file associations
-    common/optional/sops.nix
-  ];
+          "atuin.nix"
+          "xdg.nix" # file associations
+          "sops.nix"
+          "zellij.nix"
+        ])
+    )
+  );
 
   services.yubikey-touch-detector.enable = true;
   services.yubikey-touch-detector.notificationSound = true;

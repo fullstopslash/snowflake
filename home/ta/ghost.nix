@@ -18,11 +18,11 @@
         #
         (map (f: "home/common/optional/${f}") [
           "browsers"
+          "comms"
           "desktops" # default is hyprland
           "development"
-          "comms"
-          "helper-scripts"
           "gaming"
+          "helper-scripts"
           "media"
           "tools"
 
