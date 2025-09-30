@@ -22,9 +22,9 @@
       {
         mode = [ "n" ];
         key = "<Leader>ve";
-        action = "<cmd>e ~/nix-config/home/ta/common/core/nixvim/default.nix<CR>";
+        action = "<cmd>e ~/nix-config/home/common/core/nixvim/default.nix<CR>";
         options = {
-          desc = "Edit nix-config/home/ta/common/core/nixvim/default.nix";
+          desc = "Edit nix-config/home/common/core/nixvim/default.nix";
           noremap = true;
         };
       }
