@@ -12,8 +12,10 @@
         enableGitStatus = true;
         enableModifiedMarkers = true;
         enableRefreshOnWrite = true;
-        closeIfLastWindow = true;
+        closeIfLastWindow = false;
         popupBorderStyle = "rounded"; # Type: null or one of “NC”, “double”, “none”, “rounded”, “shadow”, “single”, “solid” or raw lua code
+
+        #buffers options affect the `:Neotree buffers` view
         buffers = {
           bindToCwd = false;
           followCurrentFile = {

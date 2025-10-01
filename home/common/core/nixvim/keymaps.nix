@@ -22,7 +22,7 @@
       {
         mode = [ "n" ];
         key = "<Leader>ve";
-        action = "<cmd>e ~/nix-config/home/common/core/nixvim/default.nix<CR>";
+        action = "<cmd>e ~/src/nix/nix-config/home/common/core/nixvim/default.nix<CR>";
         options = {
           desc = "Edit nix-config/home/common/core/nixvim/default.nix";
           noremap = true;
@@ -93,6 +93,60 @@
       #   key = "$";
       #   action = "<nop>";
       # }
+      #
+
+      #
+      # ======== Buffer navigation ========
+      #
+      {
+        mode = [ "n" ];
+        key = "<Leader>-";
+        action = ":b#<CR>";
+        options = {
+          desc = "Switch to the previous buffer";
+          noremap = true;
+        };
+      }
+
+      #
+      # ======== Window navigation ========
+      #
+      {
+        mode = [ "n" ];
+        key = "<Leader>h";
+        action = "<C-W>h";
+        options = {
+          desc = "Move the cursor n windows left";
+          noremap = true;
+        };
+      }
+      {
+        mode = [ "n" ];
+        key = "<Leader>j";
+        action = "<C-W>j";
+        options = {
+          desc = "Move the cursor n windows down";
+          noremap = true;
+        };
+      }
+      {
+        mode = [ "n" ];
+        key = "<Leader>k";
+        action = "<C-W>k";
+        options = {
+          desc = "Move the cursor n windows up";
+          noremap = true;
+        };
+      }
+      {
+        mode = [ "n" ];
+        key = "<Leader>l";
+        action = "<C-W>l";
+        options = {
+          desc = "Move the cursor n windows right";
+          noremap = true;
+        };
+      }
       #
       # =========== Search=========
       #
