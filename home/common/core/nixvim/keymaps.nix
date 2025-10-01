@@ -116,7 +116,7 @@
         key = "<Leader>h";
         action = "<C-W>h";
         options = {
-          desc = "Move the cursor n windows left";
+          desc = "Move the cursor one window left";
           noremap = true;
         };
       }
@@ -125,7 +125,7 @@
         key = "<Leader>j";
         action = "<C-W>j";
         options = {
-          desc = "Move the cursor n windows down";
+          desc = "Move the cursor window down";
           noremap = true;
         };
       }
@@ -134,7 +134,7 @@
         key = "<Leader>k";
         action = "<C-W>k";
         options = {
-          desc = "Move the cursor n windows up";
+          desc = "Move the cursor window up";
           noremap = true;
         };
       }
@@ -143,7 +143,7 @@
         key = "<Leader>l";
         action = "<C-W>l";
         options = {
-          desc = "Move the cursor n windows right";
+          desc = "Move the cursor window right";
           noremap = true;
         };
       }

@@ -12,10 +12,10 @@
     # ========== Mouse Binds ==========
     #
     bindm = [
-      # hold alt + leftlclick  to move/drag active window
-      "ALT,mouse:272,movewindow"
-      # hold alt + rightclick to resize active window
-      "ALT,mouse:273,resizewindow"
+      # hold SUPER + leftlclick  to move/drag active window
+      "SUPER,mouse:272,movewindow"
+      # hold SUPER + rightclick to resize active window
+      "SUPER,mouse:273,resizewindow"
     ];
     #
     # ========== Non-consuming Binds ==========
@@ -29,10 +29,10 @@
     #
     binde = [
       # Resize active window 5 pixels in direction
-      "Control_L&Shift_L&Alt_L, h, resizeactive, -5 0"
-      "Control_L&Shift_L&Alt_L, j, resizeactive, 0 5"
-      "Control_L&Shift_L&Alt_L, k, resizeactive, 0 -5"
-      "Control_L&Shift_L&Alt_L, l, resizeactive, 5 0"
+      "Control_L&Shift_L&SUPER, h, resizeactive, -5 0"
+      "Control_L&Shift_L&SUPER, j, resizeactive, 0 5"
+      "Control_L&Shift_L&SUPER, k, resizeactive, 0 -5"
+      "Control_L&Shift_L&SUPER, l, resizeactive, 5 0"
 
       # Volume - Output
       ", XF86AudioRaiseVolume, exec, pactl set-sink-volume @DEFAULT_SINK@ +5%"
@@ -91,22 +91,22 @@
         #
         # ========== Quick Launch ==========
         #
-        "ALT,space,exec,rofi -show drun"
-        "SHIFT_ALT,space,exec,rofi -show run"
+        "SUPER,space,exec,rofi -show drun"
+        "SHIFT_SUPER,space,exec,rofi -show run"
         "SUPER,s,exec,rofi -show ssh"
-        "ALT,tab,exec,rofi -show window"
+        "SUPER,tab,exec,rofi -show window"
 
-        "ALT,Return,exec,${terminal}"
-        "CTRL_ALT,v,exec,${terminal} ${editor}"
-        "CTRL_ALT,f,exec,thunar"
+        "SUPER,Return,exec,${terminal}"
+        "CTRL_SUPER,v,exec,${terminal} ${editor}"
+        "CTRL_SUPER,f,exec,thunar"
 
         #
         # ========== Screenshotting ==========
         #
         # TODO check on status of flameshot and multimonitor wayland. as of Oct 2024, it's a clusterfuck
         # so resorting to grimblast in the meantime
-        #"CTRL_ALT,p,exec,flameshot gui"
-        "CTRL_ALT,p,exec,grimblast --notify --freeze copy area"
+        #"CTRL_SUPER,p,exec,flameshot gui"
+        "CTRL_SUPER,p,exec,grimblast --notify --freeze copy area"
         ",Print,exec,grimblast --notify --freeze copy area"
 
         #
@@ -129,58 +129,63 @@
         #
         #NOTE: window resizing is under "Repeat Binds" above
 
+        # Focuses the urgent window or the last window
+        "SHIFTSUPER,minus,focusurgentorlast"
+        #Switch focus from current to previously focused window
+        "SUPER,minus,focuscurrentorlast"
+
         # Close the focused/active window
-        "SHIFTALT,q,hy3:killactive"
-        "SHIFTALT,q,killactive"
+        "SHIFTSUPER,q,hy3:killactive"
+        "SHIFTSUPER,q,killactive"
 
         # Fullscreen
-        #"ALT,f,fullscreen,0" # 0 - fullscreen (takes your entire screen), 1 - maximize (keeps gaps and bar(s))
-        "ALT,f,fullscreenstate,2 -1" # `internal client`, where `internal` and `client` can be -1 - current, 0 - none, 1 - maximize, 2 - fullscreen, 3 - maximize and fullscreen
+        #"SUPER,f,fullscreen,0" # 0 - fullscreen (takes your entire screen), 1 - maximize (keeps gaps and bar(s))
+        "SUPER,f,fullscreenstate,2 -1" # `internal client`, where `internal` and `client` can be -1 - current, 0 - none, 1 - maximize, 2 - fullscreen, 3 - maximize and fullscreen
         # Float
-        "SHIFTALT,F,togglefloating"
+        "SHIFTSUPER,F,togglefloating"
         # Pin Active Floating window
-        "SHIFTALT,p, pin, active" # pins a floating window (i.e. show it on all workspaces)
+        "SHIFTSUPER,p, pin, active" # pins a floating window (i.e. show it on all workspaces)
 
         # Splits groups
-        "ALT,v,hy3:makegroup,v" # make a vertical split
-        "SHIFTALT,v,hy3:makegroup,h" # make a horizontal split
-        "ALT,x,hy3:changegroup,opposite" # toggle btwn splits if untabbed
-        "ALT,s,togglesplit"
+        "SUPER,v,hy3:makegroup,v" # make a vertical split
+        "SHIFTSUPER,v,hy3:makegroup,h" # make a horizontal split
+        "SUPER,x,hy3:changegroup,opposite" # toggle btwn splits if untabbed
+        "SUPER,s,togglesplit"
 
         # Tab groups
-        "ALT,g,hy3:changegroup,toggletab" # tab or untab the group
-        #"ALT,t,lockactivegroup,toggle"
-        "ALT,apostrophe,changegroupactive,f"
-        "SHIFTALT,apostrophe,changegroupactive,b"
+        "SUPER,g,hy3:changegroup,toggletab" # tab or untab the group
+        #"SUPER,t,lockactivegroup,toggle"
+        "SUPER,apostrophe,changegroupactive,f"
+        "SHIFTSUPER,apostrophe,changegroupactive,b"
 
         #
         # ========== Workspaces ==========
         #
         # Change workspace
         (map (
-          n: if n == "10" then "ALT,0,workspace,name:10" else "ALT,${n},workspace,name:${n}"
+          n: if n == "10" then "SUPER,0,workspace,name:10" else "SUPER,${n},workspace,name:${n}"
         ) workspaces)
 
         # Special/scratch
-        "ALT,y, togglespecialworkspace"
-        "SHIFTALT,y,movetoworkspace,special"
+        "SUPER,y, togglespecialworkspace"
+        "SHIFTSUPER,y,movetoworkspace,special"
 
         # Move window to workspace
         (map (
           n:
           if n == "10" then
-            "SHIFTALT,0,hy3:movetoworkspace,name:10"
+            "SHIFTSUPER,0,hy3:movetoworkspace,name:10"
           else
-            "SHIFTALT,${n},hy3:movetoworkspace,name:${n}"
+            "SHIFTSUPER,${n},hy3:movetoworkspace,name:${n}"
         ) workspaces)
 
         # Move focus from active window to window in specified direction
-        #(lib.mapAttrsToList (key: direction: "ALT,${key}, exec, customMoveFocus ${direction}") directions)
-        (lib.mapAttrsToList (key: direction: "ALT,${key},hy3:movefocus,${direction},warp") directions)
+        #(lib.mapAttrsToList (key: direction: "SUPER,${key}, exec, customMoveFocus ${direction}") directions)
+        (lib.mapAttrsToList (key: direction: "SUPER,${key},hy3:movefocus,${direction},warp") directions)
 
         # Move windows
-        #(lib.mapAttrsToList (key: direction: "SHIFTALT,${key}, exec, customMoveWindow ${direction}") directions)
-        (lib.mapAttrsToList (key: direction: "SHIFTALT,${key},hy3:movewindow,${direction}") directions)
+        #(lib.mapAttrsToList (key: direction: "SHIFTSUPER,${key}, exec, customMoveWindow ${direction}") directions)
+        (lib.mapAttrsToList (key: direction: "SHIFTSUPER,${key},hy3:movewindow,${direction}") directions)
 
         # Move workspace to monitor in specified direction
         (lib.mapAttrsToList (
@@ -196,8 +201,8 @@
         #
         # ========== Misc ==========
         #
-        "SHIFTALT,r,exec,hyprctl reload" # reload the configuration file
-        "SUPER,l,exec,hyprlock" # lock the wm
+        "SHIFTSUPER,r,exec,hyprctl reload" # reload the configuration file
+        "SHIFTSUPER,l,exec,hyprlock" # lock the wm
         "SUPER,e,exec,wlogout" # lock the wm
       ];
   };
