@@ -161,7 +161,6 @@
         if config.hostSpec.hostName == "ghost" then
           [
             ''${pkgs.waypaper}/bin/waypaper --restore''
-            ''${pkgs.networkmanagerapplet}/bin/nm-applet --indicator''
             ''[workspace 10 silent]${pkgs.ghostty}/bin/ghostty --title=btop -e btop''
             ''[workspace 10 silent]${pkgs.ghostty}/bin/ghostty --title=amdgpu_top -e amdgpu_top --dark''
             ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
@@ -176,8 +175,6 @@
         else if config.hostSpec.isMobile then
           [
             ''${pkgs.waypaper}/bin/waypaper --restore''
-            ''${pkgs.networkmanagerapplet}/bin/nm-applet --indicator''
-            ''${pkgs.blueman}/bin/blueman-applet''
             ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
             ''[workspace 1 silent]${pkgs.copyq}/bin/copyq''
             ''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
@@ -186,7 +183,6 @@
         else
           [
             ''${pkgs.waypaper}/bin/waypaper --restore''
-            ''${pkgs.networkmanagerapplet}/bin/nm-applet --indicator''
           ];
 
       #
@@ -298,7 +294,11 @@
       general.layout = "hy3";
       plugin = {
         hy3 = {
-
+          #          autotile = {
+          #            enable = true;
+          #            trigger_width = 800;
+          #            trigger_height = 500;
+          #          };
         };
       };
     };

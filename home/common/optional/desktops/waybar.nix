@@ -26,6 +26,7 @@ let
 in
 {
   services.network-manager-applet.enable = true;
+  services.blueman-applet.enable = true;
 
   # Let it try to start a few more times
   systemd.user.services.waybar = {
