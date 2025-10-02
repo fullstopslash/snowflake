@@ -3,11 +3,18 @@
 [README](../README.md) > Roadmap of TODOs
 
 ## Short Term
+
+- flesh out the nix-config-starter README as per alexschombs git comment
+
+- Write up on future project evolution
+- shorts re: you-should-use and comma
+
+- Blocked: Setup backup for 'extra' drive
+- Genoa: knownhosts not written
+
+- Asserts to check that host and home level packages of the same name are using the same pkg source.
+
 - Stop calendar notifications from stealing focus... sort of dealt with using 'noinitialfocus' dispatcher but it happens immediately after focus has already been stolen
-
-Blocked:
-- Setup backup for 'extra' drive
-
 - Start using issues more than fixmes
 - Consider tagging with version numbers that match roadmap
 - Ticket for refactor yubikey module to include u2f stuff
@@ -24,7 +31,7 @@ Blocked:
 - enable backup
 - ~~laptop utils~~
 
-6.2 - Refactor multiuser
+~~6.2 - Refactor multiuser~~
 - ~~refactor how multiuser works ala fidgetingbits' changes~~
 
 #### General workflow improvements
@@ -226,7 +233,8 @@ Add laptop support to the mix to handle stuff like power, lid state, wifi, and t
 
 #### 7. Ricing
 
-- check out Kanshi (arandr for wayland).
+- Monitors Module improvements
+    - potentially integrate Kanshi (for wayland) and arandr (for x) to handle profiles based on the connected displays.
 
 - gui dev
   - host specific colours (terminal in particular) via stylix or nix-colors
@@ -234,13 +242,17 @@ Add laptop support to the mix to handle stuff like power, lid state, wifi, and t
 
 - eww as a potential replacement to waybar
 
+hyprland and hy3
+- layouts
+
 - hyprcursor
     - recreate ascendancy cursor as a hyprcursor... the existing themes out there are really underwhelming
+
 - plymouth
 - grub - https://www.gnome-look.org/browse?cat=109&ord=latest
 
 - maybe rEFInd
-- greetd - Have considered just auto logging in after luks unlock but if/when wayland or X inevitably shit the bed again, it's convenient to have a stop point after unlock
+- sddm or greetd - Have considered just auto logging in after luks unlock but if/when wayland or X inevitably shit the bed again, it's convenient to have a stop point after unlock
 - p10k - consider config so that line glyphs don't interfere with yanking
 - fonts - https://old.reddit.com/r/vim/comments/fonzfi/what_is_your_favorite_font_for_coding_in_vim/
 - dunst
@@ -326,7 +338,6 @@ The following has to happen on bare metal because I can't seem to get the yubike
 
 - Automatic scheduled sops rotate
 - Disk usage notifier
-
 
 #### 11. TBD
 
