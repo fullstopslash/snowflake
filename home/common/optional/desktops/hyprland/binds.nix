@@ -202,7 +202,6 @@
         # ========== Misc ==========
         #
         "SHIFTSUPER,r,exec,hyprctl reload" # reload the configuration file
-        "SHIFTSUPER,l,exec,hyprlock" # lock the wm
         "SUPER,e,exec,wlogout" # lock the wm
       ];
   };
