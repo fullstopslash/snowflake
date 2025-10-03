@@ -150,7 +150,7 @@
         "SUPER,v,hy3:makegroup,v" # make a vertical split
         "SHIFTSUPER,v,hy3:makegroup,h" # make a horizontal split
         "SUPER,x,hy3:changegroup,opposite" # toggle btwn splits if untabbed
-        "SUPER,s,togglesplit"
+        #"SUPER,x,togglesplit" # superceeded by hy3:changegroup
 
         # Tab groups
         "SUPER,g,hy3:changegroup,toggletab" # tab or untab the group
