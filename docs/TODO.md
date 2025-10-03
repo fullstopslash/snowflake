@@ -4,6 +4,10 @@
 
 ## Short Term
 
+- more zellij config
+- fix abbot merge conflicts
+- disable ghostty pane and tab binds
+- fix nvim/neo-tree default directory
 - flesh out the nix-config-starter README as per alexschombs git comment
 
 - Write up on future project evolution

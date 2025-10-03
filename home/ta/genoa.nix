@@ -29,7 +29,7 @@
           "atuin.nix"
           "xdg.nix" # file associations
           "sops.nix"
-          "zellij.nix"
+          "zellij/default.nix"
         ])
     )
   );
