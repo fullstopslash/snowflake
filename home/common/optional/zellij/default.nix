@@ -11,6 +11,7 @@
     #    settings = {
     #      default_mode = "locked";
     #      #default_layout = "compact"; # NOTE: compact removes the keybindings hint
+    #      pane_frames = false;
     #      show_startup_tips = false;
     #      ui.pane_frames = {
     #        rounded_corners = true;
@@ -23,17 +24,6 @@
     #    '';
   };
   home.file.".config/zellij/config.kdl".source = ./config.kdl;
-
-  #  programs.zellij = {
-  #    enable = true;
-  #    #package = pkgs.unstable.zellij;
-  #    enableZshIntegration = false; # NOTE: true forces zellij upon opening zsh
-  #    settings = {
-  #      show_startup_tips = false;
-  #      pane_frames = false;
-  #      #default_layout = "compact"; # NOTE: compact removes the keybindings hint
-  #    };
-  #  };
 
   programs.zsh = {
     shellAliases = {
