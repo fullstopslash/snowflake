@@ -202,13 +202,13 @@
         # ========== Workspace Assignments ==========
         #
         # to determine class and title for all active windows, run `hyprctl clients`
-        "workspace 8, class:^(.virt-manager-wrapped)$"
         "workspace 8, class:^(obsidian)$"
         "workspace 9, class:^(brave-browser)$"
         "workspace 9, class:^(signal)$"
         "workspace 9, class:^(discord)$"
         "workspace 10, class:^(spotify)$"
         "workspace 10, class:^(CopyQ)$"
+        "workspace 10, class:^(.virt-manager-wrapped)$"
         "workspace special, title:^(Proton VPN)$"
         "workspace special, class:^(yubioath-flutter)$"
         "workspace special, class:^(keymapp)$"
