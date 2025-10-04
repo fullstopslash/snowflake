@@ -51,6 +51,7 @@
       "hosts/common/optional/services/openssh.nix" # allow remote SSH access
       "hosts/common/optional/services/printing.nix" # CUPS
       "hosts/common/optional/audio.nix" # pipewire and cli controls
+      "hosts/common/optional/fonts.nix" # fonts
       "hosts/common/optional/gaming.nix" # window manager
       "hosts/common/optional/hyprland.nix" # window manager
       "hosts/common/optional/nvtop.nix" # GPU monitor (not available in home-manager)

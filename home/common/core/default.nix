@@ -23,7 +23,6 @@ in
     ./bat.nix
     ./btop.nix
     ./direnv.nix
-    ./fonts.nix
     ./ghostty.nix
     ./git.nix
     ./kitty.nix
