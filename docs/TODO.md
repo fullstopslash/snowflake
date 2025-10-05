@@ -4,14 +4,15 @@
 
 ## Short Term
 
-- more zellij config
 - fix nvim/neo-tree default directory
 - flesh out the nix-config-starter README as per alexschombs git comment
 
 - Write up on future project evolution
-- shorts re: you-should-use and comma
+- Shorts re: you-should-use and comma
 
-- Blocked: Setup backup for 'extra' drive
+- Blocked:
+    - Setup backup for ghost 'extra' drive
+    - Genoa backup
 - Genoa: knownhosts not written
 
 - Asserts to check that host and home level packages of the same name are using the same pkg source.
@@ -25,16 +26,38 @@
 ### Current roadmap focus items
 
 6.1 - genoa
-- ~~bootstrap genoa~~
-- ~~sort out Thinkpad E15 hardware~~
-    - ~~sent PR upstream and using fork for now~~
 - issues:
     - knownhosts not written
-- enable backup
-- ~~laptop utils~~
+- blocked: enable backup
 
-~~6.2 - Refactor multiuser~~
-- ~~refactor how multiuser works ala fidgetingbits' changes~~
+7.0 - QoL and Ricing
+
+- Monitors Module improvements
+    - potentially integrate Kanshi (for wayland) and arandr (for x) to handle profiles based on the connected displays.
+- ui dev
+  - ~~ascendancy color set~~
+    - ~~colors~~
+    - repo
+    - add to tinted gallery
+  - host specific colours (terminal in particular) via stylix?
+  - centralize color palette
+- eww as a potential replacement to waybar
+- hyprland and hy3
+    - layouts: the only viable way to do what I want appears to be scripting dispatchers as to spawn and morph tabs on launch as opposed to defining ws specific positional templates
+- hyprcursor
+    - recreate ascendancy cursor as a hyprcursor... the existing themes out there are really underwhelming
+- plymouth
+- grub - https://www.gnome-look.org/browse?cat=109&ord=latest
+- maybe rEFInd
+- sddm or greetd - Have considered just auto logging in after luks unlock but if/when wayland or X inevitably shit the bed again, it's convenient to have a stop point after unlock
+- p10k - consider config so that line glyphs don't interfere with yanking
+- fonts - https://old.reddit.com/r/vim/comments/fonzfi/what_is_your_favorite_font_for_coding_in_vim/
+- dunst
+- lualine
+
+Inspirational sets:
+- see FF bookmarks > Nix > Rice >
+
 
 #### General workflow improvements
 
@@ -232,19 +255,24 @@ Add laptop support to the mix to handle stuff like power, lid state, wifi, and t
 ##### 6.2 Refactor multiuser
 - ~~refactor how multiuser works ala fidgetingbits' changes~~
 
-#### 7. Ricing
+#### 7. QoL and Ricing
 
 - Monitors Module improvements
     - potentially integrate Kanshi (for wayland) and arandr (for x) to handle profiles based on the connected displays.
 
 - gui dev
-  - host specific colours (terminal in particular) via stylix or nix-colors
+  - ~~ascendancy color set~~
+    - ~~colors~~
+    - repo
+    - add to tinted gallery
+  - host specific colours (terminal in particular) via stylix?
   - centralize color palette
 
 - eww as a potential replacement to waybar
 
 hyprland and hy3
 - layouts
+    - the only viable way to do what I want appears to be scripting dispatchers as to spawn and morph tabs on launch as opposed to defining ws specific positional templates
 
 - hyprcursor
     - recreate ascendancy cursor as a hyprcursor... the existing themes out there are really underwhelming
@@ -265,7 +293,6 @@ Inspirational sets:
 ##### Stage 7 References
 
 - [stylix](https://github.com/danth/stylix)
-- [nix-colors](https://github.com/Misterio77/nix-colors)
 
 #### 8. Squeaky clean
 
