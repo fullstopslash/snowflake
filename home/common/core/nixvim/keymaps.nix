@@ -235,6 +235,18 @@
           noremap = true;
         };
       }
+      #
+      # ======== Zen ========
+      #
+      {
+        mode = [ "n" ];
+        key = "<Leader>zz";
+        action = ":ZenMode<CR>";
+        options = {
+          desc = "toggle ZenMode";
+          noremap = true;
+        };
+      }
     ];
   };
 }

@@ -14,6 +14,7 @@
     nixvim-config.plugins.colorizer.enable = lib.mkDefault true;
     nixvim-config.plugins.alpha.enable = lib.mkDefault true;
     nixvim-config.plugins.dressing.enable = lib.mkDefault false;
+    nixvim-config.plugins.zen-mode.enable = lib.mkDefault true;
     #
     # ========== bars/lines ==========
     #
