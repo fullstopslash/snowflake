@@ -11,7 +11,7 @@ in {
     hyprland = {
       enable = true;
       portalPackage = pkgs.xdg-desktop-portal-hyprland;
-      xwayland.enable = true;
+      xwayland.enable = false;
     };
     hyprlock.enable = true;
   };

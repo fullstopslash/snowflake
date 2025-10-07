@@ -5,10 +5,11 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-25.05";
     starship-jj.url = "gitlab:lanastara_foss/starship-jj";
-    deploy-rs = {
-      url = "github:serokell/deploy-rs";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # deploy-rs = {
+    #   url = "github:serokell/deploy-rs";
+    #   # Build deploy-rs against stable nixpkgs to avoid current rust/LLVM regressions
+    #   inputs.nixpkgs.follows = "nixpkgs-stable";
+    # };
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -84,6 +85,9 @@
               (_: prev: {
                 tailscale = prev.stable.tailscale;
                 gamescope = prev.stable.gamescope;
+                xwayland = prev.stable.xwayland;
+                # Use stable sops-install-secrets to avoid Go toolchain crash on current kernel/toolchain
+                sops-install-secrets = prev.stable.sops-install-secrets;
                 allegro = prev.allegro.overrideAttrs (old: {
                   cmakeFlags = (old.cmakeFlags or []) ++ ["-DCMAKE_POLICY_VERSION_MINIMUM=3.5"];
                 });
@@ -93,6 +97,8 @@
                 texlive = prev.stable.texlive;
                 karakeep = prev.stable.karakeep;
                 texlivePackages = prev.stable.texlivePackages;
+                # Use stable musl toolchain for security wrappers to avoid NIX_LDFLAGS_BEFORE musl wrapper bug
+                pkgsMusl = prev.stable.pkgsMusl;
               })
               # inputs.dolphin-overlay.overlays.default
             ];
@@ -113,26 +119,25 @@
 
     # Generate configurations for all discovered hosts
     hostConfigurations = nixpkgs.lib.genAttrs hosts mkHost;
-
     # deploy-rs nodes for each host (root profile)
-    deployNodes = nixpkgs.lib.genAttrs hosts (
-      hostname: {
-        inherit hostname;
-        profiles.system = {
-          user = "root";
-          path = inputs.deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.${hostname};
-        };
-      }
-    );
+    # deployNodes = nixpkgs.lib.genAttrs hosts (
+    #   hostname: {
+    #     inherit hostname;
+    #     profiles.system = {
+    #       user = "root";
+    #       path = inputs.deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.${hostname};
+    #     };
+    #   }
+    # );
   in {
     # NixOS configurations
     nixosConfigurations = hostConfigurations;
 
     # deploy-rs configuration
-    deploy = {nodes = deployNodes;};
+    # deploy = {nodes = deployNodes;};
 
     # CI checks for deploy-rs
-    checks.${system} = inputs.deploy-rs.lib.${system}.deployChecks self.deploy;
+    # checks.${system} = inputs.deploy-rs.lib.${system}.deployChecks self.deploy;
 
     # ISO build outputs and local packages
     packages = {
@@ -146,6 +151,8 @@
             {system.stateVersion = stateVersion;}
           ];
         };
+        # Provide a default package for `nix build` without an explicit attribute
+        default = self.packages.${system}.iso-installer;
       };
     };
   };

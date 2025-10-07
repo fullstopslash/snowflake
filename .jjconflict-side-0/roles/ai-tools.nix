@@ -7,7 +7,7 @@
   environment.systemPackages = with pkgs; [
     mcp-nixos
     lmstudio
-    stable.open-webui
+    # stable.open-webui
   ];
 
   # User service so multiple apps can rely on a persistent MCP instance

@@ -1,13 +1,14 @@
-
 # SOPS configuration for NixOS secrets
 creation_rules:
   - path_regex: secrets\.yaml$
     key_groups:
-      - age:
+      age:
         - age1sut4v7ers2hc8du0quar20ld99xece2z6fwhsdwp60q47ym5gysqq3crqh
+        - age1m6uadu3za3qwha27ycermrx92vu7wqg500hmspvgv6y82rcykegqqekjur
         - age1uvvw0mwjtspumxxygpnxgawu6rfxteq2gdymnkzpwewx8scnm3qs53dm67
   - path_regex: secrets/deploy-key\.sops$
     key_groups:
-      - age:
+      age:
         - age1sut4v7ers2hc8du0quar20ld99xece2z6fwhsdwp60q47ym5gysqq3crqh
+        - age1m6uadu3za3qwha27ycermrx92vu7wqg500hmspvgv6y82rcykegqqekjur
         - age1uvvw0mwjtspumxxygpnxgawu6rfxteq2gdymnkzpwewx8scnm3qs53dm67

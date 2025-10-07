@@ -200,8 +200,9 @@
   nix = {
     settings = {
       experimental-features = ["nix-command" "flakes"];
-      auto-optimise-store = true;
+      auto-optimise-store = false;
       max-jobs = "auto";
+      download-buffer-size = 524288000;
       cores = 0;
       http-connections = 50;
       connect-timeout = 5;

@@ -25,7 +25,7 @@
     ../../roles/obs.nix
     ../../roles/waybar.nix
     ../../roles/networking.nix
-    ../../roles/vpn.nix
+    # ../../roles/vpn.nix
     ../../roles/tailscale.nix
     ../../roles/syncthing.nix
     ../../roles/network-storage.nix
@@ -37,8 +37,8 @@
     ../../roles/stylix.nix
     ../../roles/fonts.nix
     ../../roles/shell.nix
-    ../../roles/voice-assistant.nix
-    ../../roles/document-processing.nix
+    # ../../roles/voice-assistant.nix
+    # ../../roles/document-processing.nix
     ../../roles/cli-tools.nix
     ../../roles/ai-tools.nix
     ../../roles/containers.nix
@@ -81,7 +81,7 @@
     ];
     # boot.kernelPackages = pkgs.linuxPackages_cachyos;
     # kernelPackages = pkgs.linuxPackages_zen;
-    kernelPackages = pkgs.linuxPackages_latest;
+    kernelPackages = pkgs.linuxPackages;
 
     initrd.kernelModules = ["amdgpu"];
     kernel.sysctl = {

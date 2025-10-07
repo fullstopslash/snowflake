@@ -166,7 +166,7 @@
     wofi
     lua
     wev
-    karakeep
+    # karakeep
     # ventoy-full-qt
     # ventoy
 
