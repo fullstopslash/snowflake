@@ -150,7 +150,7 @@
         "SUPER,v,hy3:makegroup,v" # make a vertical split
         "SHIFTSUPER,v,hy3:makegroup,h" # make a horizontal split
         "SUPER,x,hy3:changegroup,opposite" # toggle btwn splits if untabbed
-        #"SUPER,x,togglesplit" # superceeded by hy3:changegroup
+        #"SUPER,x,togglesplit" # superseded by hy3:changegroup
 
         # Tab groups
         "SUPER,g,hy3:changegroup,toggletab" # tab or untab the group
@@ -195,14 +195,15 @@
         #
         # ========== Monitors==========
         #
-        "SUPER, m, exec, toggleMonitors"
-        "SUPER, n, exec, toggleMonitorsNonPrimary"
+        "SUPER, m, exec, toggleMonitors" # custom function in ./scripts.nix
+        "SUPER, n, exec, toggleMonitorsNonPrimary" # custom function in ./scripts.nix
 
         #
         # ========== Misc ==========
         #
+        "SUPER, t, exec, arrangeTiles" # custom function in ./scripts.nix
         "SHIFTSUPER,r,exec,hyprctl reload" # reload the configuration file
-        "SUPER,e,exec,wlogout" # lock the wm
+        "SUPER,e,exec,wlogout" # display wlogout
       ];
   };
 }

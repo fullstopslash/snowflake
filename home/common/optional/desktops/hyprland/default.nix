@@ -161,13 +161,15 @@
         if config.hostSpec.hostName == "ghost" then
           [
             ''${pkgs.waypaper}/bin/waypaper --restore''
+            ''[workspace 8 silent]${pkgs.obsidian}/bin/obsidian''
+            ''[workspace 8 silent]${pkgs.copyq}/bin/copyq''
+            ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
+            ''[workspace 9 silent]${pkgs.discord}/bin/discord''
+            ''[workspace 9 silent]${pkgs.brave}/bin/brave''
+            ''[workspace 10 silent]${pkgs.virt-manager}/bin/virt-manager''
             ''[workspace 10 silent]${pkgs.ghostty}/bin/ghostty --title=btop -e btop''
             ''[workspace 10 silent]${pkgs.ghostty}/bin/ghostty --title=amdgpu_top -e amdgpu_top --dark''
-            ''[workspace 9 silent]${pkgs.signal-desktop}/bin/signal-desktop''
-            ''[workspace 8 silent]${pkgs.obsidian}/bin/obsidian''
             ''[workspace 10 silent]${pkgs.spotify}/bin/spotify''
-            ''[workspace 8 silent]${pkgs.virt-manager}/bin/virt-manager''
-            ''[workspace 10 silent]${pkgs.copyq}/bin/copyq''
             ''[workspace special silent]/run/current-system/sw/bin/protonvpn-app''
             ''[workspace special silent]${pkgs.yubioath-flutter}/bin/yubioath-flutter''
             ''[workspace special silent]${pkgs.keymapp}/bin/keymapp''
@@ -292,14 +294,10 @@
       #
       #TODO enable this and config
       general.layout = "hy3";
-      plugin = {
-        hy3 = {
-          #          autotile = {
-          #            enable = true;
-          #            trigger_width = 800;
-          #            trigger_height = 500;
-          #          };
-        };
+      plugin.hy3 = {
+      };
+      plugin.wslayout = {
+        default_layout = "master";
       };
     };
   };
