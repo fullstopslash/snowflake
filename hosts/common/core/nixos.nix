@@ -18,11 +18,13 @@
   #
   # ========== Nix Helper ==========
   #
-  # Provide better build output and will also handle garbage collection in place of standard nix gc (garbace collection)
+  # Provides better build output and will also handle garbage collection in place of standard nix gc (garbage collection)
   programs.nh = {
     enable = true;
     clean.enable = true;
     clean.extraArgs = "--keep-since 20d --keep 20";
+    # NOTE: The flake path below assumes that nh is run with a specified path. E.g. `nh os foo .` from the nix-config directory.
+    # See https://github.com/EmergentMind/nix-config/issues/35
     flake = "/home/user/${config.hostSpec.home}/nix-config";
   };
 
