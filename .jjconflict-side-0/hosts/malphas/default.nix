@@ -66,7 +66,7 @@
       efi.canTouchEfiVariables = true;
     };
     plymouth = {
-      enable = true;
+      enable = false;
       theme = "bgrt";
       themePackages = [pkgs.nixos-bgrt-plymouth];
     };

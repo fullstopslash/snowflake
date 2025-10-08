@@ -87,7 +87,7 @@
                 gamescope = prev.stable.gamescope;
                 xwayland = prev.stable.xwayland;
                 # Use stable sops-install-secrets to avoid Go toolchain crash on current kernel/toolchain
-                sops-install-secrets = prev.stable.sops-install-secrets;
+                # sops-install-secrets = prev.stable.sops-install-secrets;
                 allegro = prev.allegro.overrideAttrs (old: {
                   cmakeFlags = (old.cmakeFlags or []) ++ ["-DCMAKE_POLICY_VERSION_MINIMUM=3.5"];
                 });
