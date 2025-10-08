@@ -45,8 +45,6 @@
   #
   hostSpec = {
     hostName = "guppy";
-    primaryUsername = "rain";
-    username = "rain";
   };
 
   services.gnome.gnome-keyring.enable = true;
