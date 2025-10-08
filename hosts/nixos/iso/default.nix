@@ -5,8 +5,7 @@
   lib,
   config,
   ...
-}:
-{
+}: {
   imports = lib.flatten [
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
     #"${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-gnome.nix"
@@ -21,25 +20,26 @@
     ])
     (
       let
-        path = lib.custom.relativeToRoot "hosts/common/users/${config.hostSpec.username}/default.nix";
+        path = lib.custom.relativeToRoot "hosts/common/users/ta/default.nix";
       in
-      lib.optional (lib.pathExists path) path
+        lib.optional (lib.pathExists path) path
     )
   ];
 
   hostSpec = {
     hostName = "iso";
-    username = "ta";
+    username = "fullstopslash";
     isProduction = lib.mkForce false;
 
     # Needed because we don't use hosts/common/core for iso
-    inherit (inputs.nix-secrets)
+    inherit
+      (inputs.nix-secrets)
       domain
       networking
       ;
 
     #TODO(git): This is stuff for home/ta/common/core/git.nix. should create home/ta/common/optional/development.nix so core git.nix doesn't use it.
-    handle = "emergentmind";
+    handle = "fullstopslash";
     email.gitHub = inputs.nix-secrets.email.gitHub;
   };
 
@@ -53,12 +53,10 @@
   environment.etc = {
     isoBuildTime = {
       #
-      text = lib.readFile (
-        "${pkgs.runCommand "timestamp" {
-          # builtins.currentTime requires --impure
-          env.when = builtins.currentTime;
-        } "echo -n `date -d @$when  +%Y-%m-%d_%H-%M-%S` > $out"}"
-      );
+      text = lib.readFile "${pkgs.runCommand "timestamp" {
+        # builtins.currentTime requires --impure
+        env.when = builtins.currentTime;
+      } "echo -n `date -d @$when  +%Y-%m-%d_%H-%M-%S` > $out"}";
     };
   };
 
@@ -86,7 +84,7 @@
   services = {
     qemuGuest.enable = true;
     openssh = {
-      ports = [ config.hostSpec.networking.ports.tcp.ssh ];
+      ports = [config.hostSpec.networking.ports.tcp.ssh];
       settings.PermitRootLogin = lib.mkForce "yes";
     };
   };
@@ -104,7 +102,7 @@
   };
 
   systemd = {
-    services.sshd.wantedBy = lib.mkForce [ "multi-user.target" ];
+    services.sshd.wantedBy = lib.mkForce ["multi-user.target"];
     # gnome power settings to not turn off screen
     targets = {
       sleep.enable = false;

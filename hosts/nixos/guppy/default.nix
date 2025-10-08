@@ -4,13 +4,11 @@
 #  NixOS running on Qemu VM
 #
 ###############################################################
-
 {
   inputs,
   lib,
   ...
-}:
-{
+}: {
   imports = lib.flatten [
     #
     # ========== Hardware ==========
@@ -39,7 +37,6 @@
       # ========== Optional Configs ==========
       #
       "hosts/common/optional/services/openssh.nix"
-
     ])
   ];
 
@@ -48,6 +45,8 @@
   #
   hostSpec = {
     hostName = "guppy";
+    primaryUsername = "rain";
+    username = "rain";
   };
 
   services.gnome.gnome-keyring.enable = true;

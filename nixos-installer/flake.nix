@@ -18,6 +18,7 @@
       minimalSpecialArgs = {
         inherit inputs outputs;
         lib = nixpkgs.lib.extend (self: super: { custom = import ../lib { inherit (nixpkgs) lib; }; });
+        isDarwin = false;
       };
 
       # This mkHost is way better: https://github.com/linyinfeng/dotfiles/blob/8785bdb188504cfda3daae9c3f70a6935e35c4df/flake/hosts.nix#L358
@@ -62,6 +63,7 @@
         grief = newConfig "grief" "/dev/vda" 0 false false;
         guppy = newConfig "guppy" "/dev/vda" 0 false false;
         gusto = newConfig "gusto" "/dev/nvme0n1" 8 false false;
+        malphas = newConfig "malphas" "/dev/vda" 4 false false;
 
         ghost = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";

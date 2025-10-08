@@ -19,6 +19,7 @@
     isMinimal = lib.mkForce true;
     hostName = "installer";
     username = "ta";
+    primaryUsername = lib.mkDefault "ta";
   };
 
   fileSystems."/boot".options = [ "umask=0077" ]; # Removes permissions and security warnings.
