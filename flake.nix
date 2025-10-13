@@ -57,9 +57,10 @@
             };
             modules = [ 
               ./hosts/nixos/${host}
-              # Pass custom pkgs for alternate nixpkgs inputs
+              # Pass custom pkgs for alternate nixpkgs inputs and disable module config
               (if host == "griefling" then {
                 nixpkgs.pkgs = lib.mkForce customPkgs;
+                nixpkgs.config = lib.mkForce {};
               } else {})
             ];
           };
