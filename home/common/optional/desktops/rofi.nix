@@ -5,7 +5,7 @@
 {
   programs.rofi = {
     enable = true;
-    package = pkgs.rofi-wayland;
+    package = pkgs.rofi; # rofi-wayland merged into rofi in unstable
 
     extraConfig = {
       show-icons = true;
