@@ -23,7 +23,7 @@
 
       # This mkHost is way better: https://github.com/linyinfeng/dotfiles/blob/8785bdb188504cfda3daae9c3f70a6935e35c4df/flake/hosts.nix#L358
       newConfig =
-        name: disk: swapSize: useLuks: useImpermanence:
+        name: disk: swapSize: useLuks: useImpermanence: username:
         (
           let
             diskSpecPath =
@@ -50,21 +50,26 @@
               ./minimal-configuration.nix
               ../hosts/nixos/${name}/hardware-configuration.nix
 
-              { networking.hostName = name; }
+              { 
+                networking.hostName = name;
+                # Override username for minimal install to ensure correct SSH keys are used
+                hostSpec.primaryUsername = username;
+                hostSpec.username = username;
+              }
             ];
           }
         );
     in
     {
       nixosConfigurations = {
-        # host = newConfig "name" disk" "swapSize" "useLuks" "useImpermanence"
+        # host = newConfig "name" "disk" "swapSize" "useLuks" "useImpermanence" "username"
         # Swap size is in GiB
-        genoa = newConfig "genoa" "/dev/nvme0n1" 16 true true;
-        grief = newConfig "grief" "/dev/vda" 0 false false;
-        griefling = newConfig "griefling" "/dev/vda" 0 false false;
-        guppy = newConfig "guppy" "/dev/vda" 0 false false;
-        gusto = newConfig "gusto" "/dev/nvme0n1" 8 false false;
-        malphas = newConfig "malphas" "/dev/vda" 4 false false;
+        genoa = newConfig "genoa" "/dev/nvme0n1" 16 true true "ta";
+        grief = newConfig "grief" "/dev/vda" 0 false false "ta";
+        griefling = newConfig "griefling" "/dev/vda" 0 false false "rain";
+        guppy = newConfig "guppy" "/dev/vda" 0 false false "rain";
+        gusto = newConfig "gusto" "/dev/nvme0n1" 8 false false "ta";
+        malphas = newConfig "malphas" "/dev/vda" 4 false false "ta";
 
         ghost = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
@@ -73,7 +78,11 @@
             inputs.disko.nixosModules.disko
             ../hosts/common/disks/ghost.nix
             ./minimal-configuration.nix
-            { networking.hostName = "ghost"; }
+            { 
+              networking.hostName = "ghost";
+              hostSpec.primaryUsername = "ta";
+              hostSpec.username = "ta";
+            }
             ../hosts/nixos/ghost/hardware-configuration.nix
           ];
         };
