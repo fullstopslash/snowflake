@@ -40,6 +40,14 @@
           let
             # Use unstable for griefling test VM, stable for everything else
             pkgInput = if host == "griefling" then inputs.nixpkgs-unstable else nixpkgs;
+            # When using alternate nixpkgs, create pkgs with config
+            customPkgs = if host == "griefling" then (import inputs.nixpkgs-unstable {
+              system = "x86_64-linux";
+              config = {
+                allowUnfree = true;
+                allowBroken = true;
+              };
+            }) else null;
           in {
           name = host;
           value = pkgInput.lib.nixosSystem {
@@ -49,9 +57,9 @@
             };
             modules = [ 
               ./hosts/nixos/${host}
-              # Disable nixpkgs.config for alternate nixpkgs inputs to avoid conflicts
+              # Pass custom pkgs for alternate nixpkgs inputs
               (if host == "griefling" then {
-                nixpkgs.config = lib.mkForce {};
+                nixpkgs.pkgs = lib.mkForce customPkgs;
               } else {})
             ];
           };
