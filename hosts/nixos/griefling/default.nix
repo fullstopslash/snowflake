@@ -14,7 +14,10 @@ let
   # Use unstable nixpkgs for this test VM
   pkgs = import inputs.nixpkgs-unstable {
     system = "x86_64-linux";
-    config.allowUnfree = true;
+    config = {
+      allowUnfree = true;
+      allowBroken = true;
+    };
   };
 in
 {
