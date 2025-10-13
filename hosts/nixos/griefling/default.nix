@@ -10,16 +10,6 @@
   lib,
   ...
 }:
-let
-  # Use unstable nixpkgs for this test VM
-  pkgs = import inputs.nixpkgs-unstable {
-    system = "x86_64-linux";
-    config = {
-      allowUnfree = true;
-      allowBroken = true;
-    };
-  };
-in
 {
   imports = lib.flatten [
     #
@@ -52,11 +42,6 @@ in
       "hosts/common/optional/wayland.nix"
     ])
   ];
-
-  #
-  # ========== Nixpkgs Configuration ==========
-  #
-  nixpkgs.pkgs = pkgs;
 
   #
   # ========== Host Specification ==========
