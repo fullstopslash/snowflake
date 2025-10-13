@@ -41,6 +41,7 @@
     }
   ];
 
-  services.yubikey-touch-detector.enable = true;
+  # Disabled for test VM - no yubikey
+  # services.yubikey-touch-detector.enable = true;
 }
 
