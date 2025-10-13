@@ -11,13 +11,11 @@ let
   # FIXME(yubikey): move this, u2f sops extraction, and other yubi stuff to be set as yubikey module options
   # so it doesn't doesn't interfere with bootstrapping
   yubikeys = [
-    "maya"
-    "mara"
-    "manu"
+    # Only populated when useYubikey = true
   ];
-  yubikeySecrets =
+  yubikeySecrets = lib.optionalAttrs config.hostSpec.useYubikey (
     # extract to default pam-u2f authfile location for passwordless sudo. see modules/common/yubikey
-    lib.optionalAttrs config.hostSpec.useYubikey {
+    {
       "keys/u2f" = {
         sopsFile = "${sopsFolder}/shared.yaml";
         path = "${homeDirectory}/.config/Yubico/u2f_keys";
@@ -30,7 +28,8 @@ let
           path = "${homeDirectory}/.ssh/id_${name}";
         };
       }) yubikeys
-    );
+    )
+  );
 in
 {
   imports = [ inputs.sops-nix.homeManagerModules.sops ];
