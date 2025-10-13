@@ -47,7 +47,16 @@
               inherit inputs outputs lib;
               isDarwin = false;
             };
-            modules = [ ./hosts/nixos/${host} ];
+            modules = [ 
+              ./hosts/nixos/${host}
+              # Pass config when using alternate nixpkgs to avoid conflicts
+              (if host == "griefling" then {
+                nixpkgs.config = {
+                  allowUnfree = true;
+                  allowBroken = true;
+                };
+              } else {})
+            ];
           };
         }) (builtins.attrNames (builtins.readDir ./hosts/nixos))
       );
