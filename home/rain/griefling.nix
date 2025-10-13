@@ -41,7 +41,7 @@
     }
   ];
 
-  # Disabled for test VM - no yubikey
-  # services.yubikey-touch-detector.enable = true;
+  # Yubikey disabled for test VM (useYubikey = false in host config)
+  # services.yubikey-touch-detector.enable = false;
 }
 
