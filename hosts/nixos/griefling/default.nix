@@ -52,6 +52,7 @@
     primaryUsername = "rain";
     username = "rain";
     useWayland = true;
+    useYubikey = false; # No yubikey in test VM
   };
 
   networking = {
