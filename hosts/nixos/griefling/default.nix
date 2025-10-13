@@ -37,9 +37,10 @@
       #
       # ========== Optional Configs ==========
       #
-      "hosts/common/optional/hyprland.nix"
+      # Temporarily removed Hyprland to reduce memory for bootstrap testing
+      # "hosts/common/optional/hyprland.nix"
       "hosts/common/optional/services/openssh.nix"
-      "hosts/common/optional/wayland.nix"
+      # "hosts/common/optional/wayland.nix"
     ])
   ];
 
@@ -51,7 +52,7 @@
     hostName = "griefling";
     primaryUsername = "rain";
     username = "rain";
-    useWayland = true;
+    # useWayland = true; # Disabled temporarily for testing
   };
 
   networking = {

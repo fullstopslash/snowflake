@@ -16,34 +16,29 @@
         # ========== Host-specific Optional Configs ==========
         #
         (map (f: "home/common/optional/${f}") [
-          "desktops/hyprland"
-          "desktops/waybar.nix"
-          "desktops/rofi.nix"
-          "desktops/gtk.nix"
-          "desktops/services/dunst.nix"
+          # Temporarily removed Hyprland to reduce memory usage for testing
+          # "desktops/hyprland"
           
           "helper-scripts"
           "atuin.nix"
           "sops.nix"
-          
-          "browsers/firefox.nix"
         ])
     )
   );
 
-  # Default monitor configuration for VM
-  monitors = [
-    {
-      name = "Virtual-1";
-      primary = true;
-      width = 1920;
-      height = 1080;
-      refreshRate = 60;
-      x = 0;
-      y = 0;
-      enabled = true;
-    }
-  ];
+  # Default monitor configuration for VM (only needed when Hyprland is enabled)
+  # monitors = [
+  #   {
+  #     name = "Virtual-1";
+  #     primary = true;
+  #     width = 1920;
+  #     height = 1080;
+  #     refreshRate = 60;
+  #     x = 0;
+  #     y = 0;
+  #     enabled = true;
+  #   }
+  # ];
 
   services.yubikey-touch-detector.enable = true;
 }
