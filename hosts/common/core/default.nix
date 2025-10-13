@@ -37,9 +37,9 @@ in
   # ========== Core Host Specifications ==========
   #
   hostSpec = {
-    primaryUsername = "ta";
-    username = "ta";
-    handle = "emergentmind";
+    primaryUsername = lib.mkDefault "ta";
+    username = lib.mkDefault "ta";
+    handle = lib.mkDefault "emergentmind";
     inherit (inputs.nix-secrets)
       domain
       email
