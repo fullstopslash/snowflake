@@ -61,6 +61,7 @@
         # Swap size is in GiB
         genoa = newConfig "genoa" "/dev/nvme0n1" 16 true true;
         grief = newConfig "grief" "/dev/vda" 0 false false;
+        griefling = newConfig "griefling" "/dev/vda" 0 false false;
         guppy = newConfig "guppy" "/dev/vda" 0 false false;
         gusto = newConfig "gusto" "/dev/nvme0n1" 8 false false;
         malphas = newConfig "malphas" "/dev/vda" 4 false false;

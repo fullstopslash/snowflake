@@ -27,7 +27,8 @@ function cleanup() {
 }
 trap cleanup exit
 
-# Copy data to the target machine
+# Copy data to the target machine (legacy function - kept for manual use)
+# NOTE: For bootstrap, we now copy as root and chown to avoid SSH key issues
 function sync() {
 	# $1 = user, $2 = source, $3 = destination
 	rsync -av --mkpath --filter=':- .gitignore' -e "ssh -oControlMaster=no -l $1 -oport=${ssh_port}" "$2" "$1@${target_destination}:${nix_src_path}"
@@ -150,7 +151,7 @@ function nixos_anywhere() {
 
 	green "Adding ssh host fingerprint at $target_destination to ~/.ssh/known_hosts"
 	# This will fail if we already know the host, but that's fine
-	ssh-keyscan -p "$ssh_port" "$target_destination" | grep -v '^#' >>~/.ssh/known_hosts || true
+	ssh-keyscan -4 -p "$ssh_port" "$target_destination" | grep -v '^#' >>~/.ssh/known_hosts || true
 
 	###
 	# nixos-anywhere installation
@@ -192,7 +193,7 @@ function nixos_anywhere() {
 	fi
 
 	green "Adding $target_destination's ssh host fingerprint to ~/.ssh/known_hosts"
-	ssh-keyscan -p "$ssh_port" "$target_destination" | grep -v '^#' >>~/.ssh/known_hosts || true
+	ssh-keyscan -4 -p "$ssh_port" "$target_destination" | grep -v '^#' >>~/.ssh/known_hosts || true
 
 	if [ -n "$persist_dir" ]; then
 		$ssh_root_cmd "cp /etc/machine-id $persist_dir/etc/machine-id || true"
@@ -205,20 +206,32 @@ function sops_generate_host_age_key() {
 	green "Generating an age key based on the new ssh_host_ed25519_key"
 
 	# Get the SSH key
-	target_key=$(ssh-keyscan -p "$ssh_port" -t ssh-ed25519 "$target_destination" 2>&1 | grep ssh-ed25519 | cut -f2- -d" ") || {
+	blue "Running ssh-keyscan on $target_destination:$ssh_port..."
+	target_key=$(ssh-keyscan -4 -p "$ssh_port" -t ssh-ed25519 "$target_destination" 2>&1 | grep ssh-ed25519 | cut -f2- -d" ") || {
 		red "Failed to get ssh key. Host down or maybe SSH port now changed?"
+		red "Command attempted: ssh-keyscan -4 -p $ssh_port -t ssh-ed25519 $target_destination"
 		exit 1
 	}
 
+	if [ -z "$target_key" ]; then
+		red "ssh-keyscan returned an empty result."
+		red "Target: $target_destination:$ssh_port"
+		red "Please verify the host is up and SSH is accessible."
+		exit 1
+	fi
+
+	blue "Converting SSH key to age key..."
 	host_age_key=$(echo "$target_key" | ssh-to-age)
 
 	if grep -qv '^age1' <<<"$host_age_key"; then
 		red "The result from generated age key does not match the expected format."
-		yellow "Result: $host_age_key"
+		yellow "SSH Key: $target_key"
+		yellow "Age Key Result: $host_age_key"
 		yellow "Expected format: age10000000000000000000000000000000000000000000000000000000000"
 		exit 1
 	fi
 
+	green "Successfully generated age key: $host_age_key"
 	green "Updating nix-secrets/.sops.yaml"
 	sops_update_age_key "hosts" "$target_hostname" "$host_age_key"
 }
@@ -250,6 +263,35 @@ fi
 
 updated_age_keys=0
 if yes_or_no "Generate host (ssh-based) age key?"; then
+	# Clear any stale known_hosts entries that might conflict
+	green "Cleaning up known_hosts for $target_destination"
+	sed -i "/$target_hostname/d; /$target_destination/d" ~/.ssh/known_hosts || true
+	
+	# Wait for SSH to be fully ready after reboot
+	green "Waiting for SSH service to be ready..."
+	max_attempts=30
+	attempt=0
+	while [ $attempt -lt $max_attempts ]; do
+		# First check if we can scan the key (force IPv4 to avoid localhost resolution issues)
+		if ssh-keyscan -4 -p "$ssh_port" -t ssh-ed25519 "$target_destination" 2>&1 | grep -q ssh-ed25519; then
+			# Then verify we can actually connect
+			if $ssh_root_cmd "echo 'SSH connection successful'" 2>/dev/null; then
+				green "SSH service is ready and accepting connections!"
+				break
+			else
+				blue "SSH port is open but connection not ready yet..."
+			fi
+		fi
+		attempt=$((attempt + 1))
+		if [ $attempt -eq $max_attempts ]; then
+			red "Timed out waiting for SSH service. Please verify the host is running and SSH is accessible."
+			red "You can manually test the connection with: ssh -p $ssh_port root@$target_destination"
+			exit 1
+		fi
+		echo "Attempt $attempt/$max_attempts - waiting 2 seconds..."
+		sleep 2
+	done
+	
 	sops_generate_host_age_key
 	updated_age_keys=1
 fi
@@ -276,11 +318,20 @@ fi
 
 if yes_or_no "Do you want to copy your full nix-config and nix-secrets to $target_hostname?"; then
 	green "Adding ssh host fingerprint at $target_destination to ~/.ssh/known_hosts"
-	ssh-keyscan -p "$ssh_port" "$target_destination" 2>/dev/null | grep -v '^#' >>~/.ssh/known_hosts || true
-	green "Copying full nix-config to $target_hostname"
-	sync "$target_user" "${git_root}"/../nix-config
-	green "Copying full nix-secrets to $target_hostname"
-	sync "$target_user" "${nix_secrets_dir}"
+	ssh-keyscan -4 -p "$ssh_port" "$target_destination" 2>/dev/null | grep -v '^#' >>~/.ssh/known_hosts || true
+	
+	green "Copying full nix-config to $target_hostname (as root, will fix permissions)"
+	# Use root for initial copy since user SSH keys aren't set up yet
+	rsync -av --mkpath --filter=':- .gitignore' -e "ssh -oControlMaster=no -oport=${ssh_port}" "${git_root}"/../nix-config root@"${target_destination}":/tmp/bootstrap/
+	green "Copying full nix-secrets to $target_hostname (as root, will fix permissions)"
+	rsync -av --mkpath --filter=':- .gitignore' -e "ssh -oControlMaster=no -oport=${ssh_port}" "${nix_secrets_dir}" root@"${target_destination}":/tmp/bootstrap/
+	
+	green "Moving files to ${nix_src_path} and setting ownership to ${target_user}"
+	$ssh_root_cmd "mkdir -p /home/${target_user}/${nix_src_path} && \
+		mv /tmp/bootstrap/nix-config /home/${target_user}/${nix_src_path}/ && \
+		mv /tmp/bootstrap/nix-secrets /home/${target_user}/${nix_src_path}/ && \
+		chown -R ${target_user}:users /home/${target_user}/${nix_src_path} && \
+		rmdir /tmp/bootstrap"
 
 	# FIXME(bootstrap): Add some sort of key access from the target to download the config (if it's a cloud system)
 	if yes_or_no "Do you want to rebuild immediately?"; then

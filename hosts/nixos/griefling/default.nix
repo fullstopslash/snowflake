@@ -1,14 +1,16 @@
 #############################################################
 #
-#  Guppy - Remote Installation Test Lab
+#  Griefling - Dev Lab with Hyprland
 #  NixOS running on Qemu VM
 #
 ###############################################################
+
 {
   inputs,
   lib,
   ...
-}: {
+}:
+{
   imports = lib.flatten [
     #
     # ========== Hardware ==========
@@ -26,7 +28,6 @@
         withSwap = false;
       };
     }
-
     (map lib.custom.relativeToRoot [
       #
       # ========== Required Configs ==========
@@ -36,20 +37,22 @@
       #
       # ========== Optional Configs ==========
       #
+      "hosts/common/optional/hyprland.nix"
       "hosts/common/optional/services/openssh.nix"
+      "hosts/common/optional/wayland.nix"
     ])
   ];
 
   #
   # ========== Host Specification ==========
   #
+
   hostSpec = {
-    hostName = "guppy";
+    hostName = "griefling";
     primaryUsername = "rain";
     username = "rain";
+    useWayland = true;
   };
-
-  services.gnome.gnome-keyring.enable = true;
 
   networking = {
     networkmanager.enable = true;
@@ -61,10 +64,24 @@
     efi.canTouchEfiVariables = true;
     timeout = 3;
   };
-
   boot.initrd = {
     systemd.enable = true;
+    # This mostly mirrors what is generated on qemu from nixos-generate-config in hardware-configuration.nix
+    kernelModules = [
+      "xhci_pci"
+      "ohci_pci"
+      "ehci_pci"
+      "virtio_pci"
+      "ahci"
+      "usbhid"
+      "sr_mod"
+      "virtio_blk"
+    ];
   };
+
+  # This is a fix to enable VSCode to successfully remote SSH on a client to a NixOS host
+  # https://wiki.nixos.org/wiki/Visual_Studio_Code # Remote_SSH
+  programs.nix-ld.enable = true;
 
   # https://wiki.nixos.org/wiki/FAQ/When_do_I_update_stateVersion
   system.stateVersion = "23.11";
