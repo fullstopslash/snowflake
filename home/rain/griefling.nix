@@ -21,7 +21,7 @@
           "desktops/rofi.nix"
           
           "helper-scripts"
-          # "atuin.nix" # Disabled for test VM - requires sops secrets
+          "atuin.nix" # Disabled for test VM - requires sops secrets
           "sops.nix"
         ])
     )

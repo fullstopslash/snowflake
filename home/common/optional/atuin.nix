@@ -46,7 +46,7 @@ in
     # We use down to trigger, and use up to quickly edit the last entry only
     flags = [ "--disable-up-arrow" ];
   };
-  sops.secrets."keys/atuin" = {
+  sops.secrets."keys/age/atuin" = {
     path = "${config.home.homeDirectory}/.local/share/atuin/key";
     sopsFile = "${sopsFolder}/shared.yaml";
   };
