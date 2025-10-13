@@ -18,8 +18,6 @@
   ];
 
   programs.nixvim = {
-    nixpkgs.pkgs = import <nixpkgs> { };
-
     enable = true;
     enableMan = true; # install man pages for nixvim options
 
