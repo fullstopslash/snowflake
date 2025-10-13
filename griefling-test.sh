@@ -6,7 +6,7 @@
     -global kvm-pit.lost_tick_policy=discard \
     -cpu host,topoext \
     -smp cores=2,threads=2,sockets=1 \
-    -m 8G \
+    -m 16G \
     -device virtio-balloon \
     -pidfile ./griefling-test.pid \
     -rtc base=utc,clock=host \
