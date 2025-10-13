@@ -36,9 +36,13 @@
       #
       # Building configurations is available through `just rebuild` or `nixos-rebuild --flake .#hostname`
       nixosConfigurations = builtins.listToAttrs (
-        map (host: {
+        map (host: 
+          let
+            # Use unstable for griefling test VM, stable for everything else
+            pkgInput = if host == "griefling" then inputs.nixpkgs-unstable else nixpkgs;
+          in {
           name = host;
-          value = nixpkgs.lib.nixosSystem {
+          value = pkgInput.lib.nixosSystem {
             specialArgs = {
               inherit inputs outputs lib;
               isDarwin = false;
