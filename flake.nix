@@ -49,12 +49,9 @@
             };
             modules = [ 
               ./hosts/nixos/${host}
-              # Pass config when using alternate nixpkgs to avoid conflicts
+              # Disable nixpkgs.config for alternate nixpkgs inputs to avoid conflicts
               (if host == "griefling" then {
-                nixpkgs.config = {
-                  allowUnfree = true;
-                  allowBroken = true;
-                };
+                nixpkgs.config = lib.mkForce {};
               } else {})
             ];
           };
