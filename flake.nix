@@ -61,6 +61,9 @@
               (if host == "griefling" then {
                 nixpkgs.pkgs = lib.mkForce customPkgs;
                 nixpkgs.config = lib.mkForce {};
+                # Disable nix registry/nixPath for alternate nixpkgs to avoid conflicts
+                nix.registry = lib.mkForce {};
+                nix.nixPath = lib.mkForce [];
               } else {})
             ];
           };
