@@ -6,7 +6,8 @@ if [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
     exit 1
 fi
 
-qemu-system-x86_64 \
+# Use system qemu
+exec qemu-system-x86_64 \
     -name griefling-test,process=griefling-test \
     -machine q35,smm=off,vmport=off,accel=kvm \
     -global kvm-pit.lost_tick_policy=discard \

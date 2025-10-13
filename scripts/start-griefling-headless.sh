@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Headless test VM for griefling - no display, SSH only
-/nix/store/nk59c14nwf79bafmrsnnhndmpnrlplrv-qemu-10.1.0/bin/qemu-system-x86_64 \
+qemu-system-x86_64 \
     -name griefling-test,process=griefling-test \
     -machine q35,smm=off,vmport=off,accel=kvm \
     -global kvm-pit.lost_tick_policy=discard \
