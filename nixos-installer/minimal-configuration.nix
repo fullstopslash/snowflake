@@ -18,7 +18,7 @@
   hostSpec = {
     isMinimal = lib.mkForce true;
     hostName = "installer";
-    username = "ta";
+    username = lib.mkDefault "ta";
     primaryUsername = lib.mkDefault "ta";
   };
 
