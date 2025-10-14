@@ -14,10 +14,10 @@ in
 {
   wayland.windowManager.hyprland = {
     settings = {
-    #
-    # ========== Main Modifier Key ==========
-    #
-    "$mainMod" = "SUPER";
+      #
+      # ========== Main Modifier Key ==========
+      #
+      "$mainMod" = "SUPER";
 
     #
     # ========== Custom Environment Variables ==========
@@ -289,12 +289,12 @@ in
     #
     # ========== Mouse bindings ==========
     #
-    bindm = lib.mkAfter [
-      "$mainMod, mouse_down, workspace, e+1"
-      "$mainMod, mouse_up, workspace, e-1"
-      "$mainMod, mouse:272, movewindow"
-      "$mainMod, mouse:273, resizewindow"
-    ];
+      bindm = lib.mkAfter [
+        "$mainMod, mouse_down, workspace, e+1"
+        "$mainMod, mouse_up, workspace, e-1"
+        "$mainMod, mouse:272, movewindow"
+        "$mainMod, mouse:273, resizewindow"
+      ];
     };
     
     #
