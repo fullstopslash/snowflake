@@ -119,11 +119,12 @@ ssh_cmd="ssh \
         -oForwardAgent=yes \
         -oStrictHostKeyChecking=no \
         -oUserKnownHostsFile=/dev/null \
+        -oIdentitiesOnly=yes \
         -i $ssh_key \
         -t $target_user@$target_destination"
 # shellcheck disable=SC2001
 ssh_root_cmd=$(echo "$ssh_cmd" | sed "s|${target_user}@|root@|") # uses @ in the sed switch to avoid it triggering on the $ssh_key value
-scp_cmd="scp -oControlPath=none -oport=${ssh_port} -oStrictHostKeyChecking=no -i $ssh_key"
+scp_cmd="scp -oControlPath=none -oport=${ssh_port} -oStrictHostKeyChecking=no -oIdentitiesOnly=yes -i $ssh_key"
 
 git_root=$(git rev-parse --show-toplevel)
 
