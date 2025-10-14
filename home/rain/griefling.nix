@@ -17,12 +17,11 @@
         #
         (map (f: "home/common/optional/${f}") [
           "desktops/hyprland"
-          # "desktops/hyprland/rain-custom.nix"  # Disabled - using chezmoi for dotfiles
           "desktops/waybar.nix"
           "desktops/rofi.nix"
           
           "helper-scripts"
-          # "chezmoi.nix"  # Disabled on test VM - no GitHub SSH access
+          "chezmoi.nix"
           "atuin.nix"
           "sops.nix"
         ])
