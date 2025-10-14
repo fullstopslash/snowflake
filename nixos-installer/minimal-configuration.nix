@@ -78,7 +78,6 @@
         PermitRootLogin = "prohibit-password"; # Only allow SSH key auth for root
         PasswordAuthentication = false; # Disable password auth entirely
       };
-      authorizedKeysFiles = lib.mkForce [ "/etc/ssh/authorized_keys.d/%u" ];
     };
   };
 
