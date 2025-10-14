@@ -62,7 +62,7 @@
       Description = "Atuin daemon socket";
     };
     Socket = {
-      ListenStream = "%t/atuin/atuin.sock";
+      ListenStream = "%t/atuin/atuin.socket";
       SocketMode = "0600";
     };
     Install.WantedBy = [ "sockets.target" ];
