@@ -17,6 +17,7 @@
         #
         (map (f: "home/common/optional/${f}") [
           "desktops/hyprland"
+          "desktops/hyprland/rain-custom.nix"
           "desktops/waybar.nix"
           "desktops/rofi.nix"
           
