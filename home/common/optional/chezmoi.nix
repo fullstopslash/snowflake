@@ -15,8 +15,8 @@
       CHEZMOI_SOURCE="${config.home.homeDirectory}/.local/share/chezmoi"
       DOTFILES_REPO="git@github.com:fullstopslash/dotfiles.git"
       
-      # Force chezmoi to use external git by setting PATH
-      export PATH="${pkgs.git}/bin:$PATH"
+      # Force chezmoi to use external git and ssh by setting PATH
+      export PATH="${pkgs.git}/bin:${pkgs.openssh}/bin:$PATH"
       
       echo "Git version: $(${pkgs.git}/bin/git --version)"
       echo "Checking if $CHEZMOI_SOURCE exists..."
