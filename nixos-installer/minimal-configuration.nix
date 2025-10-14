@@ -86,8 +86,9 @@
   users.users.root.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSsv1OF/iAmRKdNbjAP5qf9u3qTqZXq3oBotI0hR6ea"
   ];
-  users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys = 
-    config.users.users.root.openssh.authorizedKeys.keys;
+  users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSsv1OF/iAmRKdNbjAP5qf9u3qTqZXq3oBotI0hR6ea"
+  ];
 
   nix = {
     #FIXME(installer): registry and nixPath shouldn't be required here because flakes but removal results in warning spam on build
