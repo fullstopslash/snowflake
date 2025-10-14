@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/usr/bin/env nix-shell
+#!nix-shell -i bash -p qemu
 # Test VM for griefling with Hyprland - GUI version
 # Check if running over SSH
 if [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
@@ -6,7 +7,6 @@ if [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
     exit 1
 fi
 
-# Use system qemu
 exec qemu-system-x86_64 \
     -name griefling-test,process=griefling-test \
     -machine q35,smm=off,vmport=off,accel=kvm \

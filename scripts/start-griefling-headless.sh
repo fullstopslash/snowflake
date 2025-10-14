@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/usr/bin/env nix-shell
+#!nix-shell -i bash -p qemu
 # Headless test VM for griefling - no display, SSH only
 qemu-system-x86_64 \
     -name griefling-test,process=griefling-test \
