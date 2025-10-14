@@ -81,75 +81,67 @@ in
     #
     # ========== Custom General Settings ==========
     #
-    general = lib.mkMerge [
-      (lib.mkBefore {
-        gaps_in = 4;
-        gaps_out = 6;
-        border_size = 2;
-        "col.active_border" = "rgba(b377f0cc) rgba(8c66cccc) 45deg";
-        "col.inactive_border" = "rgba(595959aa)";
-        resize_on_border = true;
-        allow_tearing = false;
-        no_border_on_floating = true;
-        layout = "dwindle";
-      })
-    ];
+    general = {
+      gaps_in = lib.mkForce 4;
+      gaps_out = lib.mkForce 6;
+      border_size = lib.mkForce 2;
+      "col.active_border" = lib.mkForce "rgba(b377f0cc) rgba(8c66cccc) 45deg";
+      "col.inactive_border" = lib.mkForce "rgba(595959aa)";
+      resize_on_border = lib.mkForce true;
+      allow_tearing = lib.mkForce false;
+      no_border_on_floating = lib.mkForce true;
+      layout = lib.mkForce "dwindle";
+    };
 
     #
     # ========== Custom Decoration ==========
     #
-    decoration = lib.mkMerge [
-      (lib.mkBefore {
-        rounding = 10;
-        active_opacity = 1.0;
-        inactive_opacity = 0.90;
-        dim_inactive = true;
-        dim_strength = 0.05;
-        
-        shadow = {
-          enabled = true;
-          range = 4;
-          render_power = 5;
-          color = "rgba(1a1a1aee)";
-        };
-        
-        blur = {
-          enabled = false;
-          size = 1;
-          passes = 2;
-          vibrancy = 0.1696;
-        };
-      })
-    ];
+    decoration = {
+      rounding = lib.mkForce 10;
+      active_opacity = lib.mkForce 1.0;
+      inactive_opacity = lib.mkForce 0.90;
+      dim_inactive = lib.mkForce true;
+      dim_strength = lib.mkForce 0.05;
+      
+      shadow = {
+        enabled = lib.mkForce true;
+        range = lib.mkForce 4;
+        render_power = lib.mkForce 5;
+        color = lib.mkForce "rgba(1a1a1aee)";
+      };
+      
+      blur = {
+        enabled = lib.mkForce false;
+        size = lib.mkForce 1;
+        passes = lib.mkForce 2;
+        vibrancy = lib.mkForce 0.1696;
+      };
+    };
 
     #
     # ========== Custom Input ==========
     #
-    input = lib.mkMerge [
-      (lib.mkBefore {
-        kb_rules = "";
-        scroll_method = "on_button_down";
-        scroll_button = 276; # browser forward
-        natural_scroll = true;
-        follow_mouse = 1;
-        sensitivity = 0;
-      })
-    ];
+    input = {
+      kb_rules = lib.mkForce "";
+      scroll_method = lib.mkForce "on_button_down";
+      scroll_button = lib.mkForce 276; # browser forward
+      natural_scroll = lib.mkForce true;
+      follow_mouse = lib.mkForce 1;
+      sensitivity = lib.mkForce 0;
+    };
 
     #
     # ========== Custom Misc Settings ==========
     #
-    misc = lib.mkMerge [
-      (lib.mkBefore {
-        vfr = true;
-        vrr = 0;
-        force_default_wallpaper = -1;
-        disable_hyprland_logo = false;
-        disable_autoreload = true;
-        animate_mouse_windowdragging = false;
-        animate_manual_resizes = true;
-      })
-    ];
+    misc = {
+      vfr = lib.mkForce true;
+      vrr = lib.mkForce 0;
+      force_default_wallpaper = lib.mkForce (-1);
+      disable_hyprland_logo = lib.mkForce false;
+      disable_autoreload = lib.mkForce true;
+      animate_mouse_windowdragging = lib.mkForce false;
+      animate_manual_resizes = lib.mkForce true;
+    };
 
     #
     # ========== Media Window Positioning Variables ==========
