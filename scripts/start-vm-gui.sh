@@ -56,11 +56,11 @@ OVMF_CODE=$(nix-build '<nixpkgs>' -A OVMF.fd --no-out-link)/FV/OVMF_CODE.fd
 echo "Starting $HOSTNAME VM (GUI, SSH on port $SSH_PORT)..."
 
 # Build ISO if booting from scratch and it doesn't exist
-ISO_PATH="$REPO_ROOT/result/iso/nixos-minimal-25.05.*.iso"
+ISO_PATH="$REPO_ROOT/result/iso/nixos-minimal-*.iso"
 if [ "$BOOT_FROM_ISO" = true ]; then
     if ! compgen -G "$ISO_PATH" > /dev/null; then
-        echo "Building minimal installer ISO for $HOSTNAME..."
-        cd "$REPO_ROOT/nixos-installer" && nix build ".#nixosConfigurations.${HOSTNAME}.config.system.build.isoImage"
+        echo "Building minimal installer ISO..."
+        cd "$REPO_ROOT/nixos-installer" && just iso
         cd "$REPO_ROOT"
     fi
     ISO_DRIVE=(-drive "media=cdrom,index=0,file=$(compgen -G "$ISO_PATH" | head -1)")
