@@ -8,10 +8,11 @@ let
   sopsFolder = (builtins.toString inputs.nix-secrets) + "/sops";
 in
 {
-  # FIXME(atuin): Add the background sync service
-  # https://forum.atuin.sh/t/getting-the-daemon-working-on-nixos/334
   programs.atuin = {
     enable = true;
+    
+    # Enable daemon for background syncing
+    daemon.enable = true;
 
     enableBashIntegration = false;
     enableZshIntegration = true;

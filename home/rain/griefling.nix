@@ -56,6 +56,19 @@
     btop
   ];
   
+  # Enable atuin daemon for background sync (config is managed by chezmoi)
+  systemd.user.services.atuin-daemon = {
+    Unit = {
+      Description = "Atuin daemon for background sync";
+      After = [ "network.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.atuin}/bin/atuin daemon";
+      Restart = "on-failure";
+    };
+    Install.WantedBy = [ "default.target" ];
+  };
+  
   # Disable ALL home-manager config generation - chezmoi manages dotfiles
   programs.kitty.enable = lib.mkForce false;
   programs.btop.enable = lib.mkForce false;
