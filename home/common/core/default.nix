@@ -132,6 +132,12 @@ in
       # Luajit packages (can't use inherit with dotted paths)
       luajitPackages.luarocks
       luajitPackages.magick
+      # Python packages
+      (python3.withPackages (ps: with ps; [
+        pip
+        virtualenv
+      ]))
+      uv # Modern Python package installer
     ])
     ++ builtins.attrValues {
       inherit (pkgs)
