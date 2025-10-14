@@ -46,9 +46,16 @@
   # root's ssh key are mainly used for remote deployment
   users.extraUsers.root = {
     inherit (config.users.users.${config.hostSpec.username}) hashedPassword;
-    openssh.authorizedKeys.keys =
-      config.users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys;
+    openssh.authorizedKeys.keys = [
+      # Add your SSH public key here for bootstrap access
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSsv1OF/iAmRKdNbjAP5qf9u3qTqZXq3oBotI0hR6ea"
+    ] ++ config.users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys or [];
   };
+  
+  # Also add SSH key to the regular user for bootstrap
+  users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSsv1OF/iAmRKdNbjAP5qf9u3qTqZXq3oBotI0hR6ea"
+  ];
 
   environment.etc = {
     isoBuildTime = {
@@ -81,11 +88,17 @@
     extraOptions = "experimental-features = nix-command flakes";
   };
 
+  # Passwordless sudo for bootstrap
+  security.sudo.wheelNeedsPassword = false;
+  
   services = {
     qemuGuest.enable = true;
     openssh = {
       ports = [config.hostSpec.networking.ports.tcp.ssh];
-      settings.PermitRootLogin = lib.mkForce "yes";
+      settings = {
+        PermitRootLogin = lib.mkForce "prohibit-password"; # SSH key auth only
+        PasswordAuthentication = false; # Disable password auth
+      };
     };
   };
 
