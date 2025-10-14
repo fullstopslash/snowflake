@@ -12,7 +12,8 @@ let
   mkScript = name: pkgs.writeShellScript name (builtins.readFile "${scriptsDir}/${name}");
 in
 {
-  wayland.windowManager.hyprland.settings = {
+  wayland.windowManager.hyprland = {
+    settings = {
     #
     # ========== Main Modifier Key ==========
     #
@@ -294,13 +295,13 @@ in
       "$mainMod, mouse:272, movewindow"
       "$mainMod, mouse:273, resizewindow"
     ];
-  };
-  
-  #
-  # ========== Raw Hyprland Config ==========
-  #
-  # For features that don't map to Nix attributes
-  wayland.windowManager.hyprland.extraConfig = ''
+    };
+    
+    #
+    # ========== Raw Hyprland Config ==========
+    #
+    # For features that don't map to Nix attributes
+    extraConfig = ''
     # Media key bindings (locked - don't repeat)
     bindl = , XF86AudioNext, exec, playerctl next
     bindl = , XF86AudioPause, exec, playerctl play-pause
@@ -327,8 +328,9 @@ in
     
     # Enable experimental color management for HDR
     # experimental {
-    #   xx_color_management_v4 = true
-    # }
-  '';
+      #   xx_color_management_v4 = true
+      # }
+    '';
+  };
 }
 
