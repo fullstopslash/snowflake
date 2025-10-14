@@ -5,6 +5,7 @@
   lib,
   pkgs,
   hostSpec,
+  inputs,
   ...
 }:
 let
@@ -139,6 +140,10 @@ in
       ]))
       uv # Modern Python package installer
     ])
+    ++ [
+      # MCP Hub - Model Context Protocol integration for neovim
+      inputs.mcp-hub.packages.${pkgs.system}.default
+    ]
     ++ builtins.attrValues {
       inherit (pkgs)
 

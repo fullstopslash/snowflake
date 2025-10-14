@@ -195,6 +195,12 @@
     # Theming
     stylix.url = "github:danth/stylix/release-25.05";
     rose-pine-hyprcursor.url = "github:ndom91/rose-pine-hyprcursor";
+    
+    # MCP Hub - Model Context Protocol neovim integration
+    mcp-hub = {
+      url = "github:ravitemer/mcp-hub";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     #
     # ========= Personal Repositories =========

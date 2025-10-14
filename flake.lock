@@ -122,6 +122,27 @@
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": [
+          "mcp-hub",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1743550720,
+        "narHash": "sha256-hIshGgKZCgWh6AYJpJmRgFdR3WUbkY04o82X05xqQiY=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "c621e8422220273271f52058f618c94e405bb0f5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-parts_2": {
+      "inputs": {
+        "nixpkgs-lib": [
           "nixvim",
           "nixpkgs"
         ]
@@ -140,7 +161,7 @@
         "type": "github"
       }
     },
-    "flake-parts_2": {
+    "flake-parts_3": {
       "inputs": {
         "nixpkgs-lib": [
           "stylix",
@@ -319,6 +340,27 @@
         "type": "github"
       }
     },
+    "mcp-hub": {
+      "inputs": {
+        "flake-parts": "flake-parts",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1755841689,
+        "narHash": "sha256-KakvXZf0vjdqzyT+LsAKHEr4GLICGXPmxl1hZ3tI7Yg=",
+        "owner": "ravitemer",
+        "repo": "mcp-hub",
+        "rev": "9c7670a4c341ed3cf738a6242c0fde1cea40bccf",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ravitemer",
+        "repo": "mcp-hub",
+        "type": "github"
+      }
+    },
     "nix-assets": {
       "locked": {
         "lastModified": 1758663031,
@@ -489,7 +531,7 @@
     },
     "nixvim": {
       "inputs": {
-        "flake-parts": "flake-parts",
+        "flake-parts": "flake-parts_2",
         "nixpkgs": [
           "nixpkgs"
         ],
@@ -606,6 +648,7 @@
         "disko": "disko",
         "hardware": "hardware",
         "home-manager": "home-manager",
+        "mcp-hub": "mcp-hub",
         "nix-assets": "nix-assets",
         "nix-darwin": "nix-darwin",
         "nix-index-database": "nix-index-database",
@@ -669,7 +712,7 @@
         "base16-helix": "base16-helix",
         "base16-vim": "base16-vim",
         "firefox-gnome-theme": "firefox-gnome-theme",
-        "flake-parts": "flake-parts_2",
+        "flake-parts": "flake-parts_3",
         "gnome-shell": "gnome-shell",
         "nixpkgs": "nixpkgs_3",
         "nur": "nur",
