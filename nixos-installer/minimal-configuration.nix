@@ -82,6 +82,14 @@
     };
   };
 
+  # Add your SSH public keys here for initial ISO access
+  # This allows the bootstrap script to connect before nixos-anywhere runs
+  users.users.root.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGhGAn4RQR/U5C8yJ+jwFmP+zDMyWHVDd6vM5hlLD/su rain@malphas"
+  ];
+  users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys = 
+    config.users.users.root.openssh.authorizedKeys.keys;
+
   nix = {
     #FIXME(installer): registry and nixPath shouldn't be required here because flakes but removal results in warning spam on build
     registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
