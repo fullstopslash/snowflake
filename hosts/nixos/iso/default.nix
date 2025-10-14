@@ -47,14 +47,13 @@
   users.extraUsers.root = {
     inherit (config.users.users.${config.hostSpec.username}) hashedPassword;
     openssh.authorizedKeys.keys = [
-      # Add your SSH public key here for bootstrap access
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSsv1OF/iAmRKdNbjAP5qf9u3qTqZXq3oBotI0hR6ea"
+      inputs.nix-secrets.bootstrap.sshPublicKey
     ] ++ config.users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys or [];
   };
   
   # Also add SSH key to the regular user for bootstrap
   users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSsv1OF/iAmRKdNbjAP5qf9u3qTqZXq3oBotI0hR6ea"
+    inputs.nix-secrets.bootstrap.sshPublicKey
   ];
 
   environment.etc = {

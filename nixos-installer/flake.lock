@@ -18,6 +18,23 @@
         "type": "github"
       }
     },
+    "nix-secrets": {
+      "locked": {
+        "lastModified": 1760405880,
+        "narHash": "sha256-7hDmj0WKxtBoGxDGr3ooUzilfrIp3LTlyIt/S/m2iMg=",
+        "ref": "simple",
+        "rev": "98dfc01b9d5218927bf84cf0ae1b74e77508691c",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/fullstopslash/snowflake-secrets.git"
+      },
+      "original": {
+        "ref": "simple",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/fullstopslash/snowflake-secrets.git"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1732238832,
@@ -53,6 +70,7 @@
     "root": {
       "inputs": {
         "disko": "disko",
+        "nix-secrets": "nix-secrets",
         "nixpkgs": "nixpkgs_2"
       }
     }

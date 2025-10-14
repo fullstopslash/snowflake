@@ -81,13 +81,13 @@
     };
   };
 
-  # Add your SSH public keys here for initial ISO access
+  # SSH public key for initial ISO access (centralized in nix-secrets)
   # This allows the bootstrap script to connect before nixos-anywhere runs
   users.users.root.openssh.authorizedKeys.keys = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSsv1OF/iAmRKdNbjAP5qf9u3qTqZXq3oBotI0hR6ea"
+    inputs.nix-secrets.bootstrap.sshPublicKey
   ];
   users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSsv1OF/iAmRKdNbjAP5qf9u3qTqZXq3oBotI0hR6ea"
+    inputs.nix-secrets.bootstrap.sshPublicKey
   ];
 
   nix = {
