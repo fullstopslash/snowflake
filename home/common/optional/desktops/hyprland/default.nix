@@ -143,8 +143,8 @@
           enabled = true;
           range = 12;
           #offset = "3 3";
-          color = lib.mkForce "0xffff9400";
-          color_inactive = lib.mkForce "0xff2d2d30";
+          color = lib.mkDefault "0xffff9400";
+          color_inactive = lib.mkDefault "0xff2d2d30";
         };
       };
       # group = {
