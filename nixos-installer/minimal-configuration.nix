@@ -85,7 +85,7 @@
   # Add your SSH public keys here for initial ISO access
   # This allows the bootstrap script to connect before nixos-anywhere runs
   users.users.root.openssh.authorizedKeys.keys = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGhGAn4RQR/U5C8yJ+jwFmP+zDMyWHVDd6vM5hlLD/su rain@malphas"
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGSsv1OF/iAmRKdNbjAP5qf9u3qTqZXq3oBotI0hR6ea"
   ];
   users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys = 
     config.users.users.root.openssh.authorizedKeys.keys;
