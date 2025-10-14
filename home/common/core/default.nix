@@ -141,6 +141,14 @@ in
         findutils # find
         jq # json pretty printer and manipulator
         neovim # text editor with user-managed config
+            # Network tools (in networking role)
+        imagemagick
+        luajitPackages.luarocks
+        luajitPackages.magick
+
+        cmake
+        jujutsu # version control system
+        yazi
         nix-tree # nix package tree viewer
         neofetch # fancier system info than pfetch
         ncdu # TUI disk usage
