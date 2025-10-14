@@ -46,10 +46,16 @@ let
     lib.lists.map (key: { ".ssh/${key}.pub".source = "${pathToKeys}/${key}.pub"; }) yubikeys
   );
 
-  identityFiles = [
-    "id_yubikey" # This is an auto symlink to whatever yubikey is plugged in. See modules/common/yubikey
-    "id_manu" # fallback to id_manu if yubikeys are not present
-  ];
+  identityFiles = 
+    if config.hostSpec.useYubikey or true then
+      [
+        "id_yubikey" # This is an auto symlink to whatever yubikey is plugged in. See modules/common/yubikey
+        "id_manu" # fallback to id_manu if yubikeys are not present
+      ]
+    else
+      [
+        "id_ed25519" # Standard SSH key for non-yubikey hosts
+      ];
 
   # Lots of hosts have the same default config, so don't duplicate
   vanillaHosts = [
