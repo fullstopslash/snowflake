@@ -86,6 +86,9 @@
 
   # Passwordless sudo for wheel group (dev VM only)
   security.sudo.wheelNeedsPassword = false;
+  
+  # Dev VM: Disable password requirement entirely
+  users.users.rain.hashedPassword = lib.mkForce null;
 
   # https://wiki.nixos.org/wiki/FAQ/When_do_I_update_stateVersion
   system.stateVersion = "23.11";
