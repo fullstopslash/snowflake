@@ -149,6 +149,7 @@ in
         imagemagick
         cmake
         jujutsu # version control system
+        nodejs # includes npm
         yazi
         nix-tree # nix package tree viewer
         neofetch # fancier system info than pfetch
