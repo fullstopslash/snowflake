@@ -50,25 +50,19 @@ in
     path = "${config.home.homeDirectory}/.local/share/atuin/key";
     sopsFile = "${sopsFolder}/shared.yaml";
   };
-  
-  sops.secrets."atuin/username" = {
-    path = "${config.home.homeDirectory}/.config/atuin/.username";
-    sopsFile = "${sopsFolder}/shared.yaml";
-  };
 
   # Auto-login to atuin if key exists but session doesn't
   home.activation.atuinLogin = config.lib.dag.entryAfter [ "reloadSystemd" ] ''
     KEY_FILE="$HOME/.local/share/atuin/key"
-    USERNAME_FILE="$HOME/.config/atuin/.username"
     SESSION_FILE="$HOME/.local/share/atuin/session"
+    ATUIN_USERNAME="${inputs.nix-secrets.atuin.username}"
     
-    if [ -f "$KEY_FILE" ] && [ -f "$USERNAME_FILE" ] && [ ! -f "$SESSION_FILE" ]; then
-      echo "🔐 Logging into atuin..."
+    if [ -f "$KEY_FILE" ] && [ ! -f "$SESSION_FILE" ]; then
+      echo "🔐 Logging into atuin as $ATUIN_USERNAME..."
       # Find atuin in PATH or nix profile
       ATUIN_BIN=$(PATH="$HOME/.nix-profile/bin:$PATH" command -v atuin 2>/dev/null || true)
       if [ -n "$ATUIN_BIN" ]; then
-        USERNAME=$(cat "$USERNAME_FILE")
-        $DRY_RUN_CMD "$ATUIN_BIN" login -u "$USERNAME" -k "$(cat "$KEY_FILE")" && echo "✅ Atuin login successful" || echo "⚠️  Atuin login failed"
+        $DRY_RUN_CMD "$ATUIN_BIN" login -u "$ATUIN_USERNAME" -k "$(cat "$KEY_FILE")" && echo "✅ Atuin login successful" || echo "⚠️  Atuin login failed"
       else
         echo "⚠️  Atuin binary not found in PATH"
       fi
