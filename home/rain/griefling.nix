@@ -57,16 +57,27 @@
   ];
   
   # Enable atuin daemon for background sync (config is managed by chezmoi)
+  systemd.user.sockets.atuin-daemon = {
+    Unit = {
+      Description = "Atuin daemon socket";
+    };
+    Socket = {
+      ListenStream = "%t/atuin/atuin.sock";
+      SocketMode = "0600";
+    };
+    Install.WantedBy = [ "sockets.target" ];
+  };
+  
   systemd.user.services.atuin-daemon = {
     Unit = {
       Description = "Atuin daemon for background sync";
-      After = [ "network.target" ];
+      Requires = [ "atuin-daemon.socket" ];
+      After = [ "atuin-daemon.socket" ];
     };
     Service = {
       ExecStart = "${pkgs.atuin}/bin/atuin daemon";
       Restart = "on-failure";
     };
-    Install.WantedBy = [ "default.target" ];
   };
   
   # Disable ALL home-manager config generation - chezmoi manages dotfiles
