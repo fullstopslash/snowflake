@@ -297,39 +297,10 @@ in
       ];
     };
     
-    #
-    # ========== Raw Hyprland Config ==========
-    #
-    # For features that don't map to Nix attributes
-    extraConfig = ''
-      # Media key bindings (locked - don't repeat)
-      bindl = , XF86AudioNext, exec, playerctl next
-      bindl = , XF86AudioPause, exec, playerctl play-pause
-      bindl = , XF86AudioPlay, exec, playerctl play-pause
-      bindl = , XF86AudioPrev, exec, playerctl previous
-      
-      # Brightness bindings (repeat when held)
-      bindel = , XF86MonBrightnessUp, exec, brightnessctl s 10%+
-      bindel = , XF86MonBrightnessDown, exec, brightnessctl s 10%-
-      
-      # 4K HDR Monitor Configuration (uncomment if using 4K HDR)
-      # monitorv2 {
-      #   output =
-      #   mode = 3840x2160@119.88Hz
-      #   position = auto
-      #   scale = 2
-      #   bitdepth = 10
-      #   supports_wide_color = 1
-      #   supports_hdr = 1
-      #   cm = hdr
-      #   sdr_min_luminance = 0.005
-      #   sdr_max_luminance = 180
-      # }
-      
-      # Enable experimental color management for HDR
-      # experimental {
-      #   xx_color_management_v4 = true
-      # }
-    '';
+    # NOTE: extraConfig disabled for now - media keys handled by binds.nix
+    # extraConfig = ''
+    #   bindl = , XF86AudioNext, exec, playerctl next
+    #   bindl = , XF86AudioPause, exec, playerctl play-pause
+    # '';
   };
 }
