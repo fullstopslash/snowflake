@@ -66,12 +66,18 @@
     networkmanager.enable = true;
   };
 
+  # Passwordless sudo for wheel group during bootstrap
+  security.sudo.wheelNeedsPassword = false;
+
   services = {
     qemuGuest.enable = true;
     openssh = {
       enable = true;
       ports = [ 22 ];
-      settings.PermitRootLogin = "yes";
+      settings = {
+        PermitRootLogin = "prohibit-password"; # Only allow SSH key auth for root
+        PasswordAuthentication = false; # Disable password auth entirely
+      };
       authorizedKeysFiles = lib.mkForce [ "/etc/ssh/authorized_keys.d/%u" ];
     };
   };

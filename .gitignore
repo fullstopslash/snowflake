@@ -4,7 +4,5 @@ tmp
 result
 latest.iso
 nixos-test*
-griefling-test*
-*-test.qcow2
-*-test.pid
-*-test*.socket
+# QEMU/VM test artifacts organized in quickemu/ directory
+quickemu/
