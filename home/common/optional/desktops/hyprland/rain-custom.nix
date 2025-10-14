@@ -17,28 +17,6 @@ in
     # ========== Main Modifier Key ==========
     #
     "$mainMod" = "SUPER";
-    
-    #
-    # ========== Custom Monitor Config (4K HDR) ==========
-    #
-    # Override with monitorv2 for HDR support
-    monitorv2 = [{
-      output = "";  # empty = all outputs
-      mode = "3840x2160@119.88Hz";
-      position = "auto";
-      scale = 2;
-      bitdepth = 10;
-      supports_wide_color = 1;
-      supports_hdr = 1;
-      cm = "hdr";
-      sdr_min_luminance = 0.005;
-      sdr_max_luminance = 180;
-    }];
-
-    # Enable experimental color management
-    experimental = {
-      xx_color_management_v4 = true;
-    };
 
     #
     # ========== Custom Environment Variables ==========
@@ -332,5 +310,27 @@ in
       ", XF86AudioPrev, exec, playerctl previous"
     ];
   };
+  
+  # Raw Hyprland config for features that don't map to Nix attributes
+  wayland.windowManager.hyprland.extraConfig = ''
+    # 4K HDR Monitor Configuration (comment out if not using 4K HDR)
+    # monitorv2 {
+    #   output =
+    #   mode = 3840x2160@119.88Hz
+    #   position = auto
+    #   scale = 2
+    #   bitdepth = 10
+    #   supports_wide_color = 1
+    #   supports_hdr = 1
+    #   cm = hdr
+    #   sdr_min_luminance = 0.005
+    #   sdr_max_luminance = 180
+    # }
+    
+    # Enable experimental color management for HDR
+    # experimental {
+    #   xx_color_management_v4 = true
+    # }
+  '';
 }
 
