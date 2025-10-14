@@ -14,6 +14,11 @@ in
 {
   wayland.windowManager.hyprland.settings = {
     #
+    # ========== Main Modifier Key ==========
+    #
+    "$mainMod" = "SUPER";
+    
+    #
     # ========== Custom Monitor Config (4K HDR) ==========
     #
     # Override with monitorv2 for HDR support
