@@ -321,8 +321,8 @@ in
     # ========== Media key bindings ==========
     #
     bindel = lib.mkAfter [
-      ",XF86MonBrightnessUp, exec, brightnessctl s 10%+"
-      ",XF86MonBrightnessDown, exec, brightnessctl s 10%-"
+      ", XF86MonBrightnessUp, exec, brightnessctl s 10%+"
+      ", XF86MonBrightnessDown, exec, brightnessctl s 10%-"
     ];
     
     bindl = lib.mkAfter [
