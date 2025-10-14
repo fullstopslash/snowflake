@@ -184,6 +184,7 @@ function nixos_anywhere() {
 	SHELL=/bin/sh nix run github:nix-community/nixos-anywhere -- \
 		--ssh-port "$ssh_port" \
 		--post-kexec-ssh-port "$ssh_port" \
+		--ssh-option "IdentitiesOnly=yes" \
 		--extra-files "$temp" \
 		--flake .#"$target_hostname" \
 		root@"$target_destination"
