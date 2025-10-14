@@ -44,5 +44,8 @@
 
   # Yubikey disabled for test VM (useYubikey = false in host config)
   # services.yubikey-touch-detector.enable = false;
+  
+  # Terminal file manager
+  programs.yazi.enable = true;
 }
 
