@@ -53,7 +53,7 @@
   programs.btop.enable = lib.mkForce false;
   programs.atuin.enable = lib.mkForce false;
   programs.nixvim.enable = lib.mkForce false;
-  programs.ssh.enable = lib.mkForce false;  # Let chezmoi manage SSH config
+  # Keep SSH managed by home-manager - chezmoi config has compatibility issues
   programs.zsh.envExtra = lib.mkForce "";   # Disable .zshenv generation
   
   # Hyprland already disabled via lib.mkIf false in default.nix
