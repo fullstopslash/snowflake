@@ -22,7 +22,7 @@
           "desktops/rofi.nix"
           
           "helper-scripts"
-          "chezmoi.nix"
+          # "chezmoi.nix"  # Disabled on test VM - no GitHub SSH access
           "atuin.nix"
           "sops.nix"
         ])
