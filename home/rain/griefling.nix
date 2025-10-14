@@ -47,5 +47,15 @@
   
   # Terminal file manager
   programs.yazi.enable = true;
+  
+  # Disable home-manager config generation for files managed by chezmoi
+  programs.kitty.enable = lib.mkForce false;
+  programs.btop.enable = lib.mkForce false;
+  programs.atuin.enable = lib.mkForce false;
+  programs.nixvim.enable = lib.mkForce false;
+  programs.ssh.enable = lib.mkForce false;  # Let chezmoi manage SSH config
+  programs.zsh.envExtra = lib.mkForce "";   # Disable .zshenv generation
+  
+  # Hyprland already disabled via lib.mkIf false in default.nix
 }
 
