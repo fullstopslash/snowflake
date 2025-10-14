@@ -294,25 +294,20 @@ in
       "$mainMod, mouse:272, movewindow"
       "$mainMod, mouse:273, resizewindow"
     ];
-    
-    #
-    # ========== Media key bindings ==========
-    #
-    bindel = lib.mkAfter [
-      ", XF86MonBrightnessUp, exec, brightnessctl s 10%+"
-      ", XF86MonBrightnessDown, exec, brightnessctl s 10%-"
-    ];
-    
-    bindl = lib.mkAfter [
-      ", XF86AudioNext, exec, playerctl next"
-      ", XF86AudioPause, exec, playerctl play-pause"
-      ", XF86AudioPlay, exec, playerctl play-pause"
-      ", XF86AudioPrev, exec, playerctl previous"
-    ];
   };
   
   # Raw Hyprland config for features that don't map to Nix attributes
   wayland.windowManager.hyprland.extraConfig = ''
+    # Media key bindings (locked - don't repeat)
+    bindl = , XF86AudioNext, exec, playerctl next
+    bindl = , XF86AudioPause, exec, playerctl play-pause
+    bindl = , XF86AudioPlay, exec, playerctl play-pause
+    bindl = , XF86AudioPrev, exec, playerctl previous
+    
+    # Brightness bindings (repeat when held)
+    bindel = , XF86MonBrightnessUp, exec, brightnessctl s 10%+
+    bindel = , XF86MonBrightnessDown, exec, brightnessctl s 10%-
+    
     # 4K HDR Monitor Configuration (comment out if not using 4K HDR)
     # monitorv2 {
     #   output =
