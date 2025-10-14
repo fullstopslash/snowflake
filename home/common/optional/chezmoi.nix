@@ -7,7 +7,7 @@
   # Note: This will fail gracefully if the dotfiles repo doesn't exist yet
   home.activation.chezmoiInit = lib.hm.dag.entryAfter ["writeBoundary"] ''
     CHEZMOI_SOURCE="${config.home.homeDirectory}/.local/share/chezmoi"
-    DOTFILES_REPO="https://github.com/fullstopslash/dotfiles.git"
+    DOTFILES_REPO="git@github.com:fullstopslash/dotfiles.git"
     
     if [ ! -d "$CHEZMOI_SOURCE/.git" ]; then
       $DRY_RUN_CMD echo "Attempting to initialize chezmoi from dotfiles repo..."
