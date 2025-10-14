@@ -23,7 +23,7 @@
       
       if [ ! -d "$CHEZMOI_SOURCE/.git" ]; then
         echo "Initializing chezmoi from $DOTFILES_REPO"
-        if ${pkgs.chezmoi}/bin/chezmoi init --apply "$DOTFILES_REPO"; then
+        if ${pkgs.chezmoi}/bin/chezmoi init --apply --force "$DOTFILES_REPO" 2>&1; then
           echo "✅ Chezmoi initialized successfully"
         else
           echo "⚠️  Chezmoi init failed - check SSH keys and repo access"
@@ -31,7 +31,7 @@
         fi
       else
         echo "Chezmoi already initialized, updating..."
-        ${pkgs.chezmoi}/bin/chezmoi update --apply || echo "⚠️  Chezmoi update failed"
+        ${pkgs.chezmoi}/bin/chezmoi update --apply --force 2>&1 || echo "⚠️  Chezmoi update failed"
       fi
       
       echo "========================================"
