@@ -18,7 +18,7 @@ in
     ])
     ./${platform}.nix
     ./zsh
-    ./nixvim
+    # ./nixvim  # Disabled - using plain neovim with user-managed config
     ./bash.nix
     ./bat.nix
     ./btop.nix
@@ -140,6 +140,7 @@ in
         fd # tree style ls
         findutils # find
         jq # json pretty printer and manipulator
+        neovim # text editor with user-managed config
         nix-tree # nix package tree viewer
         neofetch # fancier system info than pfetch
         ncdu # TUI disk usage

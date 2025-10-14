@@ -52,7 +52,6 @@
   programs.kitty.enable = lib.mkForce false;
   programs.btop.enable = lib.mkForce false;
   programs.atuin.enable = lib.mkForce false;
-  programs.nixvim.enable = lib.mkForce false;
   # Keep SSH managed by home-manager - chezmoi config has compatibility issues
   programs.zsh.envExtra = lib.mkForce "";   # Disable .zshenv generation
   
