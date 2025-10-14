@@ -54,8 +54,7 @@ ISO_PATH="$REPO_ROOT/result/iso/nixos-minimal-*.iso"
 if [ "$BOOT_FROM_ISO" = true ]; then
     if ! compgen -G "$ISO_PATH" > /dev/null; then
         echo "Building minimal installer ISO..."
-        cd "$REPO_ROOT/nixos-installer" && just iso
-        cd "$REPO_ROOT"
+        cd "$REPO_ROOT" && just iso
     fi
     ISO_DRIVE=(-drive "media=cdrom,index=0,file=$(compgen -G "$ISO_PATH" | head -1)")
     echo "  Booting from ISO for initial installation"
