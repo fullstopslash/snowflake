@@ -49,17 +49,24 @@
   programs.yazi.enable = true;
   
   # Install packages for programs whose config is managed by chezmoi
+  # When programs.X.enable = false, the package isn't installed, so add them here
   home.packages = with pkgs; [
-    atuin  # History sync - config managed by chezmoi
+    atuin
+    kitty
+    btop
   ];
   
-  # Disable home-manager config generation for files managed by chezmoi
+  # Disable ALL home-manager config generation - chezmoi manages dotfiles
   programs.kitty.enable = lib.mkForce false;
   programs.btop.enable = lib.mkForce false;
   programs.atuin.enable = lib.mkForce false;
-  programs.zsh.enable = lib.mkForce false;  # Let chezmoi manage all zsh config
-  # Keep SSH managed by home-manager - chezmoi config has compatibility issues
+  programs.zsh.enable = lib.mkForce false;
+  programs.bash.enable = lib.mkForce false;
+  programs.git.enable = lib.mkForce false;
+  programs.ssh.enable = lib.mkForce false;
+  programs.direnv.enable = lib.mkForce false;
   
-  # Hyprland already disabled via lib.mkIf false in default.nix
+  # Disable Hyprland config generation
+  wayland.windowManager.hyprland.enable = lib.mkForce false;
 }
 
