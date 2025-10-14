@@ -44,16 +44,5 @@
 
   # Yubikey disabled for test VM (useYubikey = false in host config)
   # services.yubikey-touch-detector.enable = false;
-  
-  # Override SSH identity files for GitHub/GitLab (no yubikey on VM)
-  programs.ssh.matchBlocks = {
-    "git" = {
-      host = "gitlab.com github.com";
-      user = "git";
-      forwardAgent = true;
-      identitiesOnly = true;
-      identityFile = [ "~/.ssh/id_ed25519" ];
-    };
-  };
 }
 
