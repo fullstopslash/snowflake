@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, pkgs, ... }:
 {
   imports = (
     map lib.custom.relativeToRoot (
@@ -47,6 +47,11 @@
   
   # Terminal file manager
   programs.yazi.enable = true;
+  
+  # Install packages for programs whose config is managed by chezmoi
+  home.packages = with pkgs; [
+    atuin  # History sync - config managed by chezmoi
+  ];
   
   # Disable home-manager config generation for files managed by chezmoi
   programs.kitty.enable = lib.mkForce false;
