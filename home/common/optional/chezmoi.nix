@@ -1,8 +1,7 @@
 { config, pkgs, lib, ... }:
 {
-  programs.chezmoi = {
-    enable = true;
-  };
+  # Install chezmoi
+  home.packages = [ pkgs.chezmoi ];
   
   # Auto-initialize and apply chezmoi on activation
   home.activation.chezmoiInit = lib.hm.dag.entryAfter ["writeBoundary"] ''
