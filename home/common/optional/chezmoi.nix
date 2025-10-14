@@ -1,7 +1,10 @@
 { config, pkgs, lib, ... }:
 {
-  # Install chezmoi
-  home.packages = [ pkgs.chezmoi ];
+  # Install chezmoi and git (chezmoi needs git for SSH cloning)
+  home.packages = [ 
+    pkgs.chezmoi 
+    pkgs.git
+  ];
   
   # Auto-initialize and apply chezmoi on activation
   home.activation.chezmoiInit = {
