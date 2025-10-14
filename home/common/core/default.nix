@@ -128,6 +128,11 @@ in
 
     in
     [ jq5 ]
+    ++ (with pkgs; [
+      # Luajit packages (can't use inherit with dotted paths)
+      luajitPackages.luarocks
+      luajitPackages.magick
+    ])
     ++ builtins.attrValues {
       inherit (pkgs)
 
@@ -141,11 +146,7 @@ in
         findutils # find
         jq # json pretty printer and manipulator
         neovim # text editor with user-managed config
-            # Network tools (in networking role)
         imagemagick
-        luajitPackages.luarocks
-        luajitPackages.magick
-
         cmake
         jujutsu # version control system
         yazi
