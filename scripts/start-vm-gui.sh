@@ -35,9 +35,11 @@ if [ -f "$PID_FILE" ] && ps -p "$(cat "$PID_FILE")" > /dev/null 2>&1; then
 fi
 
 # Create QCOW2 if it doesn't exist
+BOOT_FROM_ISO=false
 if [ ! -f "$QCOW2" ]; then
     echo "Creating disk image for $HOSTNAME..."
     qemu-img create -f qcow2 "$QCOW2" 100G
+    BOOT_FROM_ISO=true
 fi
 
 # Create OVMF_VARS if it doesn't exist
@@ -52,6 +54,21 @@ fi
 OVMF_CODE=$(nix-build '<nixpkgs>' -A OVMF.fd --no-out-link)/FV/OVMF_CODE.fd
 
 echo "Starting $HOSTNAME VM (GUI, SSH on port $SSH_PORT)..."
+
+# Build ISO if booting from scratch and it doesn't exist
+ISO_PATH="$REPO_ROOT/result/iso/nixos-minimal-25.05.*.iso"
+if [ "$BOOT_FROM_ISO" = true ]; then
+    if ! compgen -G "$ISO_PATH" > /dev/null; then
+        echo "Building minimal installer ISO for $HOSTNAME..."
+        cd "$REPO_ROOT/nixos-installer" && nix build ".#nixosConfigurations.${HOSTNAME}.config.system.build.isoImage"
+        cd "$REPO_ROOT"
+    fi
+    ISO_DRIVE=(-drive "media=cdrom,index=0,file=$(compgen -G "$ISO_PATH" | head -1)")
+    echo "  Booting from ISO for initial installation"
+else
+    ISO_DRIVE=()
+    echo "  Booting from existing disk"
+fi
 
 exec qemu-system-x86_64 \
     -name "${HOSTNAME}-test,process=${HOSTNAME}-test" \
@@ -81,6 +98,7 @@ exec qemu-system-x86_64 \
     -global driver=cfi.pflash01,property=secure,value=on \
     -drive "if=pflash,format=raw,unit=0,file=$OVMF_CODE,readonly=on" \
     -drive "if=pflash,format=raw,unit=1,file=$OVMF_VARS" \
+    "${ISO_DRIVE[@]}" \
     -device virtio-blk-pci,drive=SystemDisk \
     -drive "id=SystemDisk,if=none,format=qcow2,file=$QCOW2" \
     -monitor "unix:$MONITOR_SOCK,server,nowait" \
