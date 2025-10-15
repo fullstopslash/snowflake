@@ -22,7 +22,7 @@ in
       auto_sync = true;
       #FIXME(atuin): move to private server
       sync_address = "https://api.atuin.sh";
-      sync_frequency = "30m";
+      sync_frequency = "5m";
       update_check = false;
       filter_mode = "global";
       invert = true;
@@ -62,7 +62,7 @@ in
     sopsFile = "${sopsFolder}/shared.yaml";
   };
 
-  # Auto-login to atuin if key exists but session doesn't
+  # Auto-login to atuin if key exists but session doesn't, then sync immediately
   home.activation.atuinLogin = config.lib.dag.entryAfter [ "reloadSystemd" ] ''
     KEY_FILE="$HOME/.local/share/atuin/key"
     USERNAME_FILE="$HOME/.config/atuin/.username"
@@ -76,7 +76,13 @@ in
       # Find atuin in PATH or nix profile
       ATUIN_BIN=$(PATH="$HOME/.nix-profile/bin:$PATH" command -v atuin 2>/dev/null || true)
       if [ -n "$ATUIN_BIN" ]; then
-        $DRY_RUN_CMD "$ATUIN_BIN" login -u "$USERNAME" -p "$PASSWORD" -k "$(cat "$KEY_FILE")" && echo "✅ Atuin login successful" || echo "⚠️  Atuin login failed"
+        if $DRY_RUN_CMD "$ATUIN_BIN" login -u "$USERNAME" -p "$PASSWORD" -k "$(cat "$KEY_FILE")"; then
+          echo "✅ Atuin login successful"
+          echo "🔄 Syncing history immediately..."
+          $DRY_RUN_CMD "$ATUIN_BIN" sync && echo "✅ Initial sync complete" || echo "⚠️  Initial sync failed"
+        else
+          echo "⚠️  Atuin login failed"
+        fi
       else
         echo "⚠️  Atuin binary not found in PATH"
       fi
