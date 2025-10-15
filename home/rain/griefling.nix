@@ -57,7 +57,7 @@
   ];
   
   # Enable atuin daemon for background sync (config is managed by chezmoi)
-  systemd.user.sockets.atuin-daemon = {
+  systemd.user.sockets.atuin-daemon = lib.mkForce {
     Unit = {
       Description = "Atuin daemon socket";
     };
