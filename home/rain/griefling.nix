@@ -83,7 +83,7 @@
   # Disable ALL home-manager config generation - chezmoi manages dotfiles
   programs.kitty.enable = lib.mkForce false;
   programs.btop.enable = lib.mkForce false;
-  programs.atuin.enable = lib.mkForce false;
+  # programs.atuin.enable = lib.mkForce false;  # Keep enabled for sync_address config
   programs.zsh.enable = lib.mkForce false;
   programs.bash.enable = lib.mkForce false;
   programs.git.enable = lib.mkForce false;
