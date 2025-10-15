@@ -21,7 +21,7 @@ in
     settings = {
       auto_sync = true;
       #FIXME(atuin): move to private server
-      sync_address = "https://api.atuin.sh";
+      sync_address = "http://waterbug.lan:3333";
       sync_frequency = "5m";
       update_check = false;
       filter_mode = "global";
