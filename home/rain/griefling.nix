@@ -68,7 +68,7 @@
     Install.WantedBy = [ "sockets.target" ];
   };
   
-  systemd.user.services.atuin-daemon = {
+  systemd.user.services.atuin-daemon = lib.mkForce {
     Unit = {
       Description = "Atuin daemon for background sync";
       Requires = [ "atuin-daemon.socket" ];
