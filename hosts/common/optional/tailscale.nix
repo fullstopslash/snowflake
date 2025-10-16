@@ -17,14 +17,14 @@ in {
   # SOPS secrets for Tailscale OAuth
   sops.secrets = {
     "tailscale/oauth_client_id" = {
-      path = "/run/secrets/tailscale-oauth-client-id";
+      path = "/run/secrets/tailscale/oauth_client_id";
       owner = "root";
       group = "root";
       mode = "0400";
       sopsFile = "${inputs.nix-secrets}/sops/shared.yaml";
     };
     "tailscale/oauth_client_secret" = {
-      path = "/run/secrets/tailscale-oauth-client-secret";
+      path = "/run/secrets/tailscale/oauth_client_secret";
       owner = "root";
       group = "root";
       mode = "0400";
