@@ -15,7 +15,7 @@ in {
       #
       # ========== Main Modifier Key ==========
       #
-      "$mainMod" = "SUPER";
+      "$mainMod" = "ALT";
 
       #
       # ========== Custom Environment Variables ==========
