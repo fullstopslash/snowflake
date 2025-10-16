@@ -14,7 +14,6 @@
     # ../../roles/cachix.nix
     ../../roles/desktop.nix
     # ../../roles/plasma.nix  # Temporarily disabled due to GCC15 ICE in xwayland dependency
-    ../../roles/sddm-wayland.nix
     ../../roles/hyprland.nix
     ../../roles/flatpak.nix
     ../../roles/audio-tuning.nix

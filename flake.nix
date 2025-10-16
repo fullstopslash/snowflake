@@ -132,22 +132,5 @@
 
     # CI checks for deploy-rs
     # checks.${system} = inputs.deploy-rs.lib.${system}.deployChecks self.deploy;
-
-    # ISO build outputs and local packages
-    packages = {
-      "${system}" = {
-        iso-installer = inputs.nixos-generators.nixosGenerate {
-          inherit system;
-          format = "iso";
-          modules = [
-            ./iso/installer.nix
-            # Centralize stateVersion for the installer ISO
-            {system.stateVersion = stateVersion;}
-          ];
-        };
-        # Provide a default package for `nix build` without an explicit attribute
-        default = self.packages.${system}.iso-installer;
-      };
-    };
   };
 }

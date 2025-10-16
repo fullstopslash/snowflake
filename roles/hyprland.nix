@@ -1,5 +1,5 @@
 # Hyprland desktop role
-{pkgs, ...}: let
+{pkgs, lib, ...}: let
   hypridleConf = pkgs.writeText "hypridle.conf" ''
     general {
       before_sleep_cmd = ${pkgs.hyprlock}/bin/hyprlock
@@ -11,12 +11,38 @@ in {
     hyprland = {
       enable = true;
       # portalPackage = pkgs.xdg-desktop-portal-hyprland;
-      xwayland.enable = true;
+      xwayland.enable = true; # Re-enabled for SDDM compatibility
     };
     hyprlock.enable = true;
   };
 
   services.hypridle.enable = true;
+
+  # Use greetd as display manager (Wayland-native)
+  services.greetd = {
+    enable = true;
+    settings = {
+      default_session = {
+        command = "${pkgs.gtkgreet}/bin/gtkgreet";
+        user = "greeter";
+      };
+      terminal = {
+        vt = lib.mkForce 2;
+      };
+    };
+  };
+
+  # Create Hyprland session file for greetd
+  environment.etc."greetd/environments".text = ''
+    Hyprland
+    ${pkgs.hyprland}/bin/Hyprland
+  '';
+
+  # Disable other display managers
+  services.displayManager = {
+    sddm.enable = false;
+    defaultSession = "hyprland";
+  };
 
   # Environment for Hyprland
   environment.sessionVariables = {
@@ -67,8 +93,13 @@ in {
   # };
 
   environment.systemPackages = with pkgs; [
-    # KDE theming for Hyprland
+    # Hyprland greeters and utilities
+    greetd
+    gtkgreet
+    # Alternative: cage
+    # cage
 
+    # KDE theming for Hyprland
     hyprlock
     hyprpicker
     hypridle
