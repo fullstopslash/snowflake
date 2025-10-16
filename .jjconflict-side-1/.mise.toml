@@ -1,6 +1,0 @@
-[tools]
-direnv = "latest"
-
-
-[env]
-ALLOWED_DIRECTORY = "/home/rain/nix"
