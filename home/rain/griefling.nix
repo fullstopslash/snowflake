@@ -90,7 +90,7 @@
   programs.ssh.enable = lib.mkForce false;
   programs.direnv.enable = lib.mkForce false;
   
-  # Disable Hyprland config generation
-  wayland.windowManager.hyprland.enable = lib.mkForce false;
+  # Enable Hyprland config generation for VM
+  wayland.windowManager.hyprland.enable = lib.mkForce true;
 }
 

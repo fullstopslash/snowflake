@@ -25,11 +25,11 @@
       #pkgs.unstable.hyprlandPlugins.hy3
     ];
     
-    # Disable config generation - managed by chezmoi instead
-    # NOTE: Remove this if you want to go back to Nix-managed config
-    extraConfig = "# Config managed by chezmoi";
+    # Enable config generation for VM
+    # NOTE: Config is now managed by Nix for griefling VM
+    # extraConfig = "# Config managed by chezmoi";
 
-    settings = lib.mkIf false {
+    settings = lib.mkIf true {
       debug = {
         disable_logs = false;
       };
