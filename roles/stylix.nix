@@ -101,17 +101,20 @@ in {
     };
 
     # Configure SDDM to use the same cursor theme
-    services.displayManager.sddm.settings = {
-      "X11" = {
-        "ServerArguments" = "-nolisten tcp";
-        "DisplayCommand" = "";
-      };
-      "Wayland" = {
-        "DisplayCommand" = "";
-      };
-      "General" = {
-        "CursorTheme" = cfg.cursorTheme;
-        "CursorSize" = toString cfg.cursorSize;
+    services.displayManager.sddm = {
+      enable = true;
+      settings = {
+        "X11" = {
+          "ServerArguments" = "-nolisten tcp";
+          "DisplayCommand" = "";
+        };
+        "Wayland" = {
+          "DisplayCommand" = "";
+        };
+        "General" = {
+          "CursorTheme" = cfg.cursorTheme;
+          "CursorSize" = toString cfg.cursorSize;
+        };
       };
     };
 
