@@ -132,5 +132,12 @@
 
     # CI checks for deploy-rs
     # checks.${system} = inputs.deploy-rs.lib.${system}.deployChecks self.deploy;
+
+    # Default package - build the malphas configuration
+    packages = {
+      "${system}" = {
+        default = self.nixosConfigurations.malphas.config.system.build.toplevel;
+      };
+    };
   };
 }
