@@ -137,18 +137,6 @@ in {
         requires = ["tailscale-oauth-key.service"];
         wants = ["network-online.target"];
       };
-      # Ensure Tailscale automatically connects on startup
-      tailscale-autoconnect = {
-        description = "Automatically connect to Tailscale";
-        wantedBy = ["multi-user.target"];
-        after = ["tailscaled.service" "tailscale-oauth-key.service"];
-        requires = ["tailscaled.service" "tailscale-oauth-key.service"];
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = "${pkgs.tailscale}/bin/tailscale up --auth-key=file:/run/tailscale-oauth/auth.key --accept-dns=true --shields-up=false --accept-routes=false --ssh --advertise-tags=tag:nixos";
-          RemainAfterExit = true;
-        };
-      };
     };
   };
 
