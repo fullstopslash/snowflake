@@ -28,6 +28,7 @@ in
       "hosts/common/core/keyd.nix"
       "hosts/common/core/sops.nix" # Core because it's used for backups, mail
       "hosts/common/core/ssh.nix"
+      "hosts/common/optional/tailscale.nix" # Core networking service
 
       "hosts/common/users/"
     ])
