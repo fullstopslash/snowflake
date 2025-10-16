@@ -1,5 +1,9 @@
 # Hyprland desktop role
-{pkgs, lib, ...}: let
+{
+  pkgs,
+  lib,
+  ...
+}: let
   hypridleConf = pkgs.writeText "hypridle.conf" ''
     general {
       before_sleep_cmd = ${pkgs.hyprlock}/bin/hyprlock
@@ -18,29 +22,23 @@ in {
 
   services.hypridle.enable = true;
 
-  # Use greetd as display manager (Wayland-native)
-  services.greetd = {
-    enable = true;
-    settings = {
-      default_session = {
-        command = "${pkgs.gtkgreet}/bin/gtkgreet";
-        user = "greeter";
-      };
-      terminal = {
-        vt = lib.mkForce 2;
+  # Use SDDM with Wayland support (more reliable than greetd)
+  services.displayManager = {
+    sddm = {
+      enable = true;
+      enableHidpi = true;
+      wayland.enable = true;
+      theme = "sddm-astronaut-theme";
+      settings = {
+        General = {
+          DisplayServer = "wayland";
+          GreeterEnvironment = "QT_SCREEN_SCALE_FACTORS=2 QT_WAYLAND_SHELL_INTEGRATION=layer-shell";
+        };
+        Wayland = {
+          CompositorCommand = "Hyprland --no-lockscreen --no-global-shortcuts";
+        };
       };
     };
-  };
-
-  # Create Hyprland session file for greetd
-  environment.etc."greetd/environments".text = ''
-    Hyprland
-    ${pkgs.hyprland}/bin/Hyprland
-  '';
-
-  # Disable other display managers
-  services.displayManager = {
-    sddm.enable = false;
     defaultSession = "hyprland";
   };
 
@@ -93,13 +91,12 @@ in {
   # };
 
   environment.systemPackages = with pkgs; [
-    # Hyprland greeters and utilities
-    greetd
-    gtkgreet
-    # Alternative: cage
-    # cage
+    # SDDM theme and utilities
+    sddm-astronaut
+    catppuccin-sddm
+    where-is-my-sddm-theme
 
-    # KDE theming for Hyprland
+    # Hyprland utilities
     hyprlock
     hyprpicker
     hypridle
