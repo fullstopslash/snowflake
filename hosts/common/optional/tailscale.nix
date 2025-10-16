@@ -144,7 +144,7 @@ in {
           requires = ["tailscaled.service" "tailscale-oauth-key.service"];
           serviceConfig = {
             Type = "oneshot";
-            ExecStart = "${pkgs.tailscale}/bin/tailscale up";
+            ExecStart = "${pkgs.tailscale}/bin/tailscale up --authkey-file=/run/tailscale-oauth/auth.key --accept-dns=true --shields-up=false --accept-routes=false --ssh";
             RemainAfterExit = true;
           };
         };
