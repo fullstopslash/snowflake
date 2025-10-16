@@ -16,14 +16,14 @@
 in {
   # SOPS secrets for Tailscale OAuth
   sops.secrets = {
-    "tailscale/oauth_client_id" = {
+    "tailscale.oauth_client_id" = {
       path = "/run/secrets/tailscale-oauth-client-id";
       owner = "root";
       group = "root";
       mode = "0400";
       sopsFile = "${inputs.nix-secrets}/sops/shared.yaml";
     };
-    "tailscale/oauth_client_secret" = {
+    "tailscale.oauth_client_secret" = {
       path = "/run/secrets/tailscale-oauth-client-secret";
       owner = "root";
       group = "root";
@@ -109,8 +109,8 @@ in {
         mkdir -p "$AUTH_DIR"
         chmod 700 "$AUTH_DIR"
 
-        CLIENT_ID=$(cat ${config.sops.secrets."tailscale/oauth_client_id".path})
-        CLIENT_SECRET=$(cat ${config.sops.secrets."tailscale/oauth_client_secret".path})
+        CLIENT_ID=$(cat ${config.sops.secrets."tailscale.oauth_client_id".path})
+        CLIENT_SECRET=$(cat ${config.sops.secrets."tailscale.oauth_client_secret".path})
 
         if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
           printf "%s\n" "Missing Tailscale OAuth client credentials" 1>&2
