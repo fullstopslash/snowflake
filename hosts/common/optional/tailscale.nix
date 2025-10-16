@@ -86,6 +86,8 @@ in {
       "--operator=${operatorUser}" # Allow primary user to administer tailscale
       "--ssh" # Enable Tailscale SSH
     ];
+    # Enable automatic connection on startup
+    openFirewall = true;
   };
 
   # Systemd service to generate Tailscale auth key via OAuth
@@ -128,11 +130,24 @@ in {
   };
 
   # Ensure tailscaled starts after OAuth key generation
-  systemd.services.tailscaled = {
-    after = ["tailscale-oauth-key.service" "network-online.target"];
-    requires = ["tailscale-oauth-key.service"];
-    wants = ["network-online.target"];
-  };
+        systemd.services.tailscaled = {
+          after = ["tailscale-oauth-key.service" "network-online.target"];
+          requires = ["tailscale-oauth-key.service"];
+          wants = ["network-online.target"];
+        };
+
+        # Ensure Tailscale automatically connects on startup
+        systemd.services.tailscale-autoconnect = {
+          description = "Automatically connect to Tailscale";
+          wantedBy = ["multi-user.target"];
+          after = ["tailscaled.service" "tailscale-oauth-key.service"];
+          requires = ["tailscaled.service" "tailscale-oauth-key.service"];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = "${pkgs.tailscale}/bin/tailscale up --authkey-file=/run/tailscale-oauth/auth.key";
+            RemainAfterExit = true;
+          };
+        };
 
   # Ensure Tailscale has proper permissions
   users.groups.tailscale = {};
