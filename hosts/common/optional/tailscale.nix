@@ -119,62 +119,8 @@ in {
           exit 1
         fi
 
-        # Obtain OAuth access token with retries to handle early boot networking
-        ACCESS_TOKEN=""
-        i=0
-        while [ "$i" -lt 10 ] && [ -z "$ACCESS_TOKEN" ]; do
-          TOKEN_RESP=$(${pkgs.curl}/bin/curl --fail -sS \
-            -u "$CLIENT_ID:$CLIENT_SECRET" \
-            -d "grant_type=client_credentials" \
-            -d "scope=auth_keys" \
-            https://api.tailscale.com/api/v2/oauth/token || true)
-          ACCESS_TOKEN=$(printf "%s" "$TOKEN_RESP" | ${pkgs.jq}/bin/jq -r '.access_token // empty') || true
-          if [ -z "$ACCESS_TOKEN" ]; then
-            i=$((i + 1))
-            printf "%s\n" "Waiting for OAuth token (attempt $i/10)" 1>&2
-            sleep 3
-          fi
-        done
-        if [ -z "$ACCESS_TOKEN" ]; then
-          printf "%s\n" "Failed to obtain OAuth access token after retries" 1>&2
-          printf "%s\n" "Last response: $TOKEN_RESP" 1>&2
-          exit 1
-        fi
-
-        CREATE_PAYLOAD='{
-          "capabilities": {
-            "devices": {
-              "create": {
-                "reusable": false,
-                "ephemeral": false,
-                "preauthorized": true,
-                "tags": ["tag:nixos"]
-              }
-            }
-          }
-        }'
-
-        # Create a Tailscale auth key with retries
-        KEY=""
-        j=0
-        while [ "$j" -lt 10 ] && [ -z "$KEY" ]; do
-          KEY_RESP=$(${pkgs.curl}/bin/curl --fail -sS \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$CREATE_PAYLOAD" \
-            https://api.tailscale.com/api/v2/tailnet/-/keys || true)
-          KEY=$(printf "%s" "$KEY_RESP" | ${pkgs.jq}/bin/jq -r '.key // empty') || true
-          if [ -z "$KEY" ]; then
-            j=$((j + 1))
-            printf "%s\n" "Waiting for auth key (attempt $j/10)" 1>&2
-            sleep 3
-          fi
-        done
-        if [ -z "$KEY" ]; then
-          printf "%s\n" "Failed to create Tailscale auth key after retries" 1>&2
-          printf "%s\n" "Last response: $KEY_RESP" 1>&2
-          exit 1
-        fi
+        # Use the auth key directly (the "client secret" is actually an auth key)
+        KEY="$CLIENT_SECRET"
 
         umask 077
         printf "%s\n" "$KEY" > "$AUTH_FILE"
@@ -189,7 +135,21 @@ in {
           requires = ["tailscale-oauth-key.service"];
           wants = ["network-online.target"];
         };
-
+        # Ensure Tailscale automatically connects on startup
+        tailscale-autoconnect = {
+          description = "Automatically connect to Tailscale";
+          wantedBy = ["multi-user.target"];
+          after = ["tailscaled.service" "tailscale-oauth-key.service"];
+          requires = ["tailscaled.service" "tailscale-oauth-key.service"];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = "${pkgs.tailscale}/bin/tailscale up --auth-key=file:/run/tailscale-oauth/auth.key --accept-dns=true --shields-up=false --accept-routes=false --ssh --advertise-tags=tag:nixos";
+            RemainAfterExit = true;
+          };
+        };
+      };
+    };
+  };
 
   # Ensure Tailscale has proper permissions
   users.groups.tailscale = {};
