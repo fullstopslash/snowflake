@@ -96,9 +96,9 @@
               })
             ];
             # Force xwayland to use stable version everywhere, including in NixOS modules
-            nixpkgs.config.packageOverrides = pkgs: {
-              xwayland = pkgs.stable.xwayland;
-            };
+            # nixpkgs.config.packageOverrides = pkgs: {
+            #   xwayland = pkgs.stable.xwayland;
+            # };
           }
           # Host-specific configuration
           ./hosts/${hostname}/default.nix
