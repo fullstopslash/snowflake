@@ -85,9 +85,6 @@
               })
               # Build only failing packages with non-GCC15 toolchains
               (_: prev: {
-                # Build Hyprland against an older libc++ toolchain to avoid clang 21 frontend crashes
-                # hyprland = prev.hyprland.override {stdenv = prev.llvmPackages_18.libcxxStdenv;};
-                # xwayland = prev.stable.xwayland;
                 # Use older Go toolchain to avoid current SSA crash without pinning to stable and skip vet/test
                 sops-install-secrets = prev.sops-install-secrets.override {
                   go = prev.go_1_21;

@@ -40,7 +40,11 @@
         theme = "sddm-astronaut-theme";
         settings = {
           General = {
-            GreeterEnvironment = "QT_SCREEN_SCALE_FACTORS=2";
+            DisplayServer = "wayland";
+            GreeterEnvironment = "QT_SCREEN_SCALE_FACTORS=2 QT_WAYLAND_SHELL_INTEGRATION=layer-shell";
+          };
+          Wayland = {
+            CompositorCommand = "Hyprland --no-lockscreen --no-global-shortcuts";
           };
         };
       };
