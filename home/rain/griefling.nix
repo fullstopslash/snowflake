@@ -55,7 +55,7 @@
     kitty
     ghostty
     firefox
-    thunar
+    xfce.thunar
     wlogout
     rofi
     wofi
