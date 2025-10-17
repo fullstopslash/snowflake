@@ -19,7 +19,7 @@
       default_user = config.hostSpec.primaryUsername;
       save = false;
       animate = true;
-      animation = 0;
+      animation = 2; # use overlay-defined custom entry
       # Run custom animation command (requires 'neo' in PATH)
       cmd = "neo --chars=10450,1047F --defaultbg -c cyan";
     };
