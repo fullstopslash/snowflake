@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }:
 {
-  environment.systemPackages = [ pkgs.sddm-astronaut ];
+  environment.systemPackages = [ pkgs.sddm-astronaut-theme ];
 
   services.displayManager.sddm = {
     enable = true;
