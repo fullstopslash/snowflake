@@ -59,7 +59,6 @@
     wlogout
     rofi
     wofi
-    hyprland-contrib.grimblast
     btop
   ];
   
