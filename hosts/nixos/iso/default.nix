@@ -20,7 +20,7 @@
     ])
     (
       let
-        path = lib.custom.relativeToRoot "hosts/common/users/ta/default.nix";
+        path = lib.custom.relativeToRoot "hosts/common/users/${config.hostSpec.primaryUsername}/default.nix";
       in
         lib.optional (lib.pathExists path) path
     )
@@ -38,7 +38,7 @@
       networking
       ;
 
-    #TODO(git): This is stuff for home/ta/common/core/git.nix. should create home/ta/common/optional/development.nix so core git.nix doesn't use it.
+  #TODO(git): This is stuff for home/${config.hostSpec.primaryUsername}/common/core/git.nix. should create home/${config.hostSpec.primaryUsername}/common/optional/development.nix so core git.nix doesn't use it.
     handle = "fullstopslash";
     email.gitHub = inputs.nix-secrets.email.gitHub;
   };

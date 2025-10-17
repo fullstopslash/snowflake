@@ -28,7 +28,7 @@ echo "The ISO uses user 'fullstopslash' (or 'nixos' fallback)"
 echo ""
 
 # Try connecting as different users to see what works (using 127.0.0.1 to avoid IPv6 issues)
-for user in ta nixos; do
+for user in rain nixos; do
     echo "Trying user: $user"
     if ssh -o ConnectTimeout=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         -o BatchMode=yes -p 22220 -i ~/.ssh/id_ed25519 \
@@ -48,7 +48,7 @@ if [ -z "${WORKING_USER:-}" ]; then
     echo "  2. Manually authorize your key on the ISO"
     echo ""
     echo "To check manually, try:"
-    echo "  ssh -p 22220 ta@127.0.0.1"
+    echo "  ssh -p 22220 rain@127.0.0.1"
     echo ""
     exit 1
 fi

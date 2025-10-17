@@ -38,8 +38,8 @@ in
   # ========== Core Host Specifications ==========
   #
   hostSpec = {
-    primaryUsername = lib.mkDefault "ta";
-    username = lib.mkDefault "ta";
+    primaryUsername = lib.mkDefault "rain";
+    username = lib.mkDefault "rain";
     handle = lib.mkDefault "emergentmind";
     inherit (inputs.nix-secrets)
       domain
