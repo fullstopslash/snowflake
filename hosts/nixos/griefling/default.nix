@@ -61,8 +61,7 @@
     enableIPv6 = false;
   };
 
-  # Ensure greetd runs Hyprland session as the correct user
-  services.greetd.settings.default_session.user = "rain";
+  # greetd default user derives from hostSpec.username via module
 
   boot.loader = {
     systemd-boot.enable = true;
