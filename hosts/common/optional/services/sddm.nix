@@ -4,7 +4,7 @@
   services.displayManager.sddm = {
     enable = true;
     enableHidpi = true;
-    themePackages = [ pkgs.sddm-astronaut ];
+    # themePackages not available on this NixOS; install theme via systemPackages
     wayland = {
       enable = true;
       compositor = "kwin";
@@ -16,6 +16,9 @@
       };
     };
   };
+
+  # Ensure the theme is present for SDDM to discover
+  environment.systemPackages = (config.environment.systemPackages or []) ++ [ pkgs.sddm-astronaut ];
 
   # Ensure Hyprland session is available to SDDM and select it by default
   services.displayManager.sessionPackages = [ pkgs.hyprland ];
