@@ -38,7 +38,7 @@
       # ========== Optional Configs ==========
       #
       "hosts/common/optional/hyprland.nix"
-      "hosts/common/optional/services/greetd.nix"
+      "hosts/common/optional/services/ly.nix"
       "hosts/common/optional/services/openssh.nix"
       "hosts/common/optional/wayland.nix"
     ])
