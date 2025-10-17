@@ -27,24 +27,6 @@ let
     steam = prev.steam.overrideAttrs {
       mesa = final.unstable.mesa;
     };
-    ly = prev.ly.overrideAttrs (old: {
-      patches = (old.patches or []) ++ [
-        (final.writeText "ly-neo-animation.patch" ''
---- a/src/cfg.c
-+++ b/src/cfg.c
-@@
-   const char *animations[] = {
-     "flames",
-     "snow",
-     "matrix"
-   };
-@@
-   // Select animation by index
-   // Add custom entry at index 2 to run neo
-   animations[2] = "neo --chars=10450,1047F --defaultbg -c cyan";
-        '')
-      ];
-    });
   };
 
   stable-packages = final: prev: {
