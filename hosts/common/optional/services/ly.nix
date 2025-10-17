@@ -8,6 +8,9 @@
   # Ensure greetd is off when using ly
   services.greetd.enable = lib.mkForce false;
 
+  # Ensure the animation tool is available when ly is enabled
+  environment.systemPackages = [ pkgs.neo ];
+
   services.displayManager.ly = {
     enable = true;
     package = pkgs.ly;
@@ -15,6 +18,8 @@
     settings = {
       default_user = config.hostSpec.primaryUsername;
       save = false;
+      # Run custom animation command (requires 'neo' in PATH)
+      init_cmd = "neo --chars=10450,1047F --defaultbg -c cyan";
     };
   };
 }
