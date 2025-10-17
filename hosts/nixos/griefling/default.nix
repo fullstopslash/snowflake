@@ -40,11 +40,11 @@
       "hosts/common/optional/hyprland.nix"
       # Switch to SDDM for this host
       "hosts/common/optional/services/sddm.nix"
-      # Explicitly disable ly for this host
-      ({ lib, ... }: { services.displayManager.ly.enable = lib.mkForce false; })
       "hosts/common/optional/services/openssh.nix"
       "hosts/common/optional/wayland.nix"
     ])
+    # Explicitly disable ly for this host
+    ({ lib, ... }: { services.displayManager.ly.enable = lib.mkForce false; })
   ];
 
   #
