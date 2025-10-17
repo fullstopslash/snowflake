@@ -5,13 +5,26 @@
   ...
 }:
 {
-  wayland.windowManager.hyprland.settings = {
+  wayland.windowManager.hyprland.settings =
+    let
+      # Use ALT as main modifier on griefling to avoid host SUPER conflicts
+      mod = if config.hostSpec.hostName == "griefling" then "ALT" else "SUPER";
+      shiftMod = "SHIFT" + mod;           # e.g. SHIFTALT / SHIFTSUPER
+      ctrlMod = "CTRL_" + mod;            # e.g. CTRL_ALT / CTRL_SUPER
+      ctrlShiftAmp = "Control_L&Shift_L&" + mod;
+      replaceMods = s:
+        lib.replaceStrings
+          [ "Control_L&Shift_L&SUPER" "SHIFTSUPER" "CTRL_SUPER" "SUPER" ]
+          [ ctrlShiftAmp              shiftMod       ctrlMod        mod     ]
+          s;
+      mapMods = xs: map replaceMods xs;
+    in {
     # Reference of supported bind flags: https://wiki.hyprland.org/Configuring/Binds/#bind-flags
 
     #
     # ========== Mouse Binds ==========
     #
-    bindm = [
+    bindm = mapMods [
       # hold SUPER + leftlclick  to move/drag active window
       "SUPER,mouse:272,movewindow"
       # hold SUPER + rightclick to resize active window
@@ -27,7 +40,7 @@
     #
     # ========== Repeat Binds ==========
     #
-    binde = [
+    binde = mapMods [
       # Resize active window 5 pixels in direction
       "Control_L&Shift_L&SUPER, h, resizeactive, -5 0"
       "Control_L&Shift_L&SUPER, j, resizeactive, 0 5"
@@ -86,7 +99,7 @@
         editor = config.home.sessionVariables.EDITOR;
 
       in
-      lib.flatten [
+      mapMods (lib.flatten [
 
         #
         # ========== Quick Launch ==========
@@ -204,6 +217,6 @@
         "SUPER, t, exec, arrangeTiles" # custom function in ./scripts.nix
         "SHIFTSUPER,r,exec,hyprctl reload" # reload the configuration file
         "SUPER,e,exec,wlogout" # display wlogout
-      ];
+      ]);
   };
 }
