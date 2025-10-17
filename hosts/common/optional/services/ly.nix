@@ -11,13 +11,10 @@
   services.displayManager.ly = {
     enable = true;
     package = pkgs.ly;
-    # Prefill username from hostSpec.primaryUsername; use [main] section
+    # Prefill username from hostSpec.primaryUsername and disable saving last user
     settings = {
-      main = {
-        default_user = config.hostSpec.primaryUsername;
-        # Ensure default_user is used instead of last saved user
-        save = false;
-      };
+      default_user = config.hostSpec.primaryUsername;
+      save = false;
     };
   };
 }
