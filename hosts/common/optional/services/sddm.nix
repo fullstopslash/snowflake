@@ -9,7 +9,12 @@
       enable = true;
       compositor = "kwin";
     };
-    theme = "sddm-astronaut-theme";
+    theme = "sddm-astronaut";
+    settings = {
+      Theme = {
+        Current = "sddm-astronaut";
+      };
+    };
   };
 
   # Ensure Hyprland session is available to SDDM and select it by default
