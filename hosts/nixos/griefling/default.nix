@@ -38,7 +38,10 @@
       # ========== Optional Configs ==========
       #
       "hosts/common/optional/hyprland.nix"
-      "hosts/common/optional/services/ly.nix"
+      # Switch to SDDM for this host
+      "hosts/common/optional/services/sddm.nix"
+      # Explicitly disable ly for this host
+      ({ lib, ... }: { services.displayManager.ly.enable = lib.mkForce false; })
       "hosts/common/optional/services/openssh.nix"
       "hosts/common/optional/wayland.nix"
     ])
