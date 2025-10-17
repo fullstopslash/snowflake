@@ -7,14 +7,13 @@
     # themePackages not available on this NixOS; install theme via systemPackages
     wayland = {
       enable = true;
-      compositor = "kwin";
     };
-    theme = "sddm-astronaut";
-    settings = {
-      Theme = {
-        Current = "sddm-astronaut";
-      };
-    };
+    theme = "sddm-astronaut-theme";
+    # settings = {
+    #   Theme = {
+    #     Current = "sddm-astronaut";
+    #   };
+    # };
   };
 
   # Ensure the theme is present for SDDM to discover
