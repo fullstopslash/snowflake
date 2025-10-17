@@ -38,6 +38,7 @@
       # ========== Optional Configs ==========
       #
       "hosts/common/optional/hyprland.nix"
+      "hosts/common/optional/services/greetd.nix"
       "hosts/common/optional/services/openssh.nix"
       "hosts/common/optional/wayland.nix"
     ])
@@ -59,6 +60,9 @@
     networkmanager.enable = true;
     enableIPv6 = false;
   };
+
+  # Ensure greetd runs Hyprland session as the correct user
+  services.greetd.settings.default_session.user = "rain";
 
   boot.loader = {
     systemd-boot.enable = true;
