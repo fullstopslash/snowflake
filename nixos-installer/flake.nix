@@ -68,12 +68,12 @@
       nixosConfigurations = {
         # host = newConfig "name" "disk" "swapSize" "useLuks" "useImpermanence" "username"
         # Swap size is in GiB
-        genoa = newConfig "genoa" "/dev/nvme0n1" 16 true true "rain";
-        grief = newConfig "grief" "/dev/vda" 0 false false "rain";
-        griefling = newConfig "griefling" "/dev/vda" 8 false false "rain";
-        guppy = newConfig "guppy" "/dev/vda" 0 false false "rain";
-        gusto = newConfig "gusto" "/dev/nvme0n1" 8 false false "rain";
-        malphas = newConfig "malphas" "/dev/vda" 4 false false "rain";
+        genoa = newConfig "genoa" "/dev/nvme0n1" 16 true true "${toString inputs.nix-secrets.user}";
+        grief = newConfig "grief" "/dev/vda" 0 false false "${toString inputs.nix-secrets.user}";
+        griefling = newConfig "griefling" "/dev/vda" 8 false false "${toString inputs.nix-secrets.user}";
+        guppy = newConfig "guppy" "/dev/vda" 0 false false "${toString inputs.nix-secrets.user}";
+        gusto = newConfig "gusto" "/dev/nvme0n1" 8 false false "${toString inputs.nix-secrets.user}";
+        malphas = newConfig "malphas" "/dev/vda" 4 false false "${toString inputs.nix-secrets.user}";
 
         ghost = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
@@ -84,8 +84,8 @@
             ./minimal-configuration.nix
             { 
               networking.hostName = "ghost";
-              hostSpec.primaryUsername = "rain";
-              hostSpec.username = "rain";
+              hostSpec.primaryUsername = config.hostSpec.username or "${toString inputs.nix-secrets.user}";
+              hostSpec.username = config.hostSpec.username or "${toString inputs.nix-secrets.user}";
             }
             ../hosts/nixos/ghost/hardware-configuration.nix
           ];
