@@ -1,10 +1,10 @@
 { config, lib, pkgs, ... }:
 {
-  environment.systemPackages = [ pkgs.sddm-astronaut ];
 
   services.displayManager.sddm = {
     enable = true;
     enableHidpi = true;
+    themePackages = [ pkgs.sddm-astronaut ];
     wayland = {
       enable = true;
       compositor = "kwin";
