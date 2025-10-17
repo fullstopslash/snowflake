@@ -18,7 +18,7 @@
   };
 
   # Ensure the theme is present for SDDM to discover
-  environment.systemPackages = (config.environment.systemPackages or []) ++ [ pkgs.sddm-astronaut ];
+  environment.systemPackages = [ pkgs.sddm-astronaut ];
 
   # Ensure Hyprland session is available to SDDM and select it by default
   services.displayManager.sessionPackages = [ pkgs.hyprland ];
