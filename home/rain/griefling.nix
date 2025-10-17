@@ -53,6 +53,13 @@
   home.packages = with pkgs; [
     atuin
     kitty
+    ghostty
+    firefox
+    thunar
+    wlogout
+    rofi
+    wofi
+    hyprland-contrib.grimblast
     btop
   ];
   
