@@ -19,7 +19,7 @@
       default_user = config.hostSpec.primaryUsername;
       save = false;
       # Run custom animation command (requires 'neo' in PATH)
-      init_cmd = "neo --chars=10450,1047F --defaultbg -c cyan";
+      cmd = "neo --chars=10450,1047F --defaultbg -c cyan";
     };
   };
 }
