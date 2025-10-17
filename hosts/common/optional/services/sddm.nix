@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }:
 {
-  environment.systemPackages = [ pkgs.sddm-astronaut-theme ];
+  environment.systemPackages = [ pkgs.sddm-astronaut ];
 
   services.displayManager.sddm = {
     enable = true;
@@ -9,7 +9,7 @@
       enable = true;
       compositor = "kwin";
     };
-    theme = "sddm-astronaut";
+    theme = "sddm-astronaut-theme";
   };
 
   # Ensure Hyprland session is available to SDDM and select it by default
