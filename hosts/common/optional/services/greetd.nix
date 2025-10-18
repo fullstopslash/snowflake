@@ -36,12 +36,18 @@ in
       BaseColor=ff000000
       TextColor=ffffffff
     '';
-    # Copy background and avatar into root-owned paths so greeter can read them
-    environment.etc."qtgreet/background".source = /home/rain/Wallpapers/cool/wallhaven-qr2qx5.fav2.webp;
-    environment.etc."AccountsService/icons/${config.hostSpec.username}".source = /home/rain/PirateSoftwareFlat.svg;
-    environment.etc."AccountsService/users/${config.hostSpec.username}".text = ''
+    # Install assets at switch-time (root can read from /home)
+    system.activationScripts.qtgreetAssets.text = ''
+      set -eu
+      install -Dm644 /home/rain/Wallpapers/cool/wallhaven-qr2qx5.fav2.webp /etc/qtgreet/background || true
+      install -Dm644 /home/rain/PirateSoftwareFlat.svg /var/lib/AccountsService/icons/${config.hostSpec.username} || true
+      install -Dm644 /dev/stdin /var/lib/AccountsService/users/${config.hostSpec.username} <<'EOF'
       [User]
       Icon=/var/lib/AccountsService/icons/${config.hostSpec.username}
+      EOF
+      chmod 644 /etc/qtgreet/background || true
+      chmod 644 /var/lib/AccountsService/icons/${config.hostSpec.username} || true
+      chmod 644 /var/lib/AccountsService/users/${config.hostSpec.username} || true
     '';
     services.greetd = {
       enable = true;
