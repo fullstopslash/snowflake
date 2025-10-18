@@ -26,14 +26,14 @@ in
   };
 
   config = {
-    environment.systemPackages = [ pkgs.qtgreet pkgs.cage ];
+    environment.systemPackages = [ pkgs.greetd.qtgreet pkgs.cage ];
     services.greetd = {
       enable = true;
 
       restart = true;
       settings = {
         default_session = {
-          command = "${pkgs.cage}/bin/cage -s -- ${pkgs.qtgreet}/bin/qtgreet --command Hyprland";
+          command = "${pkgs.cage}/bin/cage -s -- ${pkgs.greetd.qtgreet}/bin/qtgreet --command Hyprland";
           user = lib.mkForce config.hostSpec.username;
         };
 
