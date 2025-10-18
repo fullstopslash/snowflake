@@ -38,13 +38,16 @@
       # ========== Optional Configs ==========
       #
       "hosts/common/optional/hyprland.nix"
-      # Switch to SDDM for this host
-      "hosts/common/optional/services/sddm.nix"
+      # Switch back to greetd with qtgreet
+      "hosts/common/optional/services/greetd.nix"
       "hosts/common/optional/services/openssh.nix"
       "hosts/common/optional/wayland.nix"
     ])
-    # Explicitly disable ly for this host
-    ({ lib, ... }: { services.displayManager.ly.enable = lib.mkForce false; })
+    # Explicitly disable ly and sddm for this host
+    ({ lib, ... }: {
+      services.displayManager.ly.enable = lib.mkForce false;
+      services.displayManager.sddm.enable = lib.mkForce false;
+    })
   ];
 
   #
