@@ -4,7 +4,7 @@
   services.displayManager.sddm = {
     enable = true;
     enableHidpi = true;
-    package = pkgs.sddm-qt6;
+    package = pkgs.kdePackages.sddm;
     # themePackages not available on this NixOS; install theme via systemPackages
     wayland = {
       enable = true;
