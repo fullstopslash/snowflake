@@ -36,12 +36,13 @@ in
       BaseColor=ff000000
       TextColor=ffffffff
     '';
-    # Link background and avatar from user-provided paths
-    systemd.tmpfiles.rules = [
-      "L /etc/qtgreet/background - - - - /home/rain/Wallpapers/cool/wallhaven-qr2qx5.fav2.webp"
-      "L /var/lib/AccountsService/icons/${config.hostSpec.username} - - - - /home/rain/PirateSoftwareFlat.svg"
-      "L /var/lib/AccountsService/users/${config.hostSpec.username} - - - - ${pkgs.writeText "acc-user-${config.hostSpec.username}" ''[User]\nIcon=/var/lib/AccountsService/icons/${config.hostSpec.username}\n''}"
-    ];
+    # Copy background and avatar into root-owned paths so greeter can read them
+    environment.etc."qtgreet/background".source = /home/rain/Wallpapers/cool/wallhaven-qr2qx5.fav2.webp;
+    environment.etc."AccountsService/icons/${config.hostSpec.username}".source = /home/rain/PirateSoftwareFlat.svg;
+    environment.etc."AccountsService/users/${config.hostSpec.username}".text = ''
+      [User]
+      Icon=/var/lib/AccountsService/icons/${config.hostSpec.username}
+    '';
     services.greetd = {
       enable = true;
 
