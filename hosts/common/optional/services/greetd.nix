@@ -32,22 +32,19 @@ in
     services.accounts-daemon.enable = true;
     environment.etc."qtgreet/config.ini".text = ''
       [Appearance]
-      Background=/etc/qtgreet/background
+      Background=/etc/qtgreet/bg.webp
       BaseColor=ff000000
       TextColor=ffffffff
     '';
-    # Install assets at switch-time (root can read from /home)
+    # Ensure AccountsService user file references your icon; use in-place assets you provided
     system.activationScripts.qtgreetAssets.text = ''
       set -eu
-      install -Dm644 /home/rain/Wallpapers/cool/wallhaven-qr2qx5.fav2.webp /etc/qtgreet/background || true
-      install -Dm644 /home/rain/PirateSoftwareFlat.svg /var/lib/AccountsService/icons/${config.hostSpec.username} || true
+      install -d -m755 /etc/qtgreet || true
+      install -d -m755 /var/lib/AccountsService/icons || true
       install -Dm644 /dev/stdin /var/lib/AccountsService/users/${config.hostSpec.username} <<'EOF'
       [User]
-      Icon=/var/lib/AccountsService/icons/${config.hostSpec.username}
+      Icon=/var/lib/AccountsService/icons/${config.hostSpec.username}.svg
       EOF
-      chmod 644 /etc/qtgreet/background || true
-      chmod 644 /var/lib/AccountsService/icons/${config.hostSpec.username} || true
-      chmod 644 /var/lib/AccountsService/users/${config.hostSpec.username} || true
     '';
     services.greetd = {
       enable = true;
