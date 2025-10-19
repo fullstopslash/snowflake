@@ -48,7 +48,7 @@
           };
         };
       };
-      defaultSession = "plasma";
+      defaultSession = "hyprland";
     };
     desktopManager.plasma6.enable = true;
   };
