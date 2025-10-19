@@ -15,6 +15,7 @@
     ../../roles/desktop.nix
     # ../../roles/plasma.nix  # Temporarily disabled due to GCC15 ICE in xwayland dependency
     ../../roles/hyprland.nix
+    ../../roles/greetd.nix
     ../../roles/flatpak.nix
     ../../roles/audio-tuning.nix
     ../../roles/gaming.nix

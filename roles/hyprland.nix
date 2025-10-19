@@ -22,25 +22,8 @@ in {
 
   services.hypridle.enable = true;
 
-  # Use SDDM with Wayland support (more reliable than greetd)
-  services.displayManager = {
-    sddm = {
-      enable = true;
-      enableHidpi = true;
-      wayland.enable = true;
-      theme = "sddm-astronaut-theme";
-      settings = {
-        General = {
-          DisplayServer = "wayland";
-          GreeterEnvironment = "QT_SCREEN_SCALE_FACTORS=2 QT_WAYLAND_SHELL_INTEGRATION=layer-shell";
-        };
-        Wayland = {
-          CompositorCommand = "Hyprland --no-lockscreen --no-global-shortcuts";
-        };
-      };
-    };
-    defaultSession = "hyprland";
-  };
+  # Display manager is handled by greetd.nix role
+  services.displayManager.defaultSession = "hyprland";
 
   # Environment for Hyprland
   environment.sessionVariables = {
@@ -91,11 +74,6 @@ in {
   # };
 
   environment.systemPackages = with pkgs; [
-    # SDDM theme and utilities
-    sddm-astronaut
-    catppuccin-sddm
-    where-is-my-sddm-theme
-
     # Hyprland utilities
     hyprlock
     hyprpicker
