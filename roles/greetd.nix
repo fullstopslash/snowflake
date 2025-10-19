@@ -1,4 +1,4 @@
-# Simple greetd display manager configuration
+# Simple greetd display manager configuration with tuigreet (more reliable)
 {
   pkgs,
   lib,
@@ -6,13 +6,13 @@
   ...
 }: {
   config = {
-    # Minimal greetd configuration - no custom appearance or complex settings
+    # Minimal greetd configuration using tuigreet (TUI greeter - more reliable)
     services.greetd = {
       enable = true;
       restart = true;
       settings = {
         default_session = {
-          command = "${pkgs.cage}/bin/cage -s -- ${pkgs.qtgreet}/bin/qtgreet";
+          command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
           user = "rain";
         };
       };
