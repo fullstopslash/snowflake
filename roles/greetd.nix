@@ -17,7 +17,7 @@
 
   config = {
     environment.systemPackages = with pkgs; [
-      greetd.qtgreet
+      qtgreet
       cage
     ];
 
@@ -46,7 +46,7 @@
       restart = true;
       settings = {
         default_session = {
-          command = "${pkgs.cage}/bin/cage -s -- ${pkgs.greetd.qtgreet}/bin/qtgreet";
+          command = "${pkgs.cage}/bin/cage -s -- ${pkgs.qtgreet}/bin/qtgreet";
           user = "rain";
         };
 
@@ -57,7 +57,7 @@
       };
     };
 
-    # Disable SDDM to avoid conflicts
-    services.displayManager.sddm.enable = false;
+    # Disable SDDM to avoid conflicts (force override stylix configuration)
+    services.displayManager.sddm.enable = lib.mkForce false;
   };
 }
