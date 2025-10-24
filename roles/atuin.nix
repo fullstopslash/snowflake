@@ -52,14 +52,23 @@
     '';
   };
 
-  # Background daemon for periodic syncs
+  # Socket-activated Atuin daemon
+  systemd.user.sockets."atuin-daemon" = {
+    wantedBy = ["sockets.target"];
+    socketConfig = {
+      ListenStream = "%t/atuin/atuin.sock";
+      SocketMode = "0600";
+      DirectoryMode = "0700";
+    };
+  };
+
   systemd.user.services."atuin-daemon" = {
     description = "Atuin background daemon";
-    wantedBy = ["default.target"];
+    # Start on socket activation; do not tie to default.target
+    wantedBy = [];
     after = ["network-online.target"];
     serviceConfig = {
       ExecStart = "${pkgs.atuin}/bin/atuin daemon";
-      # Ensure $XDG_RUNTIME_DIR/atuin exists for the daemon socket
       RuntimeDirectory = "atuin";
       Restart = "on-failure";
       RestartSec = 3;
