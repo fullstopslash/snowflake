@@ -52,7 +52,7 @@
     git-lfs
     gitFull
     kwalletcli
-    moar
+    moor
     tealdeer
     tmux-sessionizer
     tmuxp

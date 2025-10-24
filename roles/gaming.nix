@@ -61,7 +61,7 @@
     crawl
     crawlTiles
     brogue-ce
-    tome4
+    # stable.tome4
     # Dwarf Fortress
     pkgs.dwarf-fortress
 
