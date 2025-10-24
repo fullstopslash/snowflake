@@ -53,14 +53,13 @@
   };
 
   # Socket-activated Atuin daemon
-  systemd.user.sockets."atuin-daemon" = {
-    wantedBy = ["sockets.target"];
-    socketConfig = {
-      ListenStream = "%t/atuin.sock";
-      SocketMode = "0600";
-      DirectoryMode = "0700";
-    };
-  };
+  # systemd.user.sockets."atuin-daemon" = {
+  #   wantedBy = ["sockets.target"];
+  #   socketConfig = {
+  #     ListenStream = "%t/atuin.sock";
+  #     SocketMode = "0600";
+  #   };
+  # };
 
   systemd.user.services."atuin-daemon" = {
     description = "Atuin background daemon";
@@ -69,7 +68,6 @@
     after = ["network-online.target"];
     serviceConfig = {
       ExecStart = "${pkgs.atuin}/bin/atuin daemon";
-      RuntimeDirectory = "atuin";
       Restart = "on-failure";
       RestartSec = 3;
     };
