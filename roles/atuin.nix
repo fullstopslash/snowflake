@@ -56,7 +56,7 @@
   systemd.user.sockets."atuin-daemon" = {
     wantedBy = ["sockets.target"];
     socketConfig = {
-      ListenStream = "%t/atuin/atuin.sock";
+      ListenStream = "%t/atuin.sock";
       SocketMode = "0600";
       DirectoryMode = "0700";
     };
