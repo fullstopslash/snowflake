@@ -61,6 +61,9 @@
     crawl
     crawlTiles
     brogue-ce
+    tome4
+    # Dwarf Fortress
+    pkgs.dwarf-fortress
 
     # Gaming utilities
     steamtinkerlaunch
@@ -72,9 +75,6 @@
     playonlinux
     winetricks
     vulkan-tools
-
-    # Dwarf Fortress
-    pkgs.stable.dwarf-fortress
 
     # Game development
     godot3

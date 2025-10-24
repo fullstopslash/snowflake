@@ -20,7 +20,7 @@
     gopass
     ripgrep
     ripgrep-all
-    bat-extras.batgrep
+    # bat-extras.batgrep
     bat
 
     # TUIs
