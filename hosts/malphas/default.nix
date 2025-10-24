@@ -38,6 +38,7 @@
     ../../roles/stylix.nix
     ../../roles/fonts.nix
     ../../roles/shell.nix
+    ../../roles/atuin.nix
     # ../../roles/voice-assistant.nix
     # ../../roles/document-processing.nix
     ../../roles/cli-tools.nix
