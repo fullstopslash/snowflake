@@ -30,7 +30,13 @@
     memoryPercent = 50;
   };
 
+  hardware.i2c.enable = true;
+
   environment.systemPackages = with pkgs; [
+    #Brightness control
+    ddcutil
+    brightnessctl
+
     # nix Development tools
     nixd
     statix

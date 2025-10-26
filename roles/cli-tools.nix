@@ -22,12 +22,17 @@
     ripgrep-all
     # bat-extras.batgrep
     bat
+    trash-cli
 
     # TUIs
+    browsh
     entr
     btop
     btop-rocm
     ncdu
+    grex
+    python313Packages.faker
+    ttyd
 
     # Compression
     p7zip

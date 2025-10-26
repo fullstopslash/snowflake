@@ -52,14 +52,14 @@
     '';
   };
 
-  # Socket-activated Atuin daemon
-  # systemd.user.sockets."atuin-daemon" = {
-  #   wantedBy = ["sockets.target"];
-  #   socketConfig = {
-  #     ListenStream = "%t/atuin.sock";
-  #     SocketMode = "0600";
-  #   };
-  # };
+  # Socket-activated Atuin daemon (default socket: %t/atuin.sock)
+  systemd.user.sockets."atuin-daemon" = {
+    wantedBy = ["sockets.target"];
+    socketConfig = {
+      ListenStream = "%t/atuin.sock";
+      SocketMode = "0600";
+    };
+  };
 
   systemd.user.services."atuin-daemon" = {
     description = "Atuin background daemon";

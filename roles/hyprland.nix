@@ -14,8 +14,9 @@ in {
   programs = {
     hyprland = {
       enable = true;
+      package = pkgs.hyprland;
       # portalPackage = pkgs.xdg-desktop-portal-hyprland;
-      xwayland.enable = true; # Re-enabled for SDDM compatibility
+      xwayland.enable = false; # Re-enabled for SDDM compatibility
     };
     hyprlock.enable = true;
   };
@@ -44,6 +45,8 @@ in {
     XCURSOR_SIZE = "24";
     HYPRCURSOR_THEME = "Nordzy-catppuccin-mocha-dark";
     HYPRCURSOR_SIZE = "24";
+    # Expose hyprscrolling plugin path (nixpkgs) so Hyprland can find it
+    HYPRLAND_PLUGIN_DIRS = "${pkgs.hyprlandPlugins.hyprscrolling}/lib/hyprland/plugins";
     # GDK_SCALE = "2";
     # GDK_DPI_SCALE = "2";
     # Performance optimizations
@@ -52,6 +55,15 @@ in {
     # Suppress Hyprland warnings
     # HYPRLAND_NO_WARN = "1";
   };
+
+  # Provide a sane default Hyprland config in /etc that enables hyprscrolling layout.
+  # If the user has ~/.config/hypr/hyprland.conf, Hyprland will prefer that instead.
+  environment.etc."hypr/hyprland.conf".text = ''
+    plugin = ${pkgs.hyprlandPlugins.hyprscrolling}/lib/libhyprscrolling.so
+    general {
+      layout = scrolling
+    }
+  '';
 
   # xdg-desktop-portal configuration
   # xdg.portal = {
@@ -85,6 +97,7 @@ in {
     kdePackages.breeze-gtk
     kdePackages.breeze
     hyprpaper
+    hyprlandPlugins.hyprscrolling
     waybar
     eww
     rofi

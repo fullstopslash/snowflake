@@ -39,6 +39,7 @@
     ../../roles/fonts.nix
     ../../roles/shell.nix
     ../../roles/atuin.nix
+    ../../roles/niri.nix
     # ../../roles/voice-assistant.nix
     # ../../roles/document-processing.nix
     ../../roles/cli-tools.nix
