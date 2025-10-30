@@ -13,7 +13,6 @@
     rbw
     bitwarden-cli
     bitwarden-desktop
-    bitwarden
     # bws
   ];
 }

@@ -115,7 +115,7 @@ in {
     jetbrains-mono
     noto-fonts
     noto-fonts-cjk-sans
-    noto-fonts-emoji
+    noto-fonts-color-emoji
     # Additional scaling support
     xdg-utils
     xdg-desktop-portal-hyprland

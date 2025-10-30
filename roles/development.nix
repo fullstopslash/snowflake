@@ -30,11 +30,6 @@
     micro
     gittyup
 
-    # Development AI tools
-    code-cursor-fhs
-    claude-code
-    gemini-cli
-
     discord
     discordo
 

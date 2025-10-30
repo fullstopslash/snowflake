@@ -7,6 +7,13 @@
   environment.systemPackages = with pkgs; [
     mcp-nixos
     lmstudio
+
+    # Development AI tools
+    code-cursor-fhs
+    claude-code
+    gemini-cli
+    codex
+
     # stable.open-webui
   ];
 
