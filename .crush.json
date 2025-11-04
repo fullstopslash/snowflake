@@ -1,0 +1,12 @@
+{
+  "$schema": "https://charm.land/crush.json",
+  "lsp": {
+    "nixd": {
+      "command": "nixd",
+      "filetypes": ["nix"],
+      "root_markers": ["flake.nix", "default.nix"]
+    }
+  }
+}
+
+

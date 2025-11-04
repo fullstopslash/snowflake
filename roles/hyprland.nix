@@ -16,7 +16,7 @@ in {
       enable = true;
       package = pkgs.hyprland;
       # portalPackage = pkgs.xdg-desktop-portal-hyprland;
-      xwayland.enable = false; # Re-enabled for SDDM compatibility
+      xwayland.enable = true; # Required for X11 apps like LM Studio
     };
     hyprlock.enable = true;
   };

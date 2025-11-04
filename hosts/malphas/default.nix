@@ -21,7 +21,6 @@
     ../../roles/gaming.nix
     # ../../roles/moondeck-buddy.nix
     ../../roles/development.nix
-    ../../roles/crush.nix
     ../../roles/media.nix
     ../../roles/obs.nix
     ../../roles/waybar.nix
@@ -46,7 +45,7 @@
     ../../roles/ai-tools.nix
     ../../roles/containers.nix
     ../../roles/rust-packages.nix
-    # ../../roles/ollama.nix  # enable when ready
+    ../../roles/ollama.nix
     # ../../modules/hdr.nix
     ../../modules/ssh-no-sleep.nix
   ];

@@ -1,6 +1,7 @@
-# AI tools role: install mcp-nixos and user service
+# AI tools role: install mcp-nixos, crush, and user services
 {
   pkgs,
+  inputs,
   lib,
   ...
 }: {
@@ -13,9 +14,35 @@
     claude-code
     gemini-cli
     codex
+    crush
+    alpaca
+    aichat
+    opencode
+    # Crush from nix-ai-tools flake (configured for Ollama)
+    # inputs.nix-ai-tools.packages.${pkgs.system}.crush
 
-    # stable.open-webui
+    # Ollama alternatives and UIs
+    # Terminal: Use 'ollama run <model>' for built-in chat
+    # Open WebUI - Web-based interface for Ollama (lightweight, modern)
+    # Can run via Docker (see commented command below) or check if nixpkgs has it
+    # docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ];
+
+  # Crush config should be edited directly in ~/.config/crush/crush.json
+  # Example config pointing to local Ollama Docker service:
+  # {
+  #   "backend": "ollama",
+  #   "ollama": {
+  #     "base_url": "http://localhost:11434",
+  #     "model": "llama3.2"
+  #   }
+  # }
+
+  # Environment variables for Crush/Ollama integration (optional fallback)
+  environment.sessionVariables = {
+    CRUSH_BACKEND = "ollama";
+    OLLAMA_HOST = "localhost:11434";
+  };
 
   # User service so multiple apps can rely on a persistent MCP instance
   systemd.user.services."mcp-nixos" = {
