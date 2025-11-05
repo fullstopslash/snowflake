@@ -46,7 +46,7 @@ in {
     HYPRCURSOR_THEME = "Nordzy-catppuccin-mocha-dark";
     HYPRCURSOR_SIZE = "24";
     # Expose hyprscrolling plugin path (nixpkgs) so Hyprland can find it
-    HYPRLAND_PLUGIN_DIRS = "${pkgs.hyprlandPlugins.hyprscrolling}/lib/hyprland/plugins";
+    HYPRLAND_PLUGIN_DIRS = "${pkgs.hyprlandPlugins.hyprscrolling}/lib";
     # GDK_SCALE = "2";
     # GDK_DPI_SCALE = "2";
     # Performance optimizations
@@ -58,6 +58,8 @@ in {
 
   # Provide a sane default Hyprland config in /etc that enables hyprscrolling layout.
   # If the user has ~/.config/hypr/hyprland.conf, Hyprland will prefer that instead.
+  # Note: User config should use the full absolute path from ${pkgs.hyprlandPlugins.hyprscrolling}/lib/libhyprscrolling.so
+  # The path will change when the package is updated, so update hyprland.conf accordingly.
   environment.etc."hypr/hyprland.conf".text = ''
     plugin = ${pkgs.hyprlandPlugins.hyprscrolling}/lib/libhyprscrolling.so
     general {

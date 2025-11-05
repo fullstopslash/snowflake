@@ -24,6 +24,11 @@
     bat
     trash-cli
 
+    # Tools for parallelization
+    parallel
+    pueue
+    nq
+
     # TUIs
     browsh
     entr
