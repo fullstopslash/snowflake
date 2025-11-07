@@ -63,12 +63,12 @@
     brogue-ce
     # stable.tome4
     # Dwarf Fortress
-    pkgs.dwarf-fortress
+    stable.dwarf-fortress
 
     # Gaming utilities
     steamtinkerlaunch
     bottles
-    lutris
+    stable.lutris
     protontricks
     protonup-qt
     nexusmods-app

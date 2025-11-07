@@ -9,6 +9,10 @@
     # Core development tools
     vim
     tree
+    zeal
+    dasht # for general API docs
+    tealdeer # for command examples
+    manix # for Nix documentation
 
     # Android development
     android-tools
@@ -28,7 +32,11 @@
     helix
     neovide
     micro
+
+    #Git management
     gittyup
+    # gitbutler
+    meld
 
     discord
     discordo

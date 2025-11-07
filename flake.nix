@@ -76,6 +76,7 @@
         modules = [
           # Expose a stable package set under `pkgs.stable` for easy use in roles
           {
+            nixpkgs.hostPlatform = system;
             nixpkgs.overlays = [
               (_: _prev: {
                 stable = import inputs.nixpkgs-stable {

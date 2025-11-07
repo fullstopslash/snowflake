@@ -15,7 +15,7 @@
     gemini-cli
     codex
     crush
-    alpaca
+    # alpaca
     aichat
     opencode
     # Crush from nix-ai-tools flake (configured for Ollama)

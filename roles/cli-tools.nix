@@ -28,6 +28,7 @@
     parallel
     pueue
     nq
+    moreutils
 
     # TUIs
     browsh
@@ -38,6 +39,8 @@
     grex
     python313Packages.faker
     ttyd
+    viddy
+    sampler
 
     # Compression
     p7zip
@@ -63,9 +66,8 @@
     gitFull
     kwalletcli
     moor
-    tealdeer
     tmux-sessionizer
-    tmuxp
+    stable.tmuxp
     wezterm
     managarr
 

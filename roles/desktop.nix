@@ -1,5 +1,9 @@
 # Desktop environment role
-{pkgs, ...}: {
+{
+  config,
+  pkgs,
+  ...
+}: {
   # Allow insecure packages specifically required for the desktop role
   nixpkgs.config.permittedInsecurePackages = [
     "ventoy-1.1.07"
@@ -48,25 +52,33 @@
 
   systemd = {
     services = {
-      post-sleep = {
-        description = "Post-sleep script";
-        after = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
-        wantedBy = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = "${pkgs.curl}/bin/curl https://ntfy.chimera-micro.ts.net/waterbug-alerts -d 'Resumed: \"post sleep\"' -H 'Tags: skull' ";
-          User = "rain";
-        };
-      };
-
+      # post-sleep = {
+      #   description = "Post-sleep script";
+      #   after = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
+      #   wantedBy = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
+      #   serviceConfig = {
+      #     Type = "oneshot";
+      #     ExecStart = "${pkgs.curl}/bin/curl https://ntfy.chimera-micro.ts.net/waterbug-alerts -d 'Resumed: \"post sleep\"' -H 'Tags: skull' ";
+      #     User = "rain";
+      #   };
+      # };
       post-sleep-samsung = {
         description = "Post-sleep script";
-        after = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
+        after = ["suspend.target" "hibernate.target" "hybrid-sleep.target" "network-online.target"];
+        wants = ["network-online.target"];
         wantedBy = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${pkgs.home-assistant-cli}/bin/hass-cli ";
+          ExecStart = "${pkgs.home-assistant-cli}/bin/hass-cli service call media_player.turn_off --arguments entity_id=media_player.abysmal";
           User = "rain";
+          Environment = [
+            "HOME=/home/rain"
+            "XDG_RUNTIME_DIR=/run/user/1000"
+          ];
+          EnvironmentFile = [
+            config.sops.templates."post-sleep-samsung.env".path
+          ];
+          TimeoutStopSec = "30s";
         };
       };
 
@@ -150,22 +162,38 @@
     };
   };
 
+  sops.secrets = {
+    env_hass_server = {key = "env_hass_server";};
+    env_hass_token = {key = "env_hass_token";};
+  };
+
+  sops.templates."post-sleep-samsung.env" = {
+    content = ''
+      HASS_SERVER=${config.sops.placeholder."env_hass_server"}
+      HASS_TOKEN=${config.sops.placeholder."env_hass_token"}
+    '';
+    owner = "rain";
+    mode = "0400";
+  };
+
   # System packages for desktop
   environment.systemPackages = with pkgs; [
     # Browsers
     firefox
     ungoogled-chromium
     microsoft-edge
-    floorp-bin
+    # floorp-bin
     ladybird
 
     # Desktop utilities
     input-leap
+    darkman
     pywal16
     wallust
     wofi
     lua
     wev
+    ydotool
     # karakeep
     # ventoy-full-qt
     # ventoy
@@ -181,7 +209,6 @@
     tmatrix
 
     #Development utils for Desktop
-    meld
     freetype
     ncurses
     gettext
@@ -211,6 +238,8 @@
     obsidian
     anki
     anki-sync-server
+    qimgv
+    kdePackages.gwenview
 
     # Package managers
   ];

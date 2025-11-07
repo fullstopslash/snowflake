@@ -40,7 +40,7 @@
     ../../roles/atuin.nix
     ../../roles/niri.nix
     # ../../roles/voice-assistant.nix
-    # ../../roles/document-processing.nix
+    ../../roles/document-processing.nix
     ../../roles/cli-tools.nix
     ../../roles/ai-tools.nix
     ../../roles/containers.nix

@@ -1,5 +1,14 @@
 # Audio tuning role (low-latency PipeWire + rtkit)
-_: {
+{pkgs, ...}: {
+  environment.systemPackages = with pkgs; [
+    pwvucontrol
+    # helvum
+    qpwgraph
+    playerctl
+    easyeffects
+    rnnoise
+    rnnoise-plugin
+  ];
   security.rtkit.enable = true;
 
   services.pipewire.extraConfig.pipewire."92-low-latency" = {
@@ -29,5 +38,23 @@ _: {
       "node.latency" = "256/48000";
       "resample.quality" = 1;
     };
+  };
+
+  # EasyEffects systemd user service
+  systemd.user.services.easyeffects = {
+    description = "Easy Effects Service";
+    after = ["graphical-session.target" "pipewire.service" "pipewire-pulse.service"];
+    wants = ["graphical-session.target"];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${pkgs.easyeffects}/bin/easyeffects --gapplication-service";
+      Restart = "always";
+      RestartSec = 3;
+      SuccessExitStatus = "3 4";
+      Environment = [
+        "XDG_RUNTIME_DIR=%t"
+      ];
+    };
+    wantedBy = ["graphical-session.target"];
   };
 }

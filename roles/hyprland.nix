@@ -35,18 +35,16 @@ in {
     # GTK_THEME = "Breeze";
     # XCURSOR_THEME = "breeze_cursors";
     # XCURSOR_SIZE = "24";
-    # Qt scaling for Hyprland
-    # QT_AUTO_SCREEN_SCALE_FACTOR = "1";
-    # QT_SCALE_FACTOR = "2.0";
-    # QT_SCREEN_SCALE_FACTOR = "2.0";
+    # Qt scaling for Hyprland and X11 applications
     QT_ENABLE_HIGHDPI_SCALING = "1";
-    # Ensure Hyprland picks the Stylix cursor theme/colors
+    QT_AUTO_SCREEN_SCALE_FACTOR = "1";
+    # X11 DPI for Xwayland applications
     XCURSOR_THEME = "Nordzy-catppuccin-mocha-dark";
     XCURSOR_SIZE = "24";
     HYPRCURSOR_THEME = "Nordzy-catppuccin-mocha-dark";
     HYPRCURSOR_SIZE = "24";
     # Expose hyprscrolling plugin path (nixpkgs) so Hyprland can find it
-    HYPRLAND_PLUGIN_DIRS = "${pkgs.hyprlandPlugins.hyprscrolling}/lib";
+    # HYPRLAND_PLUGIN_DIRS = "${pkgs.hyprlandPlugins.hyprscrolling}/lib";
     # GDK_SCALE = "2";
     # GDK_DPI_SCALE = "2";
     # Performance optimizations
@@ -60,12 +58,12 @@ in {
   # If the user has ~/.config/hypr/hyprland.conf, Hyprland will prefer that instead.
   # Note: User config should use the full absolute path from ${pkgs.hyprlandPlugins.hyprscrolling}/lib/libhyprscrolling.so
   # The path will change when the package is updated, so update hyprland.conf accordingly.
-  environment.etc."hypr/hyprland.conf".text = ''
-    plugin = ${pkgs.hyprlandPlugins.hyprscrolling}/lib/libhyprscrolling.so
-    general {
-      layout = scrolling
-    }
-  '';
+  # environment.etc."hypr/hyprland.conf".text = ''
+  #   plugin = ${pkgs.hyprlandPlugins.hyprscrolling}/lib/libhyprscrolling.so
+  #   general {
+  #     layout = scrolling
+  #   }
+  # '';
 
   # xdg-desktop-portal configuration
   # xdg.portal = {
@@ -99,7 +97,7 @@ in {
     kdePackages.breeze-gtk
     kdePackages.breeze
     hyprpaper
-    hyprlandPlugins.hyprscrolling
+    # hyprlandPlugins.hyprscrolling
     waybar
     eww
     rofi
@@ -108,8 +106,6 @@ in {
     wirelesstools
     lm_sensors
     radeontop
-    playerctl
-    helvum
     brightnessctl
     wireplumber
     dunst
@@ -121,6 +117,8 @@ in {
     # Additional scaling support
     xdg-utils
     xdg-desktop-portal-hyprland
+    # X11 utilities for Xwayland DPI configuration
+    xorg.xrdb
     # Tray/dbusmenu helpers for Waybar
     libdbusmenu-gtk3
     libayatana-appindicator
@@ -156,6 +154,36 @@ in {
         OnlyShowIn=Hyprland;
       '';
     })
+
+    # Streamlink Twitch GUI wrapper with improved X11 rendering
+    (writeShellScriptBin "streamlink-twitch-gui" ''
+      #!/usr/bin/env sh
+      # Improve X11 rendering quality for streamlink-twitch-gui
+      # Set high DPI and Qt scaling for crisp rendering through Xwayland
+
+      # Set X11 DPI for Xwayland (96 DPI = 1x, 192 DPI = 2x scaling)
+      # Adjust based on your display - 192 is good for 2x scaling
+      export XCURSOR_SIZE=24
+
+      # Qt scaling and high DPI support
+      export QT_AUTO_SCREEN_SCALE_FACTOR=1
+      export QT_ENABLE_HIGHDPI_SCALING=1
+      export QT_SCALE_FACTOR=1
+
+      # Force Qt to use X11/XCB platform explicitly for better rendering
+      export QT_QPA_PLATFORM=xcb
+
+      # Improve font rendering and disable shared memory for better quality
+      export QT_X11_NO_MITSHM=1
+
+      # Set X11 resources for high DPI (Xwayland will pick this up)
+      # This improves rendering quality for X11 applications
+      if command -v ${pkgs.xorg.xrdb}/bin/xrdb >/dev/null 2>&1; then
+        echo "Xft.dpi: 192" | ${pkgs.xorg.xrdb}/bin/xrdb -merge 2>/dev/null || true
+      fi
+
+      exec ${pkgs.streamlink-twitch-gui-bin}/bin/streamlink-twitch-gui "$@"
+    '')
   ];
 
   # PAM integration for hyprlock

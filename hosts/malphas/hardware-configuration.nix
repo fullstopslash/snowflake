@@ -35,11 +35,15 @@
       "kvm-amd" # Virtualization - only needed when using VMs
       "uinput" # Input - only needed for gaming/input tools
     ];
-    # Fix Intel I225-V connection dropouts
-    # Disable problematic features that cause intermittent disconnections
+    # Fix Intel I225-V connection dropouts at 2.5GbE
+    # Driver-level settings to prevent link instability
     extraModprobeConfig = ''
+      # Interrupt throttling for stability
       options igc InterruptThrottleRate=125
+      # Disable EEE (Energy Efficient Ethernet) - causes dropouts at 2.5GbE
       options igc EnableEEE=0
+      # Disable flow control at driver level - prevents negotiation issues at 2.5GbE
+      options igc FlowControl=0
     '';
     kernel.sysctl = {
       # Optimize module loading
@@ -76,42 +80,23 @@
     enable = true;
   };
 
-  # Fix Intel I225-V connection dropouts via ethtool
-  # Configure interface settings to prevent intermittent disconnections
-  # The I225-V (igc driver) is known to have issues with 2.5GbE autonegotiation
-  # and power management causing connection dropouts
-  # This service runs after NetworkManager to ensure settings are applied
-  # after NetworkManager has configured the interface
-  systemd.services.fix-igc-interface = {
-    description = "Fix Intel I225-V (igc) interface settings";
-    after = [
-      "network-online.target"
-      "NetworkManager.service"
-    ];
-    wants = [ "network-online.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-    script = ''
-      # Wait for interface to be available and NetworkManager to configure it
-      for i in {1..30}; do
-        if ${pkgs.iproute2}/bin/ip link show eno1 >/dev/null 2>&1 && \
-           ${pkgs.iproute2}/bin/ip link show eno1 | grep -q "state UP"; then
-          break
-        fi
-        sleep 1
-      done
+  # Fix Intel I225-V 2.5GbE stability using NetworkManager dispatcher (non-blocking)
+  # Driver-level settings (EEE, flow control) are already applied via extraModprobeConfig
+  # This dispatcher script applies runtime settings when interface comes up
+  environment.etc."NetworkManager/dispatcher.d/10-fix-i225v" = {
+    mode = "0755";
+    text = ''
+      #!/usr/bin/env sh
+      # Fix Intel I225-V 2.5GbE stability
+      # Only run for eno1 interface on up/connect events
+      [ "$1" != "eno1" ] && exit 0
+      [ "$2" != "up" ] && [ "$2" != "connect" ] && exit 0
 
-      # Small delay to ensure NetworkManager has finished configuring
-      sleep 2
-
-      # Ensure EEE is disabled (can cause issues with some switches/routers)
-      # EEE (Energy Efficient Ethernet) can cause dropouts with certain hardware
-      ${pkgs.ethtool}/bin/ethtool --set-eee eno1 eee off 2>/dev/null || true
-
-      # Configure wake-on-LAN (preserve existing WOL setting)
-      ${pkgs.ethtool}/bin/ethtool -s eno1 wol g 2>/dev/null || true
+      # Disable EEE and flow control, force 2.5GbE
+      ${pkgs.ethtool}/bin/ethtool --set-eee "$1" eee off 2>/dev/null || true
+      ${pkgs.ethtool}/bin/ethtool -A "$1" rx off tx off 2>/dev/null || true
+      ${pkgs.ethtool}/bin/ethtool -s "$1" autoneg off speed 2500 duplex full 2>/dev/null || true
+      ${pkgs.ethtool}/bin/ethtool -A "$1" rx off tx off 2>/dev/null || true
     '';
   };
 

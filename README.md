@@ -85,6 +85,7 @@ Roles are modular configurations that can be applied to any host:
 - OBS Studio with plugins and kernel modules
 - Media players and tools
 - Virtual camera support (v4l2loopback)
+- See `docs/jellyfin-websocket-issues.md` for Jellyfin troubleshooting
 
 ### Networking Role (`roles/networking.nix`)
 - Network management
@@ -258,6 +259,14 @@ applications:
   jellyfin:
     api_key: "your_jellyfin_api_key"
 ```
+
+## Documentation
+
+Additional documentation is available in the `docs/` directory:
+
+- **Multi-Host SOPS Deployment** (`docs/multi-host-sops.md`) - Guide for deploying SOPS secrets management across multiple hosts
+- **Jellyfin WebSocket Issues** (`docs/jellyfin-websocket-issues.md`) - Documentation on known Jellyfin websocket connection issues and troubleshooting
+- **Optimization Guide** (`docs/optimization-guide.md`) - System optimization recommendations
 
 ## **Multi-Host Deployment**
 
