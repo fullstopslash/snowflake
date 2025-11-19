@@ -91,6 +91,9 @@ in {
     hyprpicker
     hypridle
     hyprls
+    hyprpaper
+    hyprutils
+    hyprlang
     kdePackages.kwallet
     kdePackages.dolphin
     kdePackages.okular
@@ -98,7 +101,6 @@ in {
     kdePackages.breeze-icons
     kdePackages.breeze-gtk
     kdePackages.breeze
-    hyprpaper
     # hyprlandPlugins.hyprscrolling
     waybar
     eww
