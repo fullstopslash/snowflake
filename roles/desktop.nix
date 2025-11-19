@@ -11,7 +11,6 @@
   ];
 
   xdg.mime.enable = true;
-  xdg.mimeApps.enable = true;
 
   # Display manager and desktop services
   services = {
