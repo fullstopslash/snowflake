@@ -6,13 +6,12 @@
     pandoc
 
     # Poppler tools - PDF utilities (pdfinfo, pdftoppm, etc.)
-    poppler_utils
+    poppler-utils
 
     # Typst a LaTeX alternative
     typst
     typstwriter
     typstyle
-    typstfmt
     typst-live
     tinymist
 

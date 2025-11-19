@@ -10,6 +10,9 @@
     "ventoy-qt5-1.1.07"
   ];
 
+  xdg.mime.enable = true;
+  xdg.mimeApps.enable = true;
+
   # Display manager and desktop services
   services = {
     hardware.openrgb.enable = true;
@@ -240,6 +243,7 @@
     anki-sync-server
     qimgv
     kdePackages.gwenview
+    swayimg
 
     # Package managers
   ];
