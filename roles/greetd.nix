@@ -12,6 +12,7 @@
       restart = true;
       settings = {
         default_session = {
+          # Always show login screen - tuigreet will prompt for password
           command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
           user = "rain";
         };

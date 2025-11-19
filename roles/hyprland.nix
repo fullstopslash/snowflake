@@ -92,6 +92,7 @@ in {
     hypridle
     hyprls
     kdePackages.kwallet
+    kdePackages.dolphin
     kdePackages.okular
     kdePackages.kwallet-pam
     kdePackages.breeze-icons

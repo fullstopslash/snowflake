@@ -14,15 +14,26 @@
 
     echo "Starting Bitwarden OAuth + KDE Wallet automation..."
 
-    # Read secrets from SOPS
-    BW_SERVER=$(cat ${config.sops.secrets."bitwarden-server".path})
-    BW_USEREMAIL=$(cat ${config.sops.secrets."bitwarden-user-email".path})
-    BITWARDEN_OAUTH_CLIENT_ID=$(cat ${config.sops.secrets."bitwarden-oauth-client-id".path})
-    BITWARDEN_OAUTH_CLIENT_SECRET=$(cat ${config.sops.secrets."bitwarden-oauth-client-secret".path})
+    # Read secrets from SOPS - handle missing files gracefully
+    SECRET_SERVER="${config.sops.secrets."bitwarden-server".path}"
+    SECRET_EMAIL="${config.sops.secrets."bitwarden-user-email".path}"
+    SECRET_CLIENT_ID="${config.sops.secrets."bitwarden-oauth-client-id".path}"
+    SECRET_CLIENT_SECRET="${config.sops.secrets."bitwarden-oauth-client-secret".path}"
+
+    # Check if secrets exist and are readable
+    if [ ! -r "$SECRET_SERVER" ] || [ ! -r "$SECRET_EMAIL" ] || [ ! -r "$SECRET_CLIENT_ID" ] || [ ! -r "$SECRET_CLIENT_SECRET" ]; then
+      echo "Bitwarden secrets not available yet (may be during rebuild), skipping..." 1>&2
+      exit 0
+    fi
+
+    BW_SERVER=$(cat "$SECRET_SERVER")
+    BW_USEREMAIL=$(cat "$SECRET_EMAIL")
+    BITWARDEN_OAUTH_CLIENT_ID=$(cat "$SECRET_CLIENT_ID")
+    BITWARDEN_OAUTH_CLIENT_SECRET=$(cat "$SECRET_CLIENT_SECRET")
 
     if [ -z "$BW_SERVER" ] || [ -z "$BW_USEREMAIL" ] || [ -z "$BITWARDEN_OAUTH_CLIENT_ID" ] || [ -z "$BITWARDEN_OAUTH_CLIENT_SECRET" ]; then
-      echo "Missing Bitwarden credentials from SOPS secrets" 1>&2
-      exit 1
+      echo "Bitwarden secrets are empty, skipping..." 1>&2
+      exit 0
     fi
 
     # Configure bw if not already configured
@@ -183,8 +194,9 @@ in {
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
-            Restart = "on-failure";
-            RestartSec = 30;
+            # Don't restart on failure - secrets may not be available during rebuild
+            # User can manually restart if needed
+            Restart = "no";
             ExecStart = bitwarden-autologin;
           };
         };
