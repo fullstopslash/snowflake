@@ -19,7 +19,7 @@
   environment.systemPackages = with pkgs; [
     neovim
     # Add mcphub.nvim package
-    inputs.mcphub-nvim.packages."${pkgs.system}".default
+    inputs.mcphub-nvim.packages."${pkgs.stdenv.hostPlatform.system}".default
     # Additional tools that might be needed for mcphub.nvim
     nodejs_20 # Required for mcp-hub binary
     jq # Optional, for better servers.json formatting

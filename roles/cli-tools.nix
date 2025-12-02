@@ -53,12 +53,19 @@
     age-plugin-yubikey
     zstd
     jq
+    jaq
+    bc
+    tomlq
+    toml-cli
+    dasel
     yq-go
     rclone
     mkpasswd
     pwgen
 
+    cliphist
     # developer utilities
+    difftastic
     delta
     eza
     fastfetch
@@ -67,9 +74,20 @@
     kwalletcli
     moor
     tmux-sessionizer
-    stable.tmuxp
+    tmuxp
+    sesh
     wezterm
+    urlencode
     managarr
+    websocat
+
+    cowsay
+    kittysay
+    # fancy-cat
+    lolcat
+    fortune
+    charasay
+    pokemonsay
 
     skim
     antidote
@@ -87,6 +105,7 @@
     vdirsyncer
     sqlite
     exiftool
+    exiv2
 
     # pinentry variants
     pinentry-all

@@ -241,6 +241,7 @@
     anki
     anki-sync-server
     qimgv
+    qview
     kdePackages.gwenview
     swayimg
 

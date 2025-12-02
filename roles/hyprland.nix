@@ -2,6 +2,7 @@
 {
   pkgs,
   lib,
+  inputs,
   ...
 }: let
   hypridleConf = pkgs.writeText "hypridle.conf" ''
@@ -66,24 +67,24 @@ in {
   # '';
 
   # xdg-desktop-portal configuration
-  # xdg.portal = {
-  #   enable = true;
-  #   extraPortals = with pkgs; [
-  #     xdg-desktop-portal-hyprland
-  #     # xdg-desktop-portal-gtk
-  #     # kdePackages.xdg-desktop-portal-kde
-  #   ];
-  #   # Common fallback so behavior is sane even if desktop detection differs
-  #   config.common = {
-  #     default = ["hyprland" "gtk"];
-  #     "org.freedesktop.impl.portal.FileChooser" = "hyprland";
-  #     "org.freedesktop.impl.portal.OpenURI" = "hyprland";
-  #   };
-  #   # Restrict default order, prefer KDE chooser, but use GTK for OpenURI
-  #   config.hyprland = {
-  #     default = ["hyprland" "gtk"];
-  #   };
-  # };
+  xdg.portal = {
+    enable = true;
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-hyprland
+      # xdg-desktop-portal-gtk
+      # kdePackages.xdg-desktop-portal-kde
+    ];
+    # Common fallback so behavior is sane even if desktop detection differs
+    config.common = {
+      default = ["hyprland" "gtk"];
+      "org.freedesktop.impl.portal.FileChooser" = "hyprland";
+      "org.freedesktop.impl.portal.OpenURI" = "hyprland";
+    };
+    # Restrict default order, prefer KDE chooser, but use GTK for OpenURI
+    # config.hyprland = {
+    #   default = ["hyprland" "gtk"];
+    # };
+  };
 
   environment.systemPackages = with pkgs; [
     # Hyprland utilities
@@ -101,6 +102,8 @@ in {
     kdePackages.breeze-icons
     kdePackages.breeze-gtk
     kdePackages.breeze
+    kdePackages.qtimageformats
+    kdePackages.kimageformats
     # hyprlandPlugins.hyprscrolling
     waybar
     eww

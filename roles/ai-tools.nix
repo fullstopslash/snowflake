@@ -14,12 +14,15 @@
     claude-code
     gemini-cli
     codex
+    aider-chat
     crush
     # alpaca
     aichat
     opencode
+    # Google Antigravity - AI-native IDE for autonomous development
+    inputs.antigravity-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
     # Crush from nix-ai-tools flake (configured for Ollama)
-    # inputs.nix-ai-tools.packages.${pkgs.system}.crush
+    # inputs.nix-ai-tools.packages.${pkgs.stdenv.hostPlatform.system}.crush
 
     # Ollama alternatives and UIs
     # Terminal: Use 'ollama run <model>' for built-in chat

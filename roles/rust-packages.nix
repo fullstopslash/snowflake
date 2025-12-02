@@ -7,6 +7,6 @@
   ...
 }: {
   environment.systemPackages = [
-    # inputs.starship-jj.packages."${pkgs.system}".default
+    inputs.starship-jj.packages."${pkgs.stdenv.hostPlatform.system}".default
   ];
 }

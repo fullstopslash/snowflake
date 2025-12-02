@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gemini:*)",
+      "Bash(systemctl status:*)",
+      "WebSearch",
+      "Bash(unresolved-ctl queries:*)",
+      "Bash(sudo unresolved-ctl:*)",
+      "WebFetch(domain:github.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

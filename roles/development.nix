@@ -22,6 +22,7 @@
 
     # Language runtimes
     python3
+    pylint
     jdk
     go
     cmake
@@ -37,6 +38,7 @@
     gittyup
     # gitbutler
     meld
+    kdePackages.kompare
 
     discord
     discordo
@@ -56,8 +58,8 @@
     mermaid-cli
 
     # mcphub.nvim and dependencies
-    inputs.mcphub-nvim.packages."${pkgs.system}".default
-    inputs.mcp-hub.packages."${pkgs.system}".default # mcp-hub binary
+    inputs.mcphub-nvim.packages."${pkgs.stdenv.hostPlatform.system}".default
+    inputs.mcp-hub.packages."${pkgs.stdenv.hostPlatform.system}".default # mcp-hub binary
     nodejs_20 # Required for mcp-hub binary
     jq # Optional, for better servers.json formatting
   ];

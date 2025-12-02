@@ -5,7 +5,7 @@
   ...
 }: {
   # Crush from nix-ai-tools flake
-  environment.systemPackages = with inputs.nix-ai-tools.packages.${pkgs.system}; [
+  environment.systemPackages = with inputs.nix-ai-tools.packages.${pkgs.stdenv.hostPlatform.system}; [
     crush
   ];
 
@@ -16,7 +16,7 @@
     backend = "ollama";
     ollama = {
       base_url = "http://localhost:11434";
-      model = "llama3.2";  # User can override with: crush --model <name>
+      model = "llama3.2"; # User can override with: crush --model <name>
     };
   };
 

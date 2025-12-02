@@ -47,7 +47,7 @@
     wants = ["graphical-session.target"];
     serviceConfig = {
       Type = "simple";
-      ExecStart = "${pkgs.easyeffects}/bin/easyeffects --gapplication-service";
+      ExecStart = "${pkgs.easyeffects}/bin/easyeffects --service-mode";
       Restart = "always";
       RestartSec = 3;
       SuccessExitStatus = "3 4";

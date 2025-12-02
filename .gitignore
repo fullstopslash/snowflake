@@ -26,3 +26,6 @@ Thumbs.db
 *.tmp
 *.temp 
 .quickemu/
+.aider*
+.env
+.env

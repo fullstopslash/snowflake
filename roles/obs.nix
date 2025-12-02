@@ -14,10 +14,11 @@
         wlrobs
         obs-backgroundremoval
         obs-pipewire-audio-capture
-        obs-vkcapture
         wlrobs
         waveform
+        obs-gstreamer
         obs-vaapi
+        obs-vkcapture
         obs-tuna
         obs-teleport
         input-overlay
@@ -25,23 +26,10 @@
     })
   ];
 
-  # OBS kernel module (build only the kernel module, skip userspace utils)
+  # OBS kernel module for virtual camera
   boot = {
     extraModulePackages = with config.boot.kernelPackages; [
-      (v4l2loopback.overrideAttrs (_old: {
-        phases = ["unpackPhase" "patchPhase" "buildPhase" "installPhase"];
-        buildPhase = ''
-          runHook preBuild
-          make -C ${config.boot.kernelPackages.kernel.dev}/lib/modules/${config.boot.kernelPackages.kernel.modDirVersion}/build M=$PWD modules
-          runHook postBuild
-        '';
-        installPhase = ''
-          runHook preInstall
-          mkdir -p $out/lib/modules/${config.boot.kernelPackages.kernel.modDirVersion}/updates
-          cp -v v4l2loopback.ko $out/lib/modules/${config.boot.kernelPackages.kernel.modDirVersion}/updates/
-          runHook postInstall
-        '';
-      }))
+      v4l2loopback
     ];
 
     kernelParams = ["video4linux"];
