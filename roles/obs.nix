@@ -1,44 +1,38 @@
 # OBS role
 {
   config,
+  lib,
   pkgs,
   ...
-}: {
-  environment.systemPackages = with pkgs; [
-    # stable.obs-cmd
-    obs-studio
-    # stable.obs-do
-    # OBS with plugins
-    (pkgs.stable.wrapOBS {
-      plugins = with pkgs.obs-studio-plugins; [
-        wlrobs
-        obs-backgroundremoval
-        obs-pipewire-audio-capture
-        wlrobs
-        waveform
-        obs-gstreamer
-        obs-vaapi
-        obs-vkcapture
-        obs-tuna
-        obs-teleport
-        input-overlay
-      ];
-    })
-  ];
-
-  # OBS kernel module for virtual camera
-  boot = {
-    extraModulePackages = with config.boot.kernelPackages; [
-      v4l2loopback
+}: let
+  # v4l2loopback 0.15.3 for kernel 6.18 compatibility
+  v4l2loopback = config.boot.kernelPackages.v4l2loopback.overrideAttrs (_old: {
+    version = "0.15.3";
+    src = pkgs.fetchFromGitHub {
+      owner = "umlaeute";
+      repo = "v4l2loopback";
+      rev = "v0.15.3";
+      hash = "sha256-KXJgsEJJTr4TG4Ww5HlF42v2F1J+AsHwrllUP1n/7g8=";
+    };
+  });
+in {
+  programs.obs-studio = {
+    enable = true;
+    enableVirtualCamera = true;
+    plugins = with pkgs.obs-studio-plugins; [
+      wlrobs
+      obs-backgroundremoval
+      obs-pipewire-audio-capture
+      obs-gstreamer
+      obs-vaapi
+      obs-vkcapture
+      obs-tuna
+      obs-teleport
+      input-overlay
+      waveform
     ];
-
-    kernelParams = ["video4linux"];
-    kernelModules = [
-      "v4l2loopback"
-    ];
-    # Load v4l2loopback module on-demand when OBS starts
-    extraModprobeConfig = ''
-      options v4l2loopback devices=1 video_nr=1 card_label="OBS Cam" exclusive_caps=1
-    '';
   };
+
+  # Override v4l2loopback module set by enableVirtualCamera
+  boot.extraModulePackages = lib.mkForce [v4l2loopback];
 }
