@@ -117,6 +117,11 @@
     newsboat
     weechat
 
+    aspell
+    aspellDicts.en
+    aspellDicts.fr
+    aspellDicts.es
+
     # desktop tool previously in desktop role
     python312Packages.samsungctl
 
