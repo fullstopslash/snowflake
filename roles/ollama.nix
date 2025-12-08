@@ -1,8 +1,11 @@
 # Ollama role with ROCm support for AMD GPUs
-{pkgs, config, ...}: {
+{
+  pkgs,
+  config,
+  ...
+}: {
   services.ollama = {
     enable = true;
-    acceleration = "rocm";
     package = pkgs.ollama;
     host = "127.0.0.1";
     port = 11434;
@@ -22,7 +25,7 @@
   };
 
   # Make ollama CLI available in PATH
-  environment.systemPackages = [pkgs.ollama];
+  environment.systemPackages = [pkgs.ollama-vulkan];
 
   # Allow firewall access to Ollama port (references configured port)
   networking.firewall.allowedTCPPorts = [config.services.ollama.port];
