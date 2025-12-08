@@ -1,5 +1,5 @@
 # Networking role
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 {
   # Network packages
   environment.systemPackages = with pkgs; [
@@ -48,11 +48,11 @@
       # dnsovertls = "true";
     };
     openssh = {
-      enable = true;
+      enable = lib.mkDefault true;
       settings = {
-        PasswordAuthentication = false;
-        AllowUsers = [ "rain" ];
-        StreamLocalBindUnlink = true;
+        PasswordAuthentication = lib.mkDefault false;
+        AllowUsers = lib.mkDefault [ "rain" ];
+        StreamLocalBindUnlink = lib.mkDefault true;
       };
     };
     # mullvad: roles/vpn.nix

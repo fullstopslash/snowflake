@@ -34,19 +34,17 @@ Plans:
 - [x] 02-01: Module migration structure (create dirs, migrate core/desktop modules)
 - [x] 02-02: Module migration continued (development, services, fix imports)
 - [x] 02-03: Role definitions (desktop, laptop, server, pi, tablet, darwin, vm)
-- [ ] 02-04: Integration & verification (wire up flake, test role system)
+- [x] 02-04: Integration & verification (wire up flake, test role system)
 
 ### Phase 3: Host-Spec & Inheritance
 **Goal**: Minimal host-spec where hosts just declare role + username + quirks; automatic inheritance with local overrides
 **Depends on**: Phase 2
-**Plans**: TBD
+**Plans**: 3 plans
 
-Key work:
-- Redesign host-spec.nix for role-based inheritance
-- Host default.nix: `role = "desktop"; primaryUser = "rain";` + quirks
-- Automatic module resolution: host imports role, role imports modules
-- Override pattern: files in host folder override role defaults
-- Validate with empty host that inherits everything
+Plans:
+- [x] 03-01: Clean hostSpec & add role defaults (remove deprecated options, roles set hostSpec defaults)
+- [x] 03-02: Module resolution (roles import optional modules, enable-gated pattern)
+- [x] 03-03: Minimal host pattern (test host, verify inheritance, document override pattern)
 
 ### Phase 4: Secrets & Security
 **Goal**: sops-nix working across all roles/hosts with secure key bootstrapping
@@ -88,8 +86,8 @@ Key work:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2025-12-08 |
-| 2. Role System | 3/4 | In progress | - |
-| 3. Host-Spec & Inheritance | 0/? | Not started | - |
+| 2. Role System | 4/4 | Complete | 2025-12-08 |
+| 3. Host-Spec & Inheritance | 3/3 | Complete | 2025-12-08 |
 | 4. Secrets & Security | 0/? | Not started | - |
 | 5. Reference Host | 0/? | Not started | - |
 | 6. Auto-Update System | 0/? | Not started | - |

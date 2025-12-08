@@ -1,13 +1,9 @@
 # Install starship-jj from its flake
-# Temporarily disabled due to upstream build issue: missing 'insta' dependency
-# See: https://gitlab.com/lanastara_foss/starship-jj
+# FIXME: Requires starship-jj flake input - disabled until added
+{ ... }:
 {
-  pkgs,
-  inputs,
-  ...
-}:
-{
-  environment.systemPackages = [
-    inputs.starship-jj.packages."${pkgs.stdenv.hostPlatform.system}".default
-  ];
+  # Disabled: starship-jj flake input not available
+  # environment.systemPackages = [
+  #   inputs.starship-jj.packages."${pkgs.stdenv.hostPlatform.system}".default
+  # ];
 }

@@ -1,4 +1,5 @@
 # Simple greetd display manager configuration with tuigreet (more reliable)
+# Uses mkDefault so host-specific greetd configs can override
 {
   pkgs,
   lib,
@@ -9,13 +10,13 @@
   config = {
     # Minimal greetd configuration using tuigreet (TUI greeter - more reliable)
     services.greetd = {
-      enable = true;
-      restart = true;
+      enable = lib.mkDefault true;
+      restart = lib.mkDefault true;
       settings = {
         default_session = {
           # Always show login screen - tuigreet will prompt for password
-          command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
-          user = "rain";
+          command = lib.mkDefault "${pkgs.greetd.tuigreet}/bin/tuigreet --time --cmd Hyprland";
+          # user defaults to "greeter" from upstream NixOS module, leave as default
         };
       };
     };

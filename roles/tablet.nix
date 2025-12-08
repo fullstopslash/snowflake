@@ -22,5 +22,11 @@ in
 
     # Power management
     powerManagement.enable = lib.mkDefault true;
+
+    # Tablet hostSpec defaults - hosts can override with lib.mkForce
+    hostSpec = {
+      isMobile = lib.mkDefault true;
+      wifi = lib.mkDefault true;
+    };
   };
 }

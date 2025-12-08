@@ -1,14 +1,11 @@
 # Crush AI coding agent role
+# FIXME: Requires nix-ai-tools flake input - disabled until added
+{ ... }:
 {
-  pkgs,
-  inputs,
-  ...
-}:
-{
-  # Crush from nix-ai-tools flake
-  environment.systemPackages = with inputs.nix-ai-tools.packages.${pkgs.stdenv.hostPlatform.system}; [
-    crush
-  ];
+  # Disabled: nix-ai-tools flake input not available
+  # environment.systemPackages = with inputs.nix-ai-tools.packages.${pkgs.stdenv.hostPlatform.system}; [
+  #   crush
+  # ];
 
   # Provide default config that points to local Ollama Docker service
   # User config in ~/.config/crush/crush.json will override this

@@ -5,7 +5,8 @@
   lib,
   config,
   ...
-}: {
+}:
+{
   imports = lib.flatten [
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
     #"${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-gnome.nix"
@@ -18,27 +19,27 @@
       "hosts/common/core/keyd.nix" # FIXME: Remove if we move to hosts/common/core above
       "modules/common/host-spec.nix"
     ])
-    (
-      let
-        path = lib.custom.relativeToRoot "hosts/common/users/${config.hostSpec.primaryUsername}/default.nix";
-      in
-        lib.optional (lib.pathExists path) path
-    )
+    # FIXME: Dynamic user import causes infinite recursion - disabled
+    # (
+    #   let
+    #     path = lib.custom.relativeToRoot "hosts/common/users/${config.hostSpec.primaryUsername}/default.nix";
+    #   in
+    #     lib.optional (lib.pathExists path) path
+    # )
   ];
 
   hostSpec = {
     hostName = "iso";
-    username = "fullstopslash";
+    primaryUsername = "fullstopslash";
     isProduction = lib.mkForce false;
 
     # Needed because we don't use hosts/common/core for iso
-    inherit
-      (inputs.nix-secrets)
+    inherit (inputs.nix-secrets)
       domain
       networking
       ;
 
-  #TODO(git): This is stuff for home/${config.hostSpec.primaryUsername}/common/core/git.nix. should create home/${config.hostSpec.primaryUsername}/common/optional/development.nix so core git.nix doesn't use it.
+    #TODO(git): This is stuff for home/${config.hostSpec.primaryUsername}/common/core/git.nix. should create home/${config.hostSpec.primaryUsername}/common/optional/development.nix so core git.nix doesn't use it.
     handle = "fullstopslash";
     email.gitHub = inputs.nix-secrets.email.gitHub;
   };
@@ -48,9 +49,10 @@
     inherit (config.users.users.${config.hostSpec.username}) hashedPassword;
     openssh.authorizedKeys.keys = [
       inputs.nix-secrets.bootstrap.sshPublicKey
-    ] ++ config.users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys or [];
+    ]
+    ++ config.users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys or [ ];
   };
-  
+
   # Also add SSH key to the regular user for bootstrap
   users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys = [
     inputs.nix-secrets.bootstrap.sshPublicKey
@@ -89,11 +91,11 @@
 
   # Passwordless sudo for bootstrap
   security.sudo.wheelNeedsPassword = false;
-  
+
   services = {
     qemuGuest.enable = true;
     openssh = {
-      ports = [config.hostSpec.networking.ports.tcp.ssh];
+      ports = [ config.hostSpec.networking.ports.tcp.ssh ];
       settings = {
         PermitRootLogin = lib.mkForce "prohibit-password"; # SSH key auth only
         PasswordAuthentication = false; # Disable password auth
@@ -114,7 +116,7 @@
   };
 
   systemd = {
-    services.sshd.wantedBy = lib.mkForce ["multi-user.target"];
+    services.sshd.wantedBy = lib.mkForce [ "multi-user.target" ];
     # gnome power settings to not turn off screen
     targets = {
       sleep.enable = false;

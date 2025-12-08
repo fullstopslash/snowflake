@@ -44,26 +44,16 @@
       "hosts/common/core"
 
       #
-      # ========== Optional Configs ==========
+      # ========== Host-specific optional configs ==========
+      # Most desktop/laptop modules now come from roles.laptop
       #
-      "hosts/common/optional/services/bluetooth.nix" # bluetooth, blueman and bluez via wireplumber
-      "hosts/common/optional/services/greetd.nix" # display manager
       "hosts/common/optional/services/openssh.nix" # allow remote SSH access
       "hosts/common/optional/services/printing.nix" # CUPS
-      "hosts/common/optional/audio.nix" # pipewire and cli controls
-      "hosts/common/optional/fonts.nix" # fonts
-      "hosts/common/optional/gaming.nix" # window manager
-      "hosts/common/optional/hyprland.nix" # window manager
-      "hosts/common/optional/nvtop.nix" # GPU monitor (not available in home-manager)
+      "hosts/common/optional/nvtop.nix" # GPU monitor (Intel)
       "hosts/common/optional/obsidian.nix" # wiki
-      "hosts/common/optional/plymouth.nix" # fancy boot screen
       "hosts/common/optional/protonvpn.nix" # vpn
-      "hosts/common/optional/stylix.nix" # quickrice
-      "hosts/common/optional/thunar.nix" # file manager
-      "hosts/common/optional/vlc.nix" # media player
-      "hosts/common/optional/wayland.nix" # wayland components and pkgs not available in home-manager
-      "hosts/common/optional/wifi.nix" # wayland components and pkgs not available in home-manager
-      "hosts/common/optional/yubikey.nix" # yubikey related packages and configs
+      "hosts/common/optional/stylix.nix" # theming (requires inputs.stylix above)
+      "hosts/common/optional/yubikey.nix" # yubikey hardware
     ])
   ];
 
@@ -71,9 +61,11 @@
   # ========== Host Specification ==========
   #
 
+  # Use laptop role for mobile devices (replaces isMobile)
+  roles.laptop = true;
+
   hostSpec = {
     hostName = "genoa";
-    isMobile = lib.mkForce true;
     useYubikey = lib.mkForce true;
     hdr = lib.mkForce true;
     wifi = lib.mkForce true;

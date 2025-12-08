@@ -17,10 +17,11 @@
           type = lib.types.str;
           description = "The primary username of the host";
         };
-        # FIXME: deprecated. Use either primaryUsername or map over users
+        # Deprecated: use primaryUsername instead. Kept for backward compatibility.
         username = lib.mkOption {
           type = lib.types.str;
-          description = "The username of the host";
+          default = config.hostSpec.primaryUsername;
+          description = "Deprecated: alias for primaryUsername";
         };
         hostName = lib.mkOption {
           type = lib.types.str;
@@ -78,8 +79,8 @@
         # Configuration Settings
         users = lib.mkOption {
           type = lib.types.listOf lib.types.str;
-          description = "An attribute set of all users on the host";
-          default = [ config.hostSpec.username ];
+          description = "A list of all users on the host";
+          default = [ config.hostSpec.primaryUsername ];
         };
         isMinimal = lib.mkOption {
           type = lib.types.bool;
@@ -91,11 +92,7 @@
           default = true;
           description = "Indicate a production host";
         };
-        isServer = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Indicate a server host";
-        };
+        # Note: isServer removed - use roles.server = true instead
         isWork = lib.mkOption {
           type = lib.types.bool;
           default = false;
@@ -106,10 +103,11 @@
           default = false;
           description = "Indicate a host used for development";
         };
+        # isMobile is set to true by laptop/tablet roles
         isMobile = lib.mkOption {
           type = lib.types.bool;
           default = false;
-          description = "Used to indicate a mobile host";
+          description = "Indicates a mobile host (set by laptop/tablet roles)";
         };
         useYubikey = lib.mkOption {
           type = lib.types.bool;

@@ -148,16 +148,17 @@
   #FIXME(clamav): something not working. disabled to reduce log spam
   semi-active-av.enable = false;
 
-  services.backup = {
-    enable = true;
-    borgBackupStartTime = "02:00:00";
-    borgServer = "${config.hostSpec.networking.subnets.grove.hosts.oops.ip}";
-    borgUser = "${config.hostSpec.username}";
-    borgPort = "${builtins.toString config.hostSpec.networking.ports.tcp.oops}";
-    borgBackupPath = "/var/services/homes/${config.hostSpec.username}/backups";
-    borgNotifyFrom = "${config.hostSpec.email.notifier}";
-    borgNotifyTo = "${config.hostSpec.email.backup}";
-  };
+  # FIXME: Backup disabled - requires networking config from nix-secrets
+  # services.backup = {
+  #   enable = true;
+  #   borgBackupStartTime = "02:00:00";
+  #   borgServer = "${config.hostSpec.networking.subnets.grove.hosts.oops.ip}";
+  #   borgUser = "${config.hostSpec.username}";
+  #   borgPort = "${builtins.toString config.hostSpec.networking.ports.tcp.oops}";
+  #   borgBackupPath = "/var/services/homes/${config.hostSpec.username}/backups";
+  #   borgNotifyFrom = "${config.hostSpec.email.notifier}";
+  #   borgNotifyTo = "${config.hostSpec.email.backup}";
+  # };
 
   # https://wiki.nixos.org/wiki/FAQ/When_do_I_update_stateVersion
   system.stateVersion = "24.05";

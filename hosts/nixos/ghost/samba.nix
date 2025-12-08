@@ -6,7 +6,8 @@
 
 { pkgs, config, ... }:
 let
-  localPrefix = config.hostSpec.networking.subnets.grove.triplet;
+  # FIXME: Requires networking secrets - using placeholder
+  localPrefix = config.hostSpec.networking.subnets.grove.triplet or "192.168.1";
 in
 {
   networking.firewall = {

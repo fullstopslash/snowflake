@@ -73,7 +73,7 @@
     git-lfs
     gitFull
     kwalletcli
-    moor
+    # moor # FIXME: Not in nixpkgs
     tmux-sessionizer
     tmuxp
     sesh

@@ -19,5 +19,12 @@ in
     # No GUI
     services.xserver.enable = lib.mkDefault false;
     sound.enable = lib.mkDefault false;
+
+    # Server hostSpec defaults - hosts can override with lib.mkForce
+    hostSpec = {
+      useWayland = lib.mkDefault false;
+      useWindowManager = lib.mkDefault false;
+      isProduction = lib.mkDefault true;
+    };
   };
 }

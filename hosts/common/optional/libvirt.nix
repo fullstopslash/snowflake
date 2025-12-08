@@ -1,13 +1,9 @@
 {
   inputs,
-  lib,
   pkgs,
   config,
   ...
 }:
-let
-  virtLib = inputs.nixvirt.lib;
-in
 {
   imports = [
     inputs.nixvirt.nixosModules.default
@@ -38,51 +34,11 @@ in
   };
   virtualisation.libvirt = {
     enable = true;
-    connections."qemu:///system" = {
-
-      networks = [
-        {
-          active = true;
-          definition = virtLib.network.writeXML {
-            uuid = "8e91d351-e902-4fce-99b6-e5ea88ac9b80";
-            name = "vm-lan";
-            forward = {
-              mode = "nat";
-              nat = {
-                nat = {
-                  port = {
-                    start = 1024;
-                    end = 65535;
-                  };
-                };
-                ipv6 = false;
-              };
-            };
-            bridge = {
-              name = "virbr0";
-              stp = true;
-              delay = 0;
-            };
-            ipv6 = false;
-            ip =
-              let
-                subnet = inputs.nix-secrets.networking.subnets.vm-lan;
-              in
-              {
-                address = subnet.gateway;
-                netmask = "255.255.255.0";
-                dhcp = {
-                  range = {
-                    start = "${subnet.triplet}.100";
-                    end = "${subnet.triplet}.254";
-                  };
-                };
-                hosts = lib.attrValues subnet.hosts;
-              };
-          };
-        }
-      ];
-    };
+    # FIXME: Network config disabled - requires networking secrets from nix-secrets
+    # To re-enable, add vm-lan subnet config to nix-secrets.networking.subnets
+    # connections."qemu:///system" = {
+    #   networks = [ ... ];
+    # };
   };
 
   # Need to add [File (in the menu bar) -> Add connection] when start for the first time

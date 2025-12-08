@@ -29,7 +29,7 @@
   };
 
   # Make ollama CLI available in PATH
-  environment.systemPackages = [ pkgs.ollama-vulkan ];
+  environment.systemPackages = [ pkgs.ollama ];
 
   # Allow firewall access to Ollama port (references configured port)
   networking.firewall.allowedTCPPorts = [ config.services.ollama.port ];
