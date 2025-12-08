@@ -13,7 +13,7 @@
     inputs.sops-nix.nixosModules.sops
     ../../modules/sops.nix
     ../../roles/secrets.nix
-    ../../roles/universal.nix
+    ../../modules/common/universal.nix
   ];
 
   boot.loader = {

@@ -34,7 +34,7 @@
     # ../../roles/latex.nix
     ../../roles/quickemu.nix
     ../../roles/secrets.nix
-    ../../roles/universal.nix
+    ../../modules/common/universal.nix
     ../../roles/stylix.nix
     ../../roles/fonts.nix
     ../../roles/shell.nix
