@@ -106,6 +106,9 @@
             #   xwayland = pkgs.stable.xwayland;
             # };
           }
+          # Host specification module for declarative host differentiation
+          ./modules/host-spec.nix
+
           # Host-specific configuration
           ./hosts/${hostname}/default.nix
 
@@ -117,6 +120,15 @@
 
           # Centralize stateVersion for all hosts
           {system.stateVersion = stateVersion;}
+
+          # Set hostSpec values automatically
+          {
+            hostSpec = {
+              hostname = hostname;
+              system = system;
+              stateVersion = stateVersion;
+            };
+          }
 
           # Note: Do not define system.build.installTest here to avoid conflicts
           # with nixos-anywhere --vm-test which also defines this option.
