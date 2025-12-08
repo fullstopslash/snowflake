@@ -26,15 +26,15 @@ Plans:
 - [x] 01-03: Build tooling integration (nh, disko, verification)
 
 ### Phase 2: Role System
-**Goal**: `/roles/` directory with base role files that define software modules and settings per device type
+**Goal**: `/roles/` with device-type roles, `/modules/` with migrated software modules from ~/nix
 **Depends on**: Phase 1
-**Plans**: TBD
+**Plans**: 4 plans
 
-Key work:
-- Create role structure: desktop.nix, server.nix, pi.nix, darwin.nix, tablet.nix
-- Migrate software modules from ~/nix/roles/ into role-appropriate files
-- Each role imports relevant modules (gaming → desktop, headless → server, etc.)
-- Roles set sensible defaults that hosts can override
+Plans:
+- [ ] 02-01: Module migration structure (create dirs, migrate core/desktop modules)
+- [ ] 02-02: Module migration continued (development, services, fix imports)
+- [ ] 02-03: Role definitions (desktop, laptop, server, pi, tablet, darwin, vm)
+- [ ] 02-04: Integration & verification (wire up flake, test role system)
 
 ### Phase 3: Host-Spec & Inheritance
 **Goal**: Minimal host-spec where hosts just declare role + username + quirks; automatic inheritance with local overrides
@@ -88,7 +88,7 @@ Key work:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2025-12-08 |
-| 2. Role System | 0/? | Not started | - |
+| 2. Role System | 0/4 | Not started | - |
 | 3. Host-Spec & Inheritance | 0/? | Not started | - |
 | 4. Secrets & Security | 0/? | Not started | - |
 | 5. Reference Host | 0/? | Not started | - |
