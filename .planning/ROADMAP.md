@@ -31,7 +31,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: Module migration structure (create dirs, migrate core/desktop modules)
+- [x] 02-01: Module migration structure (create dirs, migrate core/desktop modules)
 - [ ] 02-02: Module migration continued (development, services, fix imports)
 - [ ] 02-03: Role definitions (desktop, laptop, server, pi, tablet, darwin, vm)
 - [ ] 02-04: Integration & verification (wire up flake, test role system)
@@ -88,7 +88,7 @@ Key work:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2025-12-08 |
-| 2. Role System | 0/4 | Not started | - |
+| 2. Role System | 1/4 | In progress | - |
 | 3. Host-Spec & Inheritance | 0/? | Not started | - |
 | 4. Secrets & Security | 0/? | Not started | - |
 | 5. Reference Host | 0/? | Not started | - |
