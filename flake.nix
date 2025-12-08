@@ -63,6 +63,10 @@
             isDarwin = false;
           };
           modules = [
+            # Role system - must come before host config
+            ./roles
+            ./modules/common
+
             hostPath
             # Pass custom pkgs for alternate nixpkgs inputs and disable module config
             (
