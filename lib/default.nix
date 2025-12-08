@@ -1,8 +1,11 @@
-# FIXME(lib.custom): Add some stuff from hmajid2301/dotfiles/lib/module/default.nix, as simplifies option declaration
+# Custom lib helpers for nix-config
 { lib, ... }:
 {
-  # use path relative to the root of the project
+  # Use path relative to the root of the project
   relativeToRoot = lib.path.append ../.;
+
+  # Scan a directory for all .nix files and subdirectories (excluding default.nix)
+  # Useful for auto-importing modules
   scanPaths =
     path:
     builtins.map (f: (path + "/${f}")) (
@@ -17,4 +20,17 @@
         ) (builtins.readDir path)
       )
     );
+
+  # Import all .nix files from a directory (excluding default.nix)
+  # Useful for importing role modules
+  importDir =
+    path:
+    map (f: import (path + "/${f}")) (
+      builtins.filter (f: lib.hasSuffix ".nix" f && f != "default.nix") (
+        builtins.attrNames (builtins.readDir path)
+      )
+    );
+
+  # Check if a path exists
+  pathExists = path: builtins.pathExists path;
 }
