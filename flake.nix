@@ -13,15 +13,72 @@
       #
       # ========= Architectures =========
       #
-      forAllSystems = nixpkgs.lib.genAttrs [
+      supportedSystems = [
         "x86_64-linux"
-        #"aarch64-darwin"
+        "aarch64-linux"
+        "x86_64-darwin"
       ];
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
 
       # ========== Extend lib with lib.custom ==========
       # NOTE: This approach allows lib.custom to propagate into hm
       # see: https://github.com/nix-community/home-manager/pull/3454
       lib = nixpkgs.lib.extend (self: super: { custom = import ./lib { inherit (nixpkgs) lib; }; });
+
+      #
+      # ========= Helper Functions =========
+      #
+      # Architecture-aware mkHost helper for building NixOS configurations
+      mkHost =
+        hostname:
+        let
+          # Try to import host config to read system architecture
+          # Default to x86_64-linux if not specified
+          hostPath = ./hosts/nixos/${hostname};
+
+          # For now, all current hosts are x86_64-linux
+          # Future hosts can override this by setting hostSpec.system in their default.nix
+          system = "x86_64-linux";
+
+          # Use unstable for griefling test VM, stable for everything else
+          pkgInput = if hostname == "griefling" then inputs.nixpkgs-unstable else nixpkgs;
+
+          # When using alternate nixpkgs, create pkgs with config
+          customPkgs =
+            if hostname == "griefling" then
+              (import inputs.nixpkgs-unstable {
+                inherit system;
+                config = {
+                  allowUnfree = true;
+                  allowBroken = true;
+                };
+              })
+            else
+              null;
+        in
+        pkgInput.lib.nixosSystem {
+          inherit system;
+          specialArgs = {
+            inherit inputs outputs lib;
+            isDarwin = false;
+          };
+          modules = [
+            hostPath
+            # Pass custom pkgs for alternate nixpkgs inputs and disable module config
+            (
+              if hostname == "griefling" then
+                {
+                  nixpkgs.pkgs = lib.mkForce customPkgs;
+                  nixpkgs.config = lib.mkForce { };
+                  # Disable nix registry/nixPath for alternate nixpkgs to avoid conflicts
+                  nix.registry = lib.mkForce { };
+                  nix.nixPath = lib.mkForce [ ];
+                }
+              else
+                { }
+            )
+          ];
+        };
 
     in
     {
@@ -35,38 +92,11 @@
       # ========= Host Configurations =========
       #
       # Building configurations is available through `just rebuild` or `nixos-rebuild --flake .#hostname`
+      # Auto-discover hosts from hosts/nixos/ directory and build with mkHost helper
       nixosConfigurations = builtins.listToAttrs (
-        map (host: 
-          let
-            # Use unstable for griefling test VM, stable for everything else
-            pkgInput = if host == "griefling" then inputs.nixpkgs-unstable else nixpkgs;
-            # When using alternate nixpkgs, create pkgs with config
-            customPkgs = if host == "griefling" then (import inputs.nixpkgs-unstable {
-              system = "x86_64-linux";
-              config = {
-                allowUnfree = true;
-                allowBroken = true;
-              };
-            }) else null;
-          in {
+        map (host: {
           name = host;
-          value = pkgInput.lib.nixosSystem {
-            specialArgs = {
-              inherit inputs outputs lib;
-              isDarwin = false;
-            };
-            modules = [ 
-              ./hosts/nixos/${host}
-              # Pass custom pkgs for alternate nixpkgs inputs and disable module config
-              (if host == "griefling" then {
-                nixpkgs.pkgs = lib.mkForce customPkgs;
-                nixpkgs.config = lib.mkForce {};
-                # Disable nix registry/nixPath for alternate nixpkgs to avoid conflicts
-                nix.registry = lib.mkForce {};
-                nix.nixPath = lib.mkForce [];
-              } else {})
-            ];
-          };
+          value = mkHost host;
         }) (builtins.attrNames (builtins.readDir ./hosts/nixos))
       );
 
@@ -195,7 +225,7 @@
     # Theming
     stylix.url = "github:danth/stylix/release-25.05";
     rose-pine-hyprcursor.url = "github:ndom91/rose-pine-hyprcursor";
-    
+
     # MCP Hub - Model Context Protocol neovim integration
     mcp-hub = {
       url = "github:ravitemer/mcp-hub";

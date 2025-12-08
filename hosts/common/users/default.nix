@@ -120,6 +120,7 @@ in
                   home = {
                     homeDirectory = if isDarwin then "/Users/${user}" else "/home/${user}";
                     username = "${user}";
+                    stateVersion = "23.05"; # Required by home-manager
                   };
                 }
               )
