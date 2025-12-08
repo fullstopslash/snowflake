@@ -18,14 +18,12 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 ### Phase 1: Foundation
 **Goal**: Clean flake.nix with multi-arch support, unified lib and overlays from both repos
 **Depends on**: Nothing (first phase)
-**Plans**: TBD after detailed analysis
+**Plans**: 3 plans
 
-Key work:
-- Refactor flake.nix for x86_64-linux, aarch64-linux, x86_64-darwin
-- Merge lib/ from both repos (keep nix-config structure, add ~/nix helpers)
-- Consolidate overlays (stable/unstable packages, custom packages)
-- Set up nh integration for rebuilds
-- Ensure disko is wired up
+Plans:
+- [x] 01-01: Flake multi-arch structure (forAllSystems, mkHost helper)
+- [x] 01-02: Lib & overlays consolidation (clean helpers, fix broken overrides)
+- [x] 01-03: Build tooling integration (nh, disko, verification)
 
 ### Phase 2: Role System
 **Goal**: `/roles/` directory with base role files that define software modules and settings per device type
@@ -89,7 +87,7 @@ Key work:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/? | Not started | - |
+| 1. Foundation | 3/3 | Complete | 2025-12-08 |
 | 2. Role System | 0/? | Not started | - |
 | 3. Host-Spec & Inheritance | 0/? | Not started | - |
 | 4. Secrets & Security | 0/? | Not started | - |
