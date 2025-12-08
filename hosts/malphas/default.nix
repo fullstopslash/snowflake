@@ -1,10 +1,17 @@
-# NixOS host configuration for malphus
+# NixOS host configuration for malphas
 {
   pkgs,
   lib,
   inputs,
   ...
 }: {
+  # Host characteristics for conditional module behavior
+  hostSpec = {
+    isDesktop = true;
+    hasWifi = false; # Desktop, no wifi
+    primaryUser = "rain";
+  };
+
   imports = [
     ./hardware-configuration.nix
     inputs.sops-nix.nixosModules.sops
@@ -34,7 +41,7 @@
     # ../../roles/latex.nix
     ../../roles/quickemu.nix
     ../../roles/secrets.nix
-    ../../modules/common/universal.nix
+    # universal.nix now auto-applied via modules/common
     ../../roles/stylix.nix
     ../../roles/fonts.nix
     ../../roles/shell.nix

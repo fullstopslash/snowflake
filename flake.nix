@@ -109,6 +109,9 @@
           # Host specification module for declarative host differentiation
           ./modules/host-spec.nix
 
+          # Common modules auto-applied to all hosts
+          ./modules/common
+
           # Host-specific configuration
           ./hosts/${hostname}/default.nix
 

@@ -6,7 +6,7 @@ Transform the existing single-host NixOS flake into a scalable, self-managing mu
 
 ## Phases
 
-- [ ] **Phase 1: Module Architecture** - Three-tier module system + host-spec pattern
+- [x] **Phase 1: Module Architecture** - Three-tier module system + host-spec pattern
 - [ ] **Phase 2: Disko Integration** - Modular disk configurations by use-case
 - [ ] **Phase 3: Secrets Migration** - Port to nix-secrets flake pattern
 - [ ] **Phase 4: Darwin Support** - nix-darwin for MacBook, cross-platform modules
@@ -18,12 +18,12 @@ Transform the existing single-host NixOS flake into a scalable, self-managing mu
 ### Phase 1: Module Architecture
 **Goal**: Restructure modules into common (auto-applied), opt-in (subscribe), and host-specific tiers. Add host-spec pattern for declarative host differentiation.
 **Depends on**: Nothing (first phase)
-**Plans**: TBD after detailed planning
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Create host-spec module with host attributes
-- [ ] 01-02: Reorganize modules into common/opt-in/host-specific structure
-- [ ] 01-03: Migrate malphas to new architecture (validation)
+- [x] 01-01: Host Specification Module - Create typed hostSpec options, wire into flake
+- [x] 01-02: Module Directory Restructure - Create common/opt-in structure, move universal
+- [x] 01-03: Malphas Migration & Validation - Update malphas, live rebuild test
 
 ### Phase 2: Disko Integration
 **Goal**: Create reusable disko disk configurations for different use-cases (desktop, server, pi).
@@ -74,7 +74,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Module Architecture | 0/3 | Not started | - |
+| 1. Module Architecture | 3/3 | Complete | 2025-12-08 |
 | 2. Disko Integration | 0/2 | Not started | - |
 | 3. Secrets Migration | 0/2 | Not started | - |
 | 4. Darwin Support | 0/2 | Not started | - |
