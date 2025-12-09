@@ -49,25 +49,22 @@ Plans:
 ### Phase 4: Secrets & Security
 **Goal**: sops-nix working across all roles/hosts with secure key bootstrapping
 **Depends on**: Phase 3
-**Plans**: TBD
+**Plans**: 4 plans
 
-Key work:
-- Set up sops-nix with age keys
-- Per-host and shared secrets structure
-- Secure bootstrapping for new machines
-- Integration with roles (secrets needed by desktop vs server)
+Plans:
+- [x] 04-01: Audit & fix current SOPS setup (fix broken configs, add host-spec integration)
+- [x] 04-02: Role-based secrets structure (secret categories, role defaults)
+- [x] 04-03: Bootstrap & key management (streamline new host setup)
+- [x] 04-04: Shared secrets & multi-host access (shared.yaml integration)
 
 ### Phase 5: Reference Host
-**Goal**: Migrate malphas (main desktop) using new minimal host pattern
+**Goal**: Migrate ghost (main desktop) to minimal host pattern using role system
 **Depends on**: Phase 4
-**Plans**: TBD
+**Plans**: 2 plans
 
-Key work:
-- Create minimal malphas/default.nix using role inheritance
-- Migrate hardware-configuration.nix
-- Validate all current functionality works
-- Document the minimal host pattern
-- Test override capability (host-specific quirks)
+Plans:
+- [x] 05-01: Migrate ghost to role system (add roles.desktop, remove redundant imports)
+- [x] 05-02: Clean up test hosts & document pattern (malphas, minimaltest, roletest)
 
 ### Phase 6: Auto-Update System
 **Goal**: Self-updating machines via daily git pull + rebuild, or WoL-triggered updates
@@ -88,6 +85,6 @@ Key work:
 | 1. Foundation | 3/3 | Complete | 2025-12-08 |
 | 2. Role System | 4/4 | Complete | 2025-12-08 |
 | 3. Host-Spec & Inheritance | 3/3 | Complete | 2025-12-08 |
-| 4. Secrets & Security | 0/? | Not started | - |
-| 5. Reference Host | 0/? | Not started | - |
+| 4. Secrets & Security | 4/4 | Complete | 2025-12-08 |
+| 5. Reference Host | 2/2 | Complete | 2025-12-08 |
 | 6. Auto-Update System | 0/? | Not started | - |

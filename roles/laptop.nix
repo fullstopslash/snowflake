@@ -66,6 +66,12 @@ in
       isDevelopment = lib.mkDefault true;
       wifi = lib.mkDefault true;
       isMobile = lib.mkDefault true;
+      # Laptop secret categories (same as desktop)
+      secretCategories = {
+        base = lib.mkDefault true;
+        desktop = lib.mkDefault true;
+        network = lib.mkDefault true;
+      };
     };
   };
 }

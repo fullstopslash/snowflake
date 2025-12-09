@@ -2,321 +2,196 @@
 
 [README](../README.md) > Adding A New Host
 
-FIXME These steps can and should be streamlined significantly during each roadmap stage. In particular, install from the liveISO rather than installing and then loading the config. I opted to forgo the latter until the config is more mature and I better understand the required process.
-FIXME(docs) Needs revision based on hostSpec and nixos/darwin support overhaul
+## Quick Start (< 10 minutes)
 
-### Requirements
+For new hosts using the role-based system, adding a machine is streamlined:
 
-Because this repo relies on a private `nix-secrets` repository input as a flake uri, you must use a NixOS ISO versioned 23.11 or higher so that building the flake prompts for a passphrase.
+### 1. Create minimal host definition
 
-### In this repo
+```bash
+mkdir -p hosts/nixos/<hostname>
+```
 
-1. Create a configuration file for the new host at `hosts/nixos/<hostname/default.nix` (replace `nixos` with Darwin if that's what your using). Refer to existing host configs and define the config as needed.
-2. Add users to `hosts/common/users/<usern>.nix` if needed
-3. Create a host-specific home config for each user that will be accessing the host at `home/<user>/<hostname>.nix`. Refer to exiting user configs and define [the](the) config as needed.
-4. Edit `flake.nix` to include a the following entries:
+Create `hosts/nixos/<hostname>/default.nix`:
 
-   - Host information, under the `nixosConfigurations` option.
+```nix
+{
+  imports = [
+    ./hardware-configuration.nix
+  ];
 
-     ```nix
-       ...
-       nixosConfigurations = {
-         # This is an example of an existing host called "grief"
-         grief = lib.nixosSystem {
-           modules = [ ./hosts/grief ];
-           specialArgs = { inherit inputs outputs;};
-         }
-         # Add a description of your host
-         [yournewhostname](yournewhostname) = lib.nixosSystem {
-           modules = [ ./hosts/yournewhostname ];
-           specialArgs = { inherit inputs outputs;};
-         }
-         ...
-       };
-       ...
-     ```
+  # Choose a role: desktop, laptop, server, vm
+  roles.laptop = true;
 
-   - Primary user information for the primary user on each host, under the `homeConfigurations` option.
+  hostSpec = {
+    hostName = "<hostname>";
+    username = "rain";  # your username
+    # Override any role defaults here
+  };
+}
+```
 
-     ```nix
-       ...
-       homeConfigurations = {
-         "ta@grief" = lib.homeManagerConfiguration {
-           modules = [ ./home/ta/grief.nix ];
-           pkgs = pkgsFor.x86_64-linux;
-           extraSpecialArgs = {inherit inputs outputs;};
-         };
-         "username@yournewhostname" = lib.homeManagerConfiguration {
-           modules = [ ./home/username/yournewhostname.nix ];
-           pkgs = pkgsFor.x86_64-linux;
-           extraSpecialArgs = {inherit inputs outputs;};
-         };
-         ...
-       };
-       ...
-     ```
+### 2. Add to flake.nix
 
-5. Commit and push the changes
+Add to `nixosConfigurations`:
 
-### On the new host
+```nix
+<hostname> = mkHost {
+  hostname = "<hostname>";
+  system = "x86_64-linux";
+};
+```
 
-These steps assume:
+### 3. Bootstrap with nixos-anywhere
 
-- installation on an UEFI system
+From your main machine:
 
-0. Boot the new machine into a NixOS live environment and wait for a shell, or for the graphical installer to automatically open if you used a graphical ISO.
+```bash
+./scripts/bootstrap-nixos.sh \
+  -n <hostname> \
+  -d <ip-or-hostname> \
+  -k ~/.ssh/your_key
+```
 
-1. If in the graphical installer, and open a terminal.
-   Confirm the boot process brought up networking successfully and a ip was acquired. Check `ip a`. If no ip was assigned, refer to <https://nixos.org/manual/nixos/stable/#sec-installation-manual-networking>
+The script handles:
+- nixos-anywhere installation
+- SSH host key generation
+- Age key derivation and nix-secrets update
+- User age key creation
+- Copying nix-config to target
+- Initial rebuild
 
-2. To gain remote access right away, set a temporary password for the root user using `passwd root` and following the prompts. Then from a remote machine, `ssh root@0.0.0.0` using the ip printed in step 1.
+### 4. Verify secrets
 
-3. Most of the following steps require root. If you are remoted in from step 2 you should have a root shell. Otherwise, `sudo su`
+After bootstrap, on the new host:
 
-> IMPORTANT: the code samples below assume installation on the `sda` device. Modify if necessary.
-> These are instructions come directly from <https://nixos.org/manual/nixos/stable/#sec-installation-manual-partitioning> with little to no modification.
+```bash
+./scripts/check-sops.sh --verbose
+```
 
-3. Create a GPT partition table.
+## Role System
 
-   `# parted /dev/sda -- mklabel gpt`
+Roles automatically configure:
+- Software packages and services
+- hostSpec defaults (wayland, window manager, etc.)
+- Secret categories (which secrets are available)
 
-4. Add the root partition. This will fill the disk except for the end part, where the swap will live, and the space left in front (512MiB) which will be used by the boot partition.
+| Role | Secret Categories | Use Case |
+|------|------------------|----------|
+| desktop | base, desktop, network | Workstations with GUI |
+| laptop | base, desktop, network | Mobile workstations |
+| server | base, server, network | Headless servers |
+| vm | base | Testing/minimal |
 
-   `# parted /dev/sda -- mkpart root ext4 512MB -8GB`
+## Secret Categories
 
-   If you do not require swap, replace `-8GB` with `100%`
+Secrets are organized by purpose:
 
-5. _If you are adding a swap partition_, the size required will vary according to needs, here a 8GB one is created. NixOS uses the standard linux swap file needs so this will depend on how much memory the host has.
+| Category | Secrets | File |
+|----------|---------|------|
+| base | user password, age key, msmtp | base.nix |
+| desktop | Home Assistant tokens | desktop.nix |
+| server | borg backup, service creds | server.nix |
+| network | tailscale OAuth | network.nix |
+| shared | cross-host secrets | shared.nix (via shared.yaml) |
 
-   `# parted /dev/sda -- mkpart swap linux-swap -8GB 100%`
+## Manual Bootstrap (if not using script)
 
-6. Finally, the boot partition. NixOS by default uses the ESP (EFI system partition) as its /boot partition. It uses the initially reserved 512MiB at the start of the disk.
+If you prefer manual setup:
 
+### Generate and register host age key
+
+1. On the new host, generate SSH host key:
    ```bash
-   # parted /dev/sda -- mkpart ESP fat32 1MB 512MB
-   # parted /dev/sda -- set 3 esp on
+   sudo ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N ''
    ```
 
-7. Initialize the Ext4 partitions using mkfs.ext4 and assign a unique symbolic label using the `-L label` argument. For example:
+2. Convert to age key:
+   ```bash
+   cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age
+   ```
 
-   `# mkfs.ext4 -L nixos /dev/sda1`
+3. In nix-secrets, add to `.sops.yaml`:
+   ```yaml
+   keys:
+     hosts:
+       - &<hostname> age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-8. For swap, _if required_, use `mkswap` and assign a label using the `-L label` argument. For example:
+   creation_rules:
+     - path_regex: <hostname>\.yaml$
+       key_groups:
+         - age:
+           - *<hostname>
+           - *rain_<hostname>  # user key, if exists
+   ```
 
-   `# mkswap -L swap /dev/sda2`
+4. Create empty host secrets file:
+   ```bash
+   echo '{}' > sops/<hostname>.yaml
+   sops -e -i sops/<hostname>.yaml
+   ```
 
-9. For UEFI system boot partitions use `mkfs.fat` and assign a label using `-n label`. For example:
+5. Add host to shared.yaml creation rule (for shared secrets access)
 
-   `# mkfs.fat -F 32 -n BOOT /dev/sda3`
+6. Rekey all secrets:
+   ```bash
+   just rekey
+   ```
 
-10. Mount the target file system on which NixOS should be installed on /mnt, e.g.
+### Generate user age key
 
-    `# mount /dev/disk/by-label/nixos /mnt`
+The bootstrap script handles this, but manually:
 
-11. Mount the boot file system on /mnt/boot, e.g.
+```bash
+# Generate key
+age-keygen -o /tmp/age-key.txt
 
-    ```bash
-    # mkdir -p /mnt/boot
-    # mount /dev/disk/by-label/BOOT /mnt/boot
-    ```
+# Add public key to .sops.yaml as rain_<hostname>
+# Add private key to sops/<hostname>.yaml as keys/age
+```
 
-12. If you are using swap, activate swap devices now (swapon device). The installer (or rather, the build actions that it may spawn) may need quite a bit of RAM, depending on your configuration.
+### First rebuild
 
-    `# swapon /dev/sda2`
+```bash
+sudo nixos-rebuild switch --flake .#<hostname>
+```
 
-13. Generate default configs
+## Troubleshooting
 
-    `# nixos-generate-config --root /mnt`
+### "SOPS: Host secrets file not found"
 
-14. Edit the config so that we can quickly remote in over ssh after installation.
+The host's secrets file doesn't exist in nix-secrets. Either:
+- Run the bootstrap script to create it
+- Manually create `nix-secrets/sops/<hostname>.yaml`
+- Set `hostSpec.hasSecrets = false` if this host shouldn't have secrets
 
-    ```bash
-    # vim /mnt/etc/nixos/configuration.nix
-    ```
+### "Failed to decrypt"
 
-15. Edit or add the following as needed.
+The host's age key isn't in the sops creation rules:
+1. Get the host's age key: `cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age`
+2. Add to `.sops.yaml`
+3. Rekey: `just rekey`
+4. Update flake: `nix flake update nix-secrets`
 
-    1. Verify:
+### Age key not created
 
-       ```nix
-       boot.loader.systemd-boot.enable = true;
-       boot.loader.efi.canTouchEfiVariables = true;
-       ```
+sops-nix creates `~/.config/sops/age/keys.txt` from `keys/age` in the host's secrets file.
+Verify the secret exists: `sops sops/<hostname>.yaml`
 
-    2. Uncomment this line and replace `nixos` with your desired host name:
+### Check sops status
 
-       ```nix
-       # networking.hostname = "nixos";
-       ```
+```bash
+./scripts/check-sops.sh --verbose
+```
 
-       This step isn't technically required but will make connected to the machine faster if you have aliases already setup.
+## Legacy Instructions
 
-    3. Delete or comment out the following lines if the are present.
+For manual partitioning and traditional installation (not using nixos-anywhere), see the [NixOS manual](https://nixos.org/manual/nixos/stable/#sec-installation).
 
-       ```nix
-       # services.xserver.enable = true;
-
-       # services.xserver.displayManager.gdm.enable = true;
-
-       # services.xserver.desktopManager.gnome.enable = true;
-       ```
-
-    4. Uncomment the `users.users.alice` section and create a basic use. For example:
-
-       ```nix
-       #users.users.ta := {
-         #isNormalUser = true;
-         #extraGroups = [ "wheel" ];
-         #initialPassword = "temp";
-       #};
-       #users.mutableUsers = true;
-       ```
-
-    5. Uncomment `services.openssh.enable = true`
-
-    6. At the end of the file, but prior to the final `}`, add the following line:
-
-       `nix.settings.experimental-features = [ "nix-command" "flakes" ];`
-
-    7. Save and exit the file
-
-16. Do the installation.
-
-    `# nixos-install` and set the root password when prompted.
-
-17. Once installation is complete:
-
-    `# reboot`
-
-18. Sign in with the user you created.
-19. In case something goes wrong in the next steps, set the password for the user defined in 15.4. For example: `passwd ta`
-20. Create as source directory in the users home and clone the nix-config repo.
-
-    ```bash
-    $ mkdir -p ~/src
-    $ cd ~/src
-    $ nix-shell -p git --run 'git clone https://github.com/EmergentMind/nix-config.git'
-    ```
-
-21. Change to the repo directory and run nix-develop to access the dev shell defined in flake.nix.
-
-    ```bash
-    $ cd nix-config
-    $ nix develop
-    ```
-
-22. Generate an age key on the new host, based on it's ssh host key.
-
-    ```bash
-    $ cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age
-    age00000000000000000000000000000000000000000000000000
-    ```
-
-### On a system with access to nix-secrets
-
-22. On a system with access to the nix-secrets repo, add the generated age key as a host key entry to the `nix-secrets/.sops.yaml` file.
-
-    ```yaml
-    nix-secrets/.sops.yaml
-
-    ------------------------------
-
-    # pub keys
-    keys:
-      # ...
-      - &hosts:
-        - &yournewhostname age00000000000000000000000000000000000000000000000000
-
-    creation_rules:
-      - path_regex: secrets.yaml$
-        key_groups:
-        - age:
-        # ...
-          - *yournewhostname
-
-    ```
-
-23. Update the keys of the related sops file
-
-    ```bash
-    $ sops --config ../nix-secrets/.sops.yaml updatekeys ../nix-secrets/secrets.yaml
-    2024/02/09 12:11:05 Syncing keys for file /home/ta/src/nix-secrets/secrets.yaml
-    The following changes will be made to the file's groups:
-    Group 1
-        age00000000000000000000000000000000000000000000000000
-        age00000000000000000000000000000000000000000000000000
-    +++ age00000000000000000000000000000000000000000000000000
-    Is this okay? (y/n):y
-    2024/02/09 12:16:54 File /home/ta/src/nix-secrets/secrets.yaml synced with new keys
-    ```
-
-24. Commit and push the changes to `nix-secrets` so they will be retrieved when the flake is built on the new host.
-
-25. Before we build the flake and home-manager confgs on the new host, we need to ensure that it can access the private `nix-secrets` repo. From a system with the required priv/pub key-pair, cp the keys to the newhost:
-
-    ```bash
-    $ scp ~/.ssh/key_name* user@0.0.0.0:.ssh/
-    ```
-
-### Back on the new host
-
-26. Back on the new hosts, create a `~/.ssh/config` so the correct keys are used.
-
-    ```ssh
-    ~/.ssh/config
-    ------------------------------
-    Host gitlab.com github.com
-      IdentitiesOnly yes
-      IdentityFile ~/.ssh/id_manu
-
-    Host *
-      ForwardAgent no
-      Compression no
-      ServerAliveInterval 0
-      ServerAliveCountMax 3
-      HashKnownHosts no
-      UserKnownHostsFile ~/.ssh/known_hosts
-      ControlMaster no
-      ControlPath ~/.ssh/master-%r@%n:%p
-      ControlPersist no
-    ```
-
-27. Since we've updated nix-secrets, we'll have to update the flake lock file to ensure that the latest revision is retrieved.
-
-    ```bash
-    $ nix flake lock --update-input nix-secrets
-    warning: Git tree '/home/ta/src/nix-config' is dirty
-    Enter passphrase for key '/home/ta/.ssh/id_manu':
-    warning: updating lock file '/home/ta/src/nix-config/flake.lock':
-    • Updated input 'nix-secrets':
-     'git+ssh://git@gitlab.com/emergentmind/nix-secrets.git?ref=main&rev=aa0165aff5f74d367b523cc27dbd028b0251c30d&shallow=1' (2024-02-09)
-    → 'git+ssh://git@gitlab.com/emergentmind/nix-secrets.git?ref=main&rev=2ef287a53f19be75a4ff1f5ba28595686d4b5cbb&shallow=1' (2024-02-13)
-    warning: Git tree '/home/ta/src/nix-config' is dirty
-    ```
-
-    Enter the passphrase when prompted.
-
-28. Copy the generated hardware config from its default location to the nix-config location:
-
-    `$ cp /etc/nixos/hardware-configuration.nix ~/src/nix-config/hosts/NEWHOSTNAME/hardware-configuration.nix`
-
-29. Build and switch to the flake:
-
-    ```bash
-    $ sudo nixos-rebuild switch --flake .#newhostname`
-    ```
-
-30. Once the build is finished build home-manager configs for each user on the system:
-
-    ```bash
-    $ home-manager build --flake .#user@newhostname
-
-    ...
-
-    $ home-manager build --flake .#user@newhostname
-    ```
-
-31. Commit and push the new hardware-configuration that was copied in step 2
+The key additional steps are:
+1. Generate hardware config: `nixos-generate-config --root /mnt`
+2. Copy to nix-config: `hosts/nixos/<hostname>/hardware-configuration.nix`
+3. Follow the secrets setup above before first rebuild
 
 ---
 

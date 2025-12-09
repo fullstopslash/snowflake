@@ -63,6 +63,10 @@
             isDarwin = false;
           };
           modules = [
+            # sops-nix for secrets management - imported for all hosts so modules
+            # can reference sops options. Actual secrets config is in hosts/common/core/sops.nix
+            inputs.sops-nix.nixosModules.sops
+
             # Role system - must come before host config
             ./roles
             ./modules/common

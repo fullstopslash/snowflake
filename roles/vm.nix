@@ -17,5 +17,10 @@ in
     # Minimal configuration
     documentation.enable = lib.mkDefault false;
     boot.loader.timeout = lib.mkDefault 1;
+
+    # VM secret categories (base only)
+    hostSpec.secretCategories = {
+      base = lib.mkDefault true;
+    };
   };
 }

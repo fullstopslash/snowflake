@@ -44,11 +44,6 @@
       "hosts/common/core"
 
       #
-      # ========== Non-Primary Users to Create ==========
-      #
-      "hosts/common/users/media"
-
-      #
       # ========== Optional Configs ==========
       #
       "hosts/common/optional/services/openssh.nix" # allow remote SSH access
@@ -70,7 +65,7 @@
     useYubikey = lib.mkForce true;
     persistFolder = "/persist"; # added for "completion" because of the disko spec that was used even though impermanence isn't actually enabled here yet.
 
-    user = lib.mkForce [
+    users = [
       "rain"
       "media"
     ];

@@ -144,6 +144,40 @@
           default = true;
           description = "Indicate a host that uses LAN atticd for caching";
         };
+        hasSecrets = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Indicate if the host has sops secrets configured (false for ISO, minimal hosts)";
+        };
+        # Secret categories - roles set these, hosts can override
+        secretCategories = lib.mkOption {
+          type = lib.types.submodule {
+            options = {
+              base = lib.mkOption {
+                type = lib.types.bool;
+                default = true;
+                description = "Base secrets: user passwords, age keys, msmtp";
+              };
+              desktop = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "Desktop secrets: home assistant, atuin";
+              };
+              server = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "Server secrets: backup, service credentials";
+              };
+              network = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "Network secrets: tailscale, VPN";
+              };
+            };
+          };
+          default = { };
+          description = "Secret categories enabled for this host (set by roles)";
+        };
         hdr = lib.mkOption {
           type = lib.types.bool;
           default = false;

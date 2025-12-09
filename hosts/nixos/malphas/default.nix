@@ -1,44 +1,34 @@
-#############################################################
+# Malphas - VM Test Host
 #
-#  Malphas - Migrated minimal host
-#  Starts minimal and uses fixture secrets; replace later with real sops
+# A minimal QEMU VM for testing the role-based configuration system.
+# Uses roles.vm for minimal configuration without desktop overhead.
 #
-###############################################################
 {
-  inputs,
   lib,
-  config,
-  pkgs,
   ...
-}: {
-  imports = lib.flatten [
-    # Hardware
+}:
+{
+  imports = [
     ./hardware-configuration.nix
-
-    # Common core (brings home-manager, sops, nix-index, users, etc.)
     (lib.custom.relativeToRoot "hosts/common/core")
   ];
 
-  # Host spec
+  # VM role - minimal configuration for testing
+  roles.vm = true;
+
   hostSpec = {
     hostName = "malphas";
-    primaryUsername = "rain";
-    username = "rain";
+    # VM doesn't have real secrets - use fixture or disable
+    hasSecrets = false;
   };
-
-  # Use the bundled fixture secrets file until real sops files are added
-  # Replace with inputs.nix-secrets path after creating /sops/malphas.yaml
-  sops.defaultSopsFile = inputs.self + "/tests/fixtures/nix-secrets/sops.yaml";
 
   networking = {
     networkmanager.enable = true;
     enableIPv6 = false;
   };
 
-  # Enable SSH server for remote access
   services.openssh = {
     enable = true;
-    ports = [ 22 ];
     settings = {
       PermitRootLogin = "yes";
       PasswordAuthentication = true;
@@ -53,13 +43,5 @@
 
   boot.initrd.systemd.enable = true;
 
-  # Set explicitly during migration; upstream modules usually manage this
   system.stateVersion = "25.05";
 }
-
-
-
-
-
-
-

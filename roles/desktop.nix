@@ -49,6 +49,12 @@ in
       useWayland = lib.mkDefault true;
       useWindowManager = lib.mkDefault true;
       isDevelopment = lib.mkDefault true;
+      # Desktop secret categories
+      secretCategories = {
+        base = lib.mkDefault true;
+        desktop = lib.mkDefault true;
+        network = lib.mkDefault true;
+      };
     };
   };
 }

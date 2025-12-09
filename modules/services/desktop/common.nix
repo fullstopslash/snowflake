@@ -1,6 +1,7 @@
 # Desktop environment role
 {
   config,
+  lib,
   pkgs,
   ...
 }:
@@ -185,21 +186,16 @@
     };
   };
 
-  sops.secrets = {
-    env_hass_server = {
-      key = "env_hass_server";
-    };
-    env_hass_token = {
-      key = "env_hass_token";
-    };
-  };
+  # Desktop secrets (env_hass_server, env_hass_token) are provided by
+  # hosts/common/core/sops/desktop.nix when secretCategories.desktop = true
 
-  sops.templates."post-sleep-samsung.env" = {
+  # Use the hass.env template from the desktop secrets category
+  sops.templates."post-sleep-samsung.env" = lib.mkIf config.hostSpec.secretCategories.desktop {
     content = ''
       HASS_SERVER=${config.sops.placeholder."env_hass_server"}
       HASS_TOKEN=${config.sops.placeholder."env_hass_token"}
     '';
-    owner = "rain";
+    owner = config.hostSpec.username;
     mode = "0400";
   };
 

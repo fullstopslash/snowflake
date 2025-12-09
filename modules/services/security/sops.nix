@@ -1,9 +1,9 @@
 # SOPS configuration module
+# Sets defaults for sops-nix. sops-nix is imported at flake level for all hosts.
+# Host-specific secrets are configured in hosts/common/core/sops.nix
 _: {
-  # SOPS configuration
   sops = {
-    # defaultSopsFile should be set per-host or per-role
-    # defaultSopsFile = /path/to/secrets.yaml;
+    # defaultSopsFile should be set per-host in hosts/common/core/sops.nix
 
     age = {
       keyFile = "/var/lib/sops-nix/key.txt";
@@ -13,9 +13,5 @@ _: {
       ];
       generateKey = true;
     };
-    # secrets = {
-    #   rain-password = {};
-    #   pain-password = {};
-    # };
   };
 }

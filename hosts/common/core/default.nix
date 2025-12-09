@@ -15,7 +15,7 @@ in
 {
   imports = lib.flatten [
     inputs.home-manager.${platformModules}.home-manager
-    inputs.sops-nix.${platformModules}.sops
+    # Note: sops-nix is imported at flake level in mkHost so all hosts have access to sops options
     inputs.nix-index-database.${platformModules}.nix-index
     { programs.nix-index-database.comma.enable = true; }
 
@@ -26,7 +26,7 @@ in
 
       "hosts/common/core/${platform}.nix"
       "hosts/common/core/keyd.nix"
-      "hosts/common/core/sops.nix" # Core because it's used for backups, mail
+      "hosts/common/core/sops" # Role-based secrets (categories set by roles)
       "hosts/common/core/ssh.nix"
       "hosts/common/optional/tailscale.nix" # Core networking service
 

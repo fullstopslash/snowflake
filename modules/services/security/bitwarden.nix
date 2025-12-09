@@ -196,8 +196,6 @@ in
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
-            # Don't restart on failure - secrets may not be available during rebuild
-            # User can manually restart if needed
             Restart = "no";
             ExecStart = bitwarden-autologin;
           };

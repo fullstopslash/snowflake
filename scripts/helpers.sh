@@ -177,3 +177,116 @@ function sops_setup_user_age_key() {
 		green "Age key already exists for ${target_hostname}"
 	fi
 }
+
+### Role-based secret hints
+
+# Print hints about which secrets are needed for a given role
+# Usage: sops_role_hints <role>
+function sops_role_hints() {
+	role="$1"
+
+	echo
+	blue "Secret categories for role: $role"
+	echo
+
+	case "$role" in
+	desktop | laptop)
+		echo "  Required secrets (base category):"
+		echo "    - keys/age: User age key for home-manager sops"
+		echo "    - passwords/<username>: User login password (in shared.yaml)"
+		echo "    - passwords/msmtp: Mail password (in shared.yaml)"
+		echo
+		echo "  Desktop secrets (desktop category):"
+		echo "    - env_hass_server: Home Assistant server URL"
+		echo "    - env_hass_token: Home Assistant API token"
+		echo
+		echo "  Network secrets (network category):"
+		echo "    - tailscale/oauth_client_id: Tailscale OAuth client ID"
+		echo "    - tailscale/oauth_client_secret: Tailscale OAuth secret"
+		;;
+	server)
+		echo "  Required secrets (base category):"
+		echo "    - keys/age: User age key for home-manager sops"
+		echo "    - passwords/<username>: User login password (in shared.yaml)"
+		echo "    - passwords/msmtp: Mail password (in shared.yaml)"
+		echo
+		echo "  Server secrets (server category):"
+		echo "    - passwords/borg: Borg backup passphrase"
+		echo "    - keys/ssh/borg: SSH key for borg backup"
+		echo
+		echo "  Network secrets (network category):"
+		echo "    - tailscale/oauth_client_id: Tailscale OAuth client ID"
+		echo "    - tailscale/oauth_client_secret: Tailscale OAuth secret"
+		;;
+	vm)
+		echo "  Required secrets (base category only):"
+		echo "    - keys/age: User age key for home-manager sops"
+		echo "    - passwords/<username>: User login password (in shared.yaml)"
+		echo "    - passwords/msmtp: Mail password (in shared.yaml)"
+		;;
+	*)
+		yellow "Unknown role: $role"
+		echo "  Default base secrets:"
+		echo "    - keys/age: User age key"
+		echo "    - passwords/<username>: User password (in shared.yaml)"
+		;;
+	esac
+
+	echo
+	echo "  Shared secrets (in shared.yaml, accessible by all hosts):"
+	echo "    - passwords/<username>: User password"
+	echo "    - passwords/msmtp: Mail relay password"
+	echo
+}
+
+# Verify that required secrets exist for a host
+# Usage: sops_verify_host_secrets <hostname> [role]
+function sops_verify_host_secrets() {
+	hostname="$1"
+	role="${2:-}"
+
+	secret_file="${nix_secrets_dir}/sops/${hostname}.yaml"
+	shared_file="${nix_secrets_dir}/sops/shared.yaml"
+	config="${nix_secrets_dir}/.sops.yaml"
+
+	errors=0
+
+	blue "Verifying secrets for $hostname..."
+
+	# Check host secrets file exists
+	if [ ! -f "$secret_file" ]; then
+		red "Host secrets file not found: $secret_file"
+		errors=$((errors + 1))
+	else
+		green "Host secrets file exists"
+
+		# Check for age key
+		if sops --config "$config" -d --extract '["keys"]["age"]' "$secret_file" >/dev/null 2>&1; then
+			green "  - keys/age: present"
+		else
+			red "  - keys/age: MISSING"
+			errors=$((errors + 1))
+		fi
+	fi
+
+	# Check shared secrets file exists
+	if [ ! -f "$shared_file" ]; then
+		red "Shared secrets file not found: $shared_file"
+		errors=$((errors + 1))
+	else
+		green "Shared secrets file exists"
+	fi
+
+	if [ $errors -eq 0 ]; then
+		green "All required secrets present!"
+	else
+		red "$errors secret(s) missing"
+	fi
+
+	# Print role hints if role provided
+	if [ -n "$role" ]; then
+		sops_role_hints "$role"
+	fi
+
+	return $errors
+}

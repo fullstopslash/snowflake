@@ -32,6 +32,7 @@
     hostName = "iso";
     primaryUsername = "fullstopslash";
     isProduction = lib.mkForce false;
+    hasSecrets = false; # ISO doesn't have sops secrets configured
 
     # Needed because we don't use hosts/common/core for iso
     inherit (inputs.nix-secrets)
