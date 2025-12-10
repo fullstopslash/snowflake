@@ -75,15 +75,13 @@
     };
     # Pre-populate bash history with useful commands (most recent = first up-arrow)
     # NOTE: For full install, run from HOST: ./scripts/bootstrap-nixos.sh -n <hostname> -d <ip>
-    # OR: Copy to /tmp (disko requires git repo), then run disko + nixos-install
     "skel/.bash_history" = {
       text = ''
         cat /etc/nix-config/nixos-installer/README.md
         lsblk
         ip a
-        sudo nixos-install --flake /tmp/nix-config#griefling --no-root-passwd
-        cd /tmp/nix-config && sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- --mode format,mount ./hosts/common/disks/btrfs-disk.nix --arg disk '"/dev/vda"' --arg withSwap true --argstr swapSize 8
-        rsync -a /etc/nix-config/ /tmp/nix-config/ && chmod -R u+w /tmp/nix-config && cd /tmp/nix-config && git config user.email 'install@iso' && git config user.name 'Installer' && git init && git add -A && git commit -m 'init'
+        sudo nixos-install --flake /etc/nix-config#griefling --no-root-passwd
+        sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko/latest -- --mode disko /etc/nix-config/hosts/common/disks/btrfs-disk.nix --arg disk '"/dev/vda"' --arg withSwap true --argstr swapSize 8
       '';
     };
     # Pre-clone nix-config repo into ISO for offline installation
