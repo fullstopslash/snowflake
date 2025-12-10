@@ -46,7 +46,7 @@ let
     lib.lists.map (key: { ".ssh/${key}.pub".source = "${pathToKeys}/${key}.pub"; }) yubikeys
   );
 
-  identityFiles = 
+  identityFiles =
     if config.hostSpec.useYubikey or true then
       [
         "id_yubikey" # This is an auto symlink to whatever yubikey is plugged in. See modules/common/yubikey
@@ -82,16 +82,8 @@ in
     in
     {
       enable = true;
-
-      # FIXME(ssh): This should probably be for git systems only?
-      controlMaster = "auto";
-      controlPath = "${config.home.homeDirectory}/.ssh/sockets/S.%r@%h:%p";
-      controlPersist = "20m";
-      # Avoids infinite hang if control socket connection interrupted. ex: vpn goes down/up
-      serverAliveCountMax = 3;
-      serverAliveInterval = 5; # 3 * 5s
-      hashKnownHosts = true;
-      addKeysToAgent = "yes";
+      # Disable deprecated default config - we set our own in matchBlocks."*"
+      enableDefaultConfig = false;
 
       # Bring in decrypted config
       extraConfig = ''
@@ -104,6 +96,18 @@ in
           workHosts = if config.hostSpec.isWork then inputs.nix-secrets.work.git.servers else "";
         in
         {
+          # Default settings for all hosts (replaces deprecated top-level options)
+          "*" = {
+            controlMaster = "auto";
+            controlPath = "${config.home.homeDirectory}/.ssh/sockets/S.%r@%h:%p";
+            controlPersist = "20m";
+            # Avoids infinite hang if control socket connection interrupted. ex: vpn goes down/up
+            serverAliveCountMax = 3;
+            serverAliveInterval = 5; # 3 * 5s
+            hashKnownHosts = true;
+            addKeysToAgent = "yes";
+          };
+
           # Not all of this systems I have access to can use yubikey.
           "yubikey-hosts" = lib.hm.dag.entryAfter [ "*" ] {
             host = "${workHosts} ${yubikeyHostsString}";

@@ -35,8 +35,8 @@
   programs.zsh = {
     enable = true;
 
-    # relative to ~
-    dotDir = ".config/zsh";
+    # Use XDG config directory for zsh files
+    dotDir = "${config.xdg.configHome}/zsh";
     enableCompletion = true;
     syntaxHighlighting.enable = true;
     autocd = true;
