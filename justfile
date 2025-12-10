@@ -3,6 +3,9 @@ SOPS_FILE := "../nix-secrets/.sops.yaml"
 # Define path to helpers
 export HELPERS_PATH := justfile_directory() + "/scripts/helpers.sh"
 
+# Default host for VM testing
+DEFAULT_VM_HOST := "griefling"
+
 # default recipe to display help information
 default:
   @just --list
@@ -68,14 +71,21 @@ iso:
 iso-install DRIVE: iso
   sudo dd if=$(eza --sort changed result/iso/*.iso | tail -n1) of={{DRIVE}} bs=4M status=progress oflag=sync
 
-# Configure a drive password using disko
+# One-command fresh install test via nixos-anywhere (fully automated)
+test-install HOST=DEFAULT_VM_HOST:
+  ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force
+
+# Interactive fresh install test (boots ISO, user runs commands manually)
+test-install-manual HOST=DEFAULT_VM_HOST:
+  ./scripts/test-fresh-install.sh {{HOST}} --gui --force
+
+# Configure a drive using disko (formats and mounts)
 disko DRIVE PASSWORD:
   echo "{{PASSWORD}}" > /tmp/disko-password
   sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- \
-    --mode disko \
-    disks/btrfs-luks-impermanence-disko.nix \
-    --arg disk '"{{DRIVE}}"' \
-    --arg password '"{{PASSWORD}}"'
+    --mode format,mount \
+    hosts/common/disks/btrfs-luks-impermanence-disk.nix \
+    --arg disk '"{{DRIVE}}"'
   rm /tmp/disko-password
 
 # Copy all the config files to the remote host

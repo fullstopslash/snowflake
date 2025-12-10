@@ -30,7 +30,7 @@
 
   hostSpec = {
     hostName = "iso";
-    primaryUsername = "fullstopslash";
+    primaryUsername = "rain";
     isProduction = lib.mkForce false;
     hasSecrets = false; # ISO doesn't have sops secrets configured
 
@@ -41,7 +41,7 @@
       ;
 
     #TODO(git): This is stuff for home/${config.hostSpec.primaryUsername}/common/core/git.nix. should create home/${config.hostSpec.primaryUsername}/common/optional/development.nix so core git.nix doesn't use it.
-    handle = "fullstopslash";
+    handle = "rain";
     email.gitHub = inputs.nix-secrets.email.gitHub;
   };
 
@@ -61,12 +61,46 @@
 
   environment.etc = {
     isoBuildTime = {
-      #
       text = lib.readFile "${pkgs.runCommand "timestamp" {
         # builtins.currentTime requires --impure
         env.when = builtins.currentTime;
       } "echo -n `date -d @$when  +%Y-%m-%d_%H-%M-%S` > $out"}";
     };
+    # Pre-populate bash history with install commands (most recent = first up-arrow)
+    # Order: disko first, then nixos-install (reverse order in file = correct up-arrow order)
+    "skel/.bash_history" = {
+      text = ''
+        nix flake show /etc/nix-config
+        cd /etc/nix-config && sudo nixos-install --flake .#griefling --no-root-passwd
+        echo "changeme" | sudo tee /tmp/disko-password && cd /etc/nix-config && sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- --mode format,mount hosts/common/disks/btrfs-luks-impermanence-disk.nix --arg disk '"/dev/vda"'
+      '';
+    };
+    # Pre-clone nix-config repo into ISO for offline installation
+    "nix-config".source = lib.cleanSource ../../..;
+  };
+
+  # Ensure root gets the pre-populated bash history
+  systemd.tmpfiles.rules = [
+    "C /root/.bash_history 0600 root root - /etc/skel/.bash_history"
+  ];
+
+  # Copy bash history to primary user after home directory exists
+  systemd.services.setup-user-bash-history = {
+    description = "Setup bash history for primary user";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "systemd-tmpfiles-setup.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      USER_HOME="/home/${config.hostSpec.username}"
+      if [ -d "$USER_HOME" ] && [ ! -f "$USER_HOME/.bash_history" ]; then
+        cp /etc/skel/.bash_history "$USER_HOME/.bash_history"
+        chown ${config.hostSpec.username}:users "$USER_HOME/.bash_history"
+        chmod 600 "$USER_HOME/.bash_history"
+      fi
+    '';
   };
 
   # Add the build time to the prompt so it's easier to know the ISO age
