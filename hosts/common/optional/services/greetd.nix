@@ -26,7 +26,10 @@ in
   };
 
   config = {
-    environment.systemPackages = [ pkgs.greetd.qtgreet pkgs.cage ];
+    environment.systemPackages = [
+      pkgs.qtgreet
+      pkgs.cage
+    ];
 
     # qtgreet appearance
     services.accounts-daemon.enable = true;
@@ -52,7 +55,7 @@ in
       restart = true;
       settings = {
         default_session = {
-          command = "${pkgs.cage}/bin/cage -s -- ${pkgs.greetd.qtgreet}/bin/qtgreet";
+          command = "${pkgs.cage}/bin/cage -s -- ${pkgs.qtgreet}/bin/qtgreet";
           user = lib.mkForce config.hostSpec.username;
         };
 

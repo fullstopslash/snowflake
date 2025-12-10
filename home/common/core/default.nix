@@ -134,15 +134,17 @@ in
       luajitPackages.luarocks
       luajitPackages.magick
       # Python packages
-      (python3.withPackages (ps: with ps; [
-        pip
-        virtualenv
-      ]))
+      (python3.withPackages (
+        ps: with ps; [
+          pip
+          virtualenv
+        ]
+      ))
       uv # Modern Python package installer
     ])
     ++ [
       # MCP Hub - Model Context Protocol integration for neovim
-      inputs.mcp-hub.packages.${pkgs.system}.default
+      inputs.mcp-hub.packages.${pkgs.stdenv.hostPlatform.system}.default
     ]
     ++ builtins.attrValues {
       inherit (pkgs)
