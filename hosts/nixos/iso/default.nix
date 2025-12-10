@@ -67,15 +67,15 @@
       } "echo -n `date -d @$when  +%Y-%m-%d_%H-%M-%S` > $out"}";
     };
     # Pre-populate bash history with useful commands (most recent = first up-arrow)
-    # NOTE: Actual installation is done via nixos-anywhere from the HOST machine:
-    #   ./scripts/bootstrap-nixos.sh -n <hostname> -d <ip>
-    # These commands are for exploration and manual recovery only
+    # NOTE: For full install, run from HOST: ./scripts/bootstrap-nixos.sh -n <hostname> -d <ip>
+    # The disko command below works for griefling (btrfs-disk.nix, no LUKS, 8GB swap)
     "skel/.bash_history" = {
       text = ''
         cat /etc/nix-config/nixos-installer/README.md
-        nix flake show /etc/nix-config
-        ip a
         lsblk
+        ip a
+        sudo nixos-install --flake /etc/nix-config#griefling --no-root-passwd
+        sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- --mode format,mount /etc/nix-config/hosts/common/disks/btrfs-disk.nix --arg disk '"/dev/vda"' --arg withSwap true --argstr swapSize 8
       '';
     };
     # Pre-clone nix-config repo into ISO for offline installation
