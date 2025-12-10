@@ -1,12 +1,19 @@
 #NOTE: This ISO is NOT minimal. We don't want a minimal environment when using the iso for recovery purposes.
 {
   inputs,
+  outputs,
   pkgs,
   lib,
   config,
   ...
 }:
 {
+  # ISO doesn't import hosts/common/core, but needs overlays for pkgs.unstable
+  nixpkgs.overlays = [ outputs.overlays.default ];
+
+  # Disable wireless to avoid conflict with NetworkManager from modules/services/networking
+  networking.wireless.enable = lib.mkForce false;
+
   imports = lib.flatten [
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
     #"${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-gnome.nix"

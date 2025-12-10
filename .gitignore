@@ -6,3 +6,5 @@ latest.iso
 nixos-test*
 # QEMU/VM test artifacts organized in quickemu/ directory
 quickemu/
+quickemu/*.socket
+quickemu/*.pid
