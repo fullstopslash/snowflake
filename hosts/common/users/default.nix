@@ -121,8 +121,6 @@ in
                     homeDirectory = if isDarwin then "/Users/${user}" else "/home/${user}";
                     username = "${user}";
                     stateVersion = "23.05"; # Required by home-manager
-                    # Suppress version mismatch warning for hosts using nixpkgs-unstable
-                    enableNixpkgsReleaseCheck = false;
                   };
                 }
               )
@@ -132,7 +130,6 @@ in
         // {
           root = {
             home.stateVersion = "23.05"; # Avoid error
-            home.enableNixpkgsReleaseCheck = false; # Suppress version mismatch warning
             programs.zsh = {
               enable = true;
               plugins = [
