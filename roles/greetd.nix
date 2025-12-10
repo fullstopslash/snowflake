@@ -1,4 +1,4 @@
-# Simple greetd display manager configuration with tuigreet (more reliable)
+# ly display manager - TUI login with theming support
 {
   pkgs,
   lib,
@@ -6,20 +6,16 @@
   ...
 }: {
   config = {
-    # Minimal greetd configuration using tuigreet (TUI greeter - more reliable)
-    services.greetd = {
+    services.displayManager.ly = {
       enable = true;
-      restart = true;
       settings = {
-        default_session = {
-          # Always show login screen - tuigreet will prompt for password
-          command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
-          user = "rain";
-        };
+        # Default session command
+        default_session_name = "Hyprland";
       };
     };
 
-    # Disable SDDM to avoid conflicts (force override stylix configuration)
+    # Disable other display managers to avoid conflicts
+    services.greetd.enable = lib.mkForce false;
     services.displayManager.sddm.enable = lib.mkForce false;
   };
 }

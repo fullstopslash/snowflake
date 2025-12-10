@@ -75,11 +75,11 @@
     moor
     tmux-sessionizer
     tmuxp
-    sesh
     wezterm
     urlencode
     managarr
     websocat
+    gum
 
     cowsay
     kittysay
