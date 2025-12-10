@@ -40,17 +40,14 @@
       #
       # ========== Minimal Configs ==========
       #
-      # Don't import hosts/common/core - it pulls in all roles
-      # Instead, import only what's needed
-      "modules/common" # Shared modules
-      "hosts/common/core/sops" # Secrets management
+      "modules/common/host-spec.nix" # Only host-spec, not all of modules/common
       "hosts/common/optional/hyprland.nix"
       "hosts/common/optional/services/greetd.nix"
       "hosts/common/optional/services/openssh.nix"
       "hosts/common/optional/wayland.nix"
       "hosts/common/optional/tailscale.nix"
     ])
-    # Explicitly disable ly and sddm for this host
+    # Explicitly disable display managers we don't want
     (
       { lib, ... }:
       {
@@ -67,10 +64,11 @@
     hostName = "griefling";
     primaryUsername = "rain";
     username = "rain";
-    users = [ "rain" ]; # Required for user creation
+    users = [ "rain" ];
     useWayland = true;
-    useYubikey = false; # No yubikey in test VM
-    isMinimal = true; # Mark as minimal to avoid pulling in extras
+    useYubikey = false;
+    isMinimal = true;
+    hasSecrets = false; # No sops secrets for test VM
     # Inherit secrets config from inputs
     inherit (inputs.nix-secrets)
       domain
@@ -87,14 +85,23 @@
   };
 
   #
+  # ========== Nix Settings ==========
+  #
+  nix.settings = {
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    warn-dirty = false;
+  };
+
+  #
   # ========== Basic User Setup ==========
   #
   programs.zsh.enable = true;
-  programs.git.enable = true;
 
   users = {
     mutableUsers = false;
-    # Allow no password login for dev VM
     allowNoPasswordLogin = true;
     users = {
       rain = {
@@ -104,7 +111,6 @@
           "wheel"
           "networkmanager"
         ];
-        # Dev VM: No password
         hashedPassword = null;
       };
       root = {
@@ -117,6 +123,7 @@
   #
   # ========== Home Manager Configuration ==========
   #
+  # MINIMAL config - no imports from home/common/core to avoid bloat
   home-manager = {
     useGlobalPkgs = true;
     backupFileExtension = "bk";
@@ -125,43 +132,73 @@
       hostSpec = config.hostSpec;
     };
     users.rain = {
-      imports = [
-        (lib.custom.relativeToRoot "home/common/core")
-        (lib.custom.relativeToRoot "home/common/core/nixos.nix")
-        (lib.custom.relativeToRoot "home/common/optional/desktops/hyprland")
-        (lib.custom.relativeToRoot "home/common/optional/desktops/waybar.nix")
-      ];
-
       home = {
         username = "rain";
         homeDirectory = "/home/rain";
         stateVersion = "23.05";
       };
 
-      # Minimal packages for testing
+      # Only the packages we actually need for testing
       home.packages = with pkgs; [
         firefox
         neovim
         ktailctl
         easyeffects
         kdePackages.kdeconnect-kde
+        # Basic utilities
+        git
+        curl
+        ripgrep
       ];
 
-      # Monitor config for VM
-      monitors = [
-        {
-          name = "Virtual-1";
-          primary = true;
-          width = 1920;
-          height = 1080;
-          refreshRate = 60;
-          x = 0;
-          y = 0;
-          enabled = true;
-        }
-      ];
+      # Minimal hyprland config
+      wayland.windowManager.hyprland = {
+        enable = true;
+        settings = {
+          monitor = [ "Virtual-1,1920x1080@60,0x0,1" ];
+          env = [
+            "NIXOS_OZONE_WL,1"
+            "XDG_SESSION_TYPE,wayland"
+          ];
+          exec-once = [ ];
+          input = {
+            follow_mouse = 2;
+          };
+          general = {
+            gaps_in = 5;
+            gaps_out = 10;
+            border_size = 2;
+          };
+          bind = [
+            "SUPER,Return,exec,ghostty"
+            "SUPER,Q,killactive"
+            "SUPER,M,exit"
+            "SUPER,D,exec,wofi --show drun"
+            "SUPER,1,workspace,1"
+            "SUPER,2,workspace,2"
+            "SUPER,3,workspace,3"
+            "SUPER SHIFT,1,movetoworkspace,1"
+            "SUPER SHIFT,2,movetoworkspace,2"
+            "SUPER SHIFT,3,movetoworkspace,3"
+          ];
+        };
+      };
 
-      wayland.windowManager.hyprland.enable = true;
+      # Minimal waybar
+      programs.waybar = {
+        enable = true;
+        settings.mainBar = {
+          layer = "top";
+          modules-left = [ "hyprland/workspaces" ];
+          modules-center = [ "clock" ];
+          modules-right = [
+            "network"
+            "battery"
+          ];
+        };
+      };
+
+      programs.home-manager.enable = true;
     };
   };
 
@@ -169,10 +206,13 @@
   # ========== System Packages ==========
   #
   environment.systemPackages = with pkgs; [
-    just
+    vim
+    git
+    curl
     rsync
-    openssh
     tailscale
+    ghostty # terminal
+    wofi # launcher
   ];
 
   #
@@ -212,12 +252,13 @@
   #
   # ========== Services ==========
   #
-  # VM guest tools
   services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;
-
-  # Enable VSCode remote SSH
-  programs.nix-ld.enable = true;
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    pulse.enable = true;
+  };
 
   # Passwordless sudo for wheel group (dev VM only)
   security.sudo.wheelNeedsPassword = false;

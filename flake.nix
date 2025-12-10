@@ -77,8 +77,8 @@
             # can reference sops options. Actual secrets config is in hosts/common/core/sops.nix
             inputs.sops-nix.nixosModules.sops
 
-            # Role system - must come before host config (skip for ISO which has no roles)
-            (if hostname != "iso" then ./roles else { })
+            # Role system - must come before host config (skip for ISO and griefling which are minimal)
+            (if hostname != "iso" && hostname != "griefling" then ./roles else { })
             ./modules/common
 
             hostPath
