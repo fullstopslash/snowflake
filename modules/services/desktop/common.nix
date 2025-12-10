@@ -66,7 +66,7 @@
       #     User = "rain";
       #   };
       # };
-      post-sleep-samsung = {
+      post-sleep-samsung = lib.mkIf config.hostSpec.secretCategories.desktop {
         description = "Post-sleep script";
         after = [
           "suspend.target"

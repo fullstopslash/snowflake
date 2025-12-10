@@ -55,11 +55,21 @@
               })
             else
               null;
+
+          # Use matching lib for the nixpkgs version (unstable modules need unstable lib)
+          hostLib =
+            if hostname == "griefling" then
+              inputs.nixpkgs-unstable.lib.extend (
+                self: super: { custom = import ./lib { lib = inputs.nixpkgs-unstable.lib; }; }
+              )
+            else
+              lib;
         in
         pkgInput.lib.nixosSystem {
           inherit system;
           specialArgs = {
-            inherit inputs outputs lib;
+            inherit inputs outputs;
+            lib = hostLib;
             isDarwin = false;
           };
           modules = [
