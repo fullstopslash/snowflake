@@ -44,10 +44,13 @@
       "hosts/common/optional/wayland.nix"
     ])
     # Explicitly disable ly and sddm for this host
-    ({ lib, ... }: {
-      services.displayManager.ly.enable = lib.mkForce false;
-      services.displayManager.sddm.enable = lib.mkForce false;
-    })
+    (
+      { lib, ... }:
+      {
+        services.displayManager.ly.enable = lib.mkForce false;
+        services.displayManager.sddm.enable = lib.mkForce false;
+      }
+    )
   ];
 
   #
@@ -95,7 +98,7 @@
 
   # Passwordless sudo for wheel group (dev VM only)
   security.sudo.wheelNeedsPassword = false;
-  
+
   # Dev VM: Disable password requirement entirely
   users.users.rain.hashedPassword = lib.mkForce null;
 
