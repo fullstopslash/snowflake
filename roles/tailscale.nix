@@ -181,6 +181,24 @@ in {
         requires = ["tailscale-oauth-key.service"];
         wants = ["network-online.target"];
       };
+      # Ensure operator is set after tailscale is running
+      tailscale-operator = {
+        description = "Set Tailscale operator";
+        after = ["tailscaled.service"];
+        wants = ["tailscaled.service"];
+        wantedBy = ["multi-user.target"];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        script = ''
+          # Wait for tailscaled to be ready
+          while ! ${pkgs.tailscale}/bin/tailscale status >/dev/null 2>&1; do
+            sleep 1
+          done
+          ${pkgs.tailscale}/bin/tailscale set --operator=${operatorUser}
+        '';
+      };
     };
   };
 

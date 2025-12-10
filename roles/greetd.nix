@@ -9,8 +9,10 @@
     services.displayManager.ly = {
       enable = true;
       settings = {
-        # Default session command
-        default_session_name = "Hyprland";
+        # Save session selection (default, but explicit)
+        save = true;
+        # Focus session selector on startup so user sees options
+        default_input = "session";
       };
     };
 
