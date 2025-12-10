@@ -66,13 +66,16 @@
         env.when = builtins.currentTime;
       } "echo -n `date -d @$when  +%Y-%m-%d_%H-%M-%S` > $out"}";
     };
-    # Pre-populate bash history with install commands (most recent = first up-arrow)
-    # Order: disko first, then nixos-install (reverse order in file = correct up-arrow order)
+    # Pre-populate bash history with useful commands (most recent = first up-arrow)
+    # NOTE: Actual installation is done via nixos-anywhere from the HOST machine:
+    #   ./scripts/bootstrap-nixos.sh -n <hostname> -d <ip>
+    # These commands are for exploration and manual recovery only
     "skel/.bash_history" = {
       text = ''
+        cat /etc/nix-config/nixos-installer/README.md
         nix flake show /etc/nix-config
-        cd /etc/nix-config && sudo nixos-install --flake .#griefling --no-root-passwd
-        echo "changeme" | sudo tee /tmp/disko-password && cd /etc/nix-config && sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- --mode format,mount hosts/common/disks/btrfs-luks-impermanence-disk.nix --arg disk '"/dev/vda"'
+        ip a
+        lsblk
       '';
     };
     # Pre-clone nix-config repo into ISO for offline installation

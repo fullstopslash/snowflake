@@ -282,10 +282,13 @@ if [[ $USE_ANYWHERE == true ]]; then
 	echo ""
 	info "Deploying $HOSTNAME configuration..."
 
+	# Use nixos-installer flake which has minimal bootstrap configs with disko
+	cd "$REPO_ROOT/nixos-installer"
 	nix run github:nix-community/nixos-anywhere -- \
 		--flake ".#$HOSTNAME" \
 		-p "$SSH_PORT" \
 		root@127.0.0.1
+	cd "$REPO_ROOT"
 
 	success "nixos-anywhere deployment complete!"
 	echo ""

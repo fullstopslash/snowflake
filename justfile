@@ -79,14 +79,10 @@ test-install HOST=DEFAULT_VM_HOST:
 test-install-manual HOST=DEFAULT_VM_HOST:
   ./scripts/test-fresh-install.sh {{HOST}} --gui --force
 
-# Configure a drive using disko (formats and mounts)
-disko DRIVE PASSWORD:
-  echo "{{PASSWORD}}" > /tmp/disko-password
-  sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- \
-    --mode format,mount \
-    hosts/common/disks/btrfs-luks-impermanence-disk.nix \
-    --arg disk '"{{DRIVE}}"'
-  rm /tmp/disko-password
+# Bootstrap a new NixOS host (disko + install via nixos-anywhere)
+# See nixos-installer/README.md for full documentation
+bootstrap HOST DEST:
+  ./scripts/bootstrap-nixos.sh -n {{HOST}} -d {{DEST}}
 
 # Copy all the config files to the remote host
 sync USER HOST PATH:
