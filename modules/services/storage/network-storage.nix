@@ -35,6 +35,7 @@ in
             Options = [
               "noatime"
               "nfsvers=3"
+              "noresvport" # Use non-reserved ports (for NAT/VM environments)
             ];
             TimeoutSec = "30";
           };
