@@ -49,7 +49,7 @@ in
       };
     };
     # System service to auto-login to Atuin and sync
-    # Runs at boot and on rebuilds - before user login for immediate availability
+    # Runs at boot, on rebuilds, and periodically via timer for self-healing
     systemd.services."atuin-autologin" = {
       description = "Atuin auto-login and initial sync";
       wantedBy = [ "multi-user.target" ];
@@ -60,9 +60,6 @@ in
         User = primaryUser;
         Group = "users";
         RemainAfterExit = true;
-        # Retry on network failures
-        Restart = "on-failure";
-        RestartSec = 5;
       };
       script = ''
         set -eu
@@ -122,6 +119,16 @@ in
           exit 1
         fi
       '';
+    };
+
+    # Timer for self-healing - check login status periodically
+    systemd.timers."atuin-autologin" = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnBootSec = "2min"; # Run shortly after boot if service didn't complete
+        OnUnitActiveSec = "15min"; # Re-check every 15 minutes
+        Unit = "atuin-autologin.service";
+      };
     };
 
     # Socket-activated Atuin daemon (default socket: %t/atuin.sock)
