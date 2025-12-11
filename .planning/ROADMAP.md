@@ -14,6 +14,7 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 - [ ] **Phase 6: Auto-Update System** - Daily rebuilds, WoL-triggered updates, git pull automation
 - [ ] **Phase 7: Structure Reorganization** - Unify modules, clean up hosts/common, rename home to home-manager
 - [ ] **Phase 8: Role System Refinement** - Common role base, task-based roles, minimal host pattern
+- [ ] **Phase 9: Griefling Minimal Fix** - Fix module imports so VM role is truly minimal
 
 ## Phase Details
 
@@ -126,6 +127,40 @@ Target host pattern:
 }
 ```
 
+### Phase 9: Griefling Minimal Fix
+**Goal**: Fix module imports so VMs using `roles.vm` are truly minimal (no steam, docker, latex, compilers)
+**Depends on**: Phase 8
+**Plans**: 4 plans
+
+Plans:
+- [ ] 09-01: Add enable options to gaming, latex, containers, cli modules
+- [ ] 09-02: Fix hw-vm role imports and add Ly display manager
+- [ ] 09-03: Enable modules in desktop role, verify both roles work
+- [ ] 09-04: Commit with jj, push, verify on griefling host
+
+Key work:
+- Convert unconditional modules to `myModules.*.enable` pattern
+- Remove unconditional imports from role files
+- Add Ly display manager to vm role for GUI access
+- Enable modules explicitly in desktop role
+- Verify griefling is minimal, ghost still has full functionality
+
+Root cause found:
+- `roles/default.nix` imports ALL role files unconditionally
+- Each role file's `imports` section loads modules even when role disabled
+- `modules/apps/gaming`, `modules/apps/development/latex.nix`, etc. lack enable options
+- `hw-vm.nix` imports `modules/apps/cli` outside its `mkIf` block
+
+Target griefling packages:
+- Ly (display manager)
+- Hyprland + Waybar
+- Firefox
+- Tailscale + autologin
+- Atuin
+- Syncthing
+- Basic networking tools
+- NO: Steam, Docker, LaTeX, compilers, gaming tools
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -138,3 +173,4 @@ Target host pattern:
 | 6. Auto-Update System | 0/? | Not started | - |
 | 7. Structure Reorganization | 4/4 | Complete | 2025-12-11 |
 | 8. Role System Refinement | 4/4 | Complete | 2025-12-11 |
+| 9. Griefling Minimal Fix | 0/4 | In Progress | - |

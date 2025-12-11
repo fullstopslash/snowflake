@@ -1,133 +1,142 @@
 # CLI tools rollup role (temporary consolidation)
-{ pkgs, ... }:
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.myModules.apps.cli.tools;
+in
 {
-  programs = {
-    bat.enable = true;
-    mosh.enable = true;
+  options.myModules.apps.cli.tools = {
+    enable = lib.mkEnableOption "Extended CLI tools";
   };
-  services.eternal-terminal.enable = true;
 
-  environment.systemPackages = with pkgs; [
-    # Input remapping
-    kanata-with-cmd
+  config = lib.mkIf cfg.enable {
+    programs = {
+      bat.enable = true;
+      mosh.enable = true;
+    };
+    services.eternal-terminal.enable = true;
 
-    # Node.js
-    nodejs
+    environment.systemPackages = with pkgs; [
+      # Input remapping
+      kanata-with-cmd
 
-    # File management
-    yazi
-    chezmoi
-    gnupg
-    gopass
-    ripgrep
-    ripgrep-all
-    # bat-extras.batgrep
-    bat
-    trash-cli
+      # Node.js
+      nodejs
 
-    # Tools for parallelization
-    parallel
-    pueue
-    nq
-    moreutils
+      # File management
+      yazi
+      chezmoi
+      gnupg
+      gopass
+      ripgrep
+      ripgrep-all
+      # bat-extras.batgrep
+      bat
+      trash-cli
 
-    # TUIs
-    browsh
-    entr
-    btop
-    btop-rocm
-    ncdu
-    grex
-    python313Packages.faker
-    ttyd
-    viddy
-    sampler
+      # Tools for parallelization
+      parallel
+      pueue
+      nq
+      moreutils
 
-    # Compression
-    p7zip
+      # TUIs
+      browsh
+      entr
+      btop
+      btop-rocm
+      ncdu
+      grex
+      python313Packages.faker
+      ttyd
+      viddy
+      sampler
 
-    # System tools
-    pv
-    lsof
-    fd
-    age
-    age-plugin-yubikey
-    zstd
-    jq
-    jaq
-    bc
-    tomlq
-    toml-cli
-    dasel
-    yq-go
-    rclone
-    mkpasswd
-    pwgen
+      # Compression
+      p7zip
 
-    cliphist
-    # developer utilities
-    difftastic
-    delta
-    eza
-    fastfetch
-    git-lfs
-    gitFull
-    kwalletcli
-    # moor # FIXME: Not in nixpkgs
-    tmux-sessionizer
-    tmuxp
-    sesh
-    wezterm
-    urlencode
-    managarr
-    websocat
+      # System tools
+      pv
+      lsof
+      fd
+      age
+      age-plugin-yubikey
+      zstd
+      jq
+      jaq
+      bc
+      tomlq
+      toml-cli
+      dasel
+      yq-go
+      rclone
+      mkpasswd
+      pwgen
 
-    cowsay
-    kittysay
-    # fancy-cat
-    lolcat
-    fortune
-    charasay
-    pokemonsay
+      cliphist
+      # developer utilities
+      difftastic
+      delta
+      eza
+      fastfetch
+      git-lfs
+      gitFull
+      kwalletcli
+      # moor # FIXME: Not in nixpkgs
+      tmux-sessionizer
+      tmuxp
+      sesh
+      wezterm
+      urlencode
+      managarr
+      websocat
 
-    skim
-    antidote
+      cowsay
+      kittysay
+      # fancy-cat
+      lolcat
+      fortune
+      charasay
+      pokemonsay
 
-    hyperfine
+      skim
+      antidote
 
-    asciinema_3
+      hyperfine
 
-    qrencode
-    fortune-kind
-    glab
-    # personal management
-    khard
-    khal
-    vdirsyncer
-    sqlite
-    exiftool
-    exiv2
+      asciinema_3
 
-    # pinentry variants
-    pinentry-all
-    pinentry-qt
+      qrencode
+      fortune-kind
+      glab
+      # personal management
+      khard
+      khal
+      vdirsyncer
+      sqlite
+      exiftool
+      exiv2
 
-    # Communication and news
-    neomutt
-    procmail
-    newsboat
-    weechat
+      # pinentry variants
+      pinentry-all
+      pinentry-qt
 
-    aspell
-    aspellDicts.en
-    aspellDicts.fr
-    aspellDicts.es
+      # Communication and news
+      neomutt
+      procmail
+      newsboat
+      weechat
 
-    # desktop tool previously in desktop role
-    python312Packages.samsungctl
+      aspell
+      aspellDicts.en
+      aspellDicts.fr
+      aspellDicts.es
 
-    # CLI browsers kept here with mail/tui tools
-    lynx
-    w3m
-  ];
+      # desktop tool previously in desktop role
+      python312Packages.samsungctl
+
+      # CLI browsers kept here with mail/tui tools
+      lynx
+      w3m
+    ];
+  };
 }

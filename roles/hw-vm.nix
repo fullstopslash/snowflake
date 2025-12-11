@@ -20,11 +20,14 @@ in
 {
   # Virtual machine - full VM support
   imports = [
-    ../modules/apps/cli
+    ../modules/services/display-manager
   ];
 
   # VM-specific config
   config = lib.mkIf cfg.vm {
+    # Enable Ly display manager for GUI access
+    myModules.displayManager.ly.enable = lib.mkDefault true;
+
     # Enable desktop and networking modules
     myModules.desktop.hyprland.enable = lib.mkDefault true;
     myModules.desktop.wayland.enable = lib.mkDefault true;

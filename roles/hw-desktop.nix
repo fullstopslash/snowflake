@@ -48,6 +48,13 @@ in
     myModules.services.atuin.enable = lib.mkDefault true;
     myModules.networking.ssh.enable = lib.mkDefault true;
 
+    # Enable full desktop software stack
+    myModules.apps.gaming.enable = lib.mkDefault true;
+    myModules.apps.development.latex.enable = lib.mkDefault true;
+    myModules.services.development.containers.enable = lib.mkDefault true;
+    myModules.apps.cli.tools.enable = lib.mkDefault true;
+    myModules.apps.cli.shell.enable = lib.mkDefault true;
+
     # Desktop hostSpec defaults - hosts can override with lib.mkForce
     hostSpec = {
       # Behavioral defaults specific to desktop

@@ -1,11 +1,13 @@
 # LaTeX role
 {
+  config,
   lib,
   pkgs,
   ...
 }:
-with lib;
 let
+  cfg = config.myModules.apps.development.latex;
+
   latex-fhs = pkgs.buildFHSEnv {
     name = "latex-env";
 
@@ -69,32 +71,38 @@ let
   };
 in
 {
-  # Make the latex-env command available system-wide
-  environment = {
-    systemPackages = [ latex-fhs ];
-    shellAliases = {
-      latex-env = "${latex-fhs}/bin/latex-env";
+  options.myModules.apps.development.latex = {
+    enable = lib.mkEnableOption "LaTeX development environment";
+  };
+
+  config = lib.mkIf cfg.enable {
+    # Make the latex-env command available system-wide
+    environment = {
+      systemPackages = [ latex-fhs ];
+      shellAliases = {
+        latex-env = "${latex-fhs}/bin/latex-env";
+      };
+      etc."latex-env-help".text = ''
+        LaTeX FHS Environment Help
+        ==========================
+
+        To enter the LaTeX environment: latex-env
+
+        First time setup:
+        1. Run: latex-env
+        2. Inside the environment: install_texlive
+        3. Use tlmgr normally: tlmgr install <package>
+
+        The environment includes:
+        - GNU Make
+        - GCC compiler
+        - Perl, Python3
+        - wget, curl, tar, gzip
+        - ghostscript
+        - fontconfig
+
+        TeXLive will be installed to: $HOME/texlive
+      '';
     };
-    etc."latex-env-help".text = ''
-      LaTeX FHS Environment Help
-      ==========================
-
-      To enter the LaTeX environment: latex-env
-
-      First time setup:
-      1. Run: latex-env
-      2. Inside the environment: install_texlive
-      3. Use tlmgr normally: tlmgr install <package>
-
-      The environment includes:
-      - GNU Make
-      - GCC compiler
-      - Perl, Python3
-      - wget, curl, tar, gzip
-      - ghostscript
-      - fontconfig
-
-      TeXLive will be installed to: $HOME/texlive
-    '';
   };
 }

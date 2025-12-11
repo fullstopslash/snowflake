@@ -1,63 +1,72 @@
 # Shell configuration role
-{ pkgs, ... }:
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.myModules.apps.cli.shell;
+in
 {
-  # Shell packages
-  environment.systemPackages = with pkgs; [
-    # Shells
-    zsh
-    fish
-    nushell
+  options.myModules.apps.cli.shell = {
+    enable = lib.mkEnableOption "Shell configuration and tools";
+  };
 
-    # Shell tools
-    fzf
-    atuin
-    zoxide
-    starship
-    glow
+  config = lib.mkIf cfg.enable {
+    # Shell packages
+    environment.systemPackages = with pkgs; [
+      # Shells
+      zsh
+      fish
+      nushell
 
-    # Shell completion
-    carapace
-  ];
-  programs = {
-    foot = {
-      enable = true;
-      enableBashIntegration = true;
-      enableFishIntegration = true;
-      enableZshIntegration = true;
-    };
+      # Shell tools
+      fzf
+      atuin
+      zoxide
+      starship
+      glow
 
-    # direnv.enable = true;
+      # Shell completion
+      carapace
+    ];
+    programs = {
+      foot = {
+        enable = true;
+        enableBashIntegration = true;
+        enableFishIntegration = true;
+        enableZshIntegration = true;
+      };
 
-    # Nushell configuration (available as package, not as program)
-    # Nushell is installed as a package and configured via config files
+      # direnv.enable = true;
 
-    # Carapace completion (available as package, not as program)
-    # Carapace is installed as a package and configured in nushell
+      # Nushell configuration (available as package, not as program)
+      # Nushell is installed as a package and configured via config files
 
-    # Shell programs configuration
+      # Carapace completion (available as package, not as program)
+      # Carapace is installed as a package and configured in nushell
 
-    starship = {
-      enable = true;
-      settings = {
-        add_newline = true;
-        character = {
-          success_symbol = "[➜](bold green)";
-          error_symbol = "[➜](bold red)";
+      # Shell programs configuration
+
+      starship = {
+        enable = true;
+        settings = {
+          add_newline = true;
+          character = {
+            success_symbol = "[➜](bold green)";
+            error_symbol = "[➜](bold red)";
+          };
         };
       };
-    };
-    zsh = {
-      enable = true;
-      enableGlobalCompInit = false;
-    };
-    tmux = {
-      enable = true;
-    };
-    zoxide = {
-      enable = true;
-      enableZshIntegration = true;
-      enableBashIntegration = true;
-      enableFishIntegration = true;
+      zsh = {
+        enable = true;
+        enableGlobalCompInit = false;
+      };
+      tmux = {
+        enable = true;
+      };
+      zoxide = {
+        enable = true;
+        enableZshIntegration = true;
+        enableBashIntegration = true;
+        enableFishIntegration = true;
+      };
     };
   };
 }
