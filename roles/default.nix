@@ -33,5 +33,7 @@
     # Task-based roles (composable)
     ./task-development.nix
     ./task-mediacenter.nix
+    ./task-test.nix
+    ./task-vm-hardware.nix
   ];
 }

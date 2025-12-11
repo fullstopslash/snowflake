@@ -6,6 +6,7 @@
 {
   config,
   inputs,
+  outputs,
   lib,
   pkgs,
   ...
@@ -63,6 +64,25 @@ in
       enable = true;
       enableCompletion = true;
       promptInit = "source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme";
+    };
+
+    #
+    # ========== Overlays ==========
+    #
+    nixpkgs.overlays = lib.mkDefault [ outputs.overlays.default ];
+
+    # Note: nix.settings is already configured in modules/common/nix.nix
+
+    #
+    # ========== Home Manager Configuration ==========
+    # Note: Griefling uses home-manager-unstable and imports it directly,
+    # so it doesn't use this config. All other hosts use stable home-manager
+    # via hosts/common/core/default.nix which already sets useGlobalPkgs and backupFileExtension.
+    # This provides extraSpecialArgs for hosts using the role system.
+    #
+    home-manager.extraSpecialArgs = lib.mkDefault {
+      inherit inputs;
+      hostSpec = config.hostSpec;
     };
   };
 }

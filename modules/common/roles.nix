@@ -24,6 +24,8 @@ in
     # Task-based roles (composable - can be combined with hardware roles)
     development = lib.mkEnableOption "Development environment (IDEs, LSPs, dev tools)";
     mediacenter = lib.mkEnableOption "Media center role (media playback, streaming clients)";
+    test = lib.mkEnableOption "Test/development VM settings (passwordless sudo, SSH password auth)";
+    vmHardware = lib.mkEnableOption "VM hardware (QEMU guest, virtio, boot config) - composable with any hardware role";
   };
 
   # Assertions to prevent conflicting hardware roles
