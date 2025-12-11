@@ -18,6 +18,10 @@ let
 
     echo "Starting Bitwarden OAuth + libsecret automation..."
 
+    # Timeout for network operations (30 seconds per command)
+    BW_TIMEOUT=30
+    BW="${pkgs.coreutils}/bin/timeout $BW_TIMEOUT ${pkgs.bitwarden-cli}/bin/bw"
+
     # Read secrets from SOPS - handle missing files gracefully
     SECRET_SERVER="${config.sops.secrets."bitwarden/server".path}"
     SECRET_EMAIL="${config.sops.secrets."bitwarden/user_email".path}"
@@ -42,10 +46,17 @@ let
 
     # Configure bw if not already configured
     echo "Configuring bw..."
-    ${pkgs.bitwarden-cli}/bin/bw config server "$BW_SERVER"
+    if ! $BW config server "$BW_SERVER"; then
+      echo "Failed to configure server (timeout or network error), skipping..." 1>&2
+      exit 0
+    fi
 
     # Check current status
-    STATUS=$(${pkgs.bitwarden-cli}/bin/bw status --response | ${pkgs.jq}/bin/jq -r '.status')
+    STATUS_OUTPUT=$($BW status --response 2>&1) || {
+      echo "Failed to get status (timeout or network error), skipping..." 1>&2
+      exit 0
+    }
+    STATUS=$(echo "$STATUS_OUTPUT" | ${pkgs.jq}/bin/jq -r '.status')
     echo "Current status: $STATUS"
 
     case "$STATUS" in
@@ -54,12 +65,12 @@ let
         export BW_CLIENTID="$BITWARDEN_OAUTH_CLIENT_ID"
         export BW_CLIENTSECRET="$BITWARDEN_OAUTH_CLIENT_SECRET"
 
-        # Use OAuth to authenticate
-        if ${pkgs.bitwarden-cli}/bin/bw login --sso; then
+        # Use OAuth to authenticate (longer timeout for SSO flow)
+        if ${pkgs.coreutils}/bin/timeout 60 ${pkgs.bitwarden-cli}/bin/bw login --sso; then
           echo "Successfully authenticated via OAuth"
           STATUS="locked"
         else
-          echo "Failed to authenticate via OAuth" 1>&2
+          echo "Failed to authenticate via OAuth (timeout or auth error)" 1>&2
           exit 1
         fi
         ;;
@@ -69,7 +80,7 @@ let
       "unlocked")
         echo "Already unlocked, checking if session is still valid..."
         # Test if current session works
-        if ${pkgs.bitwarden-cli}/bin/bw list items --limit 1 >/dev/null 2>&1; then
+        if $BW list items --limit 1 >/dev/null 2>&1; then
           echo "Session is still valid, no action needed"
           exit 0
         else
@@ -94,11 +105,11 @@ let
         echo "Found stored password in keyring, attempting unlock..."
         export BW_PASSWORD="$STORED_PASSWORD"
 
-        if ${pkgs.bitwarden-cli}/bin/bw unlock --passwordenv BW_PASSWORD; then
+        if $BW unlock --passwordenv BW_PASSWORD; then
           echo "Successfully unlocked vault using stored password"
 
           # Test the session
-          if ${pkgs.bitwarden-cli}/bin/bw list items --limit 1 >/dev/null 2>&1; then
+          if $BW list items --limit 1 >/dev/null 2>&1; then
             echo "Session established and working"
           else
             echo "Warning: Unlock succeeded but session test failed" 1>&2
@@ -196,14 +207,16 @@ in
       services = {
         bitwarden-autologin = lib.mkIf cfg.enableAutoLogin {
           description = "Automatically authenticate and unlock Bitwarden using OAuth + libsecret";
-          wantedBy = [ "graphical-session.target" ];
-          after = [ "graphical-session.target" ];
+          wantedBy = [ "default.target" ];
+          after = [ "network-online.target" ];
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
             # Don't restart on failure - secrets may not be available during rebuild
             # User can manually restart if needed
             Restart = "no";
+            # Timeout for network operations (bw can hang on unreachable servers)
+            TimeoutStartSec = 120;
             ExecStart = bitwarden-autologin;
           };
         };
