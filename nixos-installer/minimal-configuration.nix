@@ -1,3 +1,14 @@
+# Minimal NixOS configuration for nixos-anywhere bootstrap
+#
+# Purpose: Provide just enough to boot, SSH in, and run nixos-rebuild
+# This is NOT meant for daily use - just for initial system installation
+#
+# Features:
+#   - SSH access with key authentication
+#   - Passwordless sudo for bootstrap
+#   - Basic tools (git, curl, rsync)
+#   - systemd-boot with LUKS support
+#
 {
   inputs,
   config,
@@ -6,13 +17,8 @@
   ...
 }:
 {
-  imports = lib.flatten [
-    (map lib.custom.relativeToRoot [
-      "modules/common/host-spec.nix"
-      "hosts/common/core/ssh.nix"
-      "hosts/common/users"
-      "hosts/common/optional/minimal-user.nix"
-    ])
+  imports = [
+    (lib.custom.relativeToRoot "modules/common/host-spec.nix")
   ];
 
   hostSpec = {
@@ -22,94 +28,82 @@
     primaryUsername = lib.mkDefault "rain";
   };
 
-  fileSystems."/boot".options = [ "umask=0077" ]; # Removes permissions and security warnings.
-  boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.systemd-boot = {
-    enable = true;
-    # we use Git for version control, so we don't need to keep too many generations.
-    configurationLimit = lib.mkDefault 3;
-    # pick the highest resolution for systemd-boot's console.
-    consoleMode = lib.mkDefault "max";
-  };
-  boot.initrd = {
-    systemd.enable = true;
-    systemd.emergencyAccess = true; # Don't need to enter password in emergency mode
-    luks.forceLuksSupportInInitrd = true;
-  };
-  boot.kernelParams = [
-    "systemd.setenv=SYSTEMD_SULOGIN_FORCE=1"
-    "systemd.show_status=true"
-    #"systemd.log_level=debug"
-    "systemd.log_target=console"
-    "systemd.journald.forward_to_console=1"
-  ];
-
-  # allow sudo over ssh with yubikey
-  security.pam = {
-    rssh.enable = true;
-    services.sudo = {
-      rssh = true;
-      u2fAuth = true;
+  # Minimal user setup - no sops, no home-manager
+  users = {
+    mutableUsers = false;
+    users.${config.hostSpec.username} = {
+      isNormalUser = true;
+      extraGroups = [
+        "wheel"
+        "networkmanager"
+      ];
+      # Empty password for console access during troubleshooting
+      initialPassword = "";
+      openssh.authorizedKeys.keys = [
+        inputs.nix-secrets.bootstrap.sshPublicKey
+      ];
+    };
+    users.root = {
+      initialPassword = "";
+      openssh.authorizedKeys.keys = [
+        inputs.nix-secrets.bootstrap.sshPublicKey
+      ];
     };
   };
 
-  environment.systemPackages = builtins.attrValues {
-    inherit (pkgs)
-      wget
-      curl
-      rsync
-      git
-      ;
+  # Boot configuration
+  fileSystems."/boot".options = [ "umask=0077" ];
+  boot = {
+    loader = {
+      efi.canTouchEfiVariables = true;
+      systemd-boot = {
+        enable = true;
+        configurationLimit = lib.mkDefault 3;
+        consoleMode = lib.mkDefault "max";
+      };
+    };
+    initrd = {
+      systemd.enable = true;
+      systemd.emergencyAccess = true;
+      luks.forceLuksSupportInInitrd = true;
+    };
+    kernelParams = [
+      "systemd.setenv=SYSTEMD_SULOGIN_FORCE=1"
+      "systemd.show_status=true"
+      "systemd.log_target=console"
+      "systemd.journald.forward_to_console=1"
+    ];
   };
 
-  networking = {
-    networkmanager.enable = true;
-  };
+  # Minimal packages for bootstrap and troubleshooting
+  environment.systemPackages = with pkgs; [
+    git
+    curl
+    wget
+    rsync
+    vim
+  ];
+
+  networking.networkmanager.enable = true;
 
   # Passwordless sudo for wheel group during bootstrap
   security.sudo.wheelNeedsPassword = false;
 
   services = {
     qemuGuest.enable = true;
-    spice-vdagentd.enable = true;
-
-    # Display manager for VM testing
-    displayManager.ly = {
-      enable = true;
-      settings = {
-        default_user = config.hostSpec.username;
-        save = false;
-      };
-    };
-
     openssh = {
       enable = true;
       ports = [ 22 ];
       settings = {
-        PermitRootLogin = "yes";
-        PasswordAuthentication = true; # Enable password auth for bootstrap
+        PermitRootLogin = "prohibit-password";
+        PasswordAuthentication = false;
       };
     };
   };
 
-  # Disable other display managers
-  services.displayManager.sddm.enable = lib.mkForce false;
-  services.greetd.enable = lib.mkForce false;
-
-  # SSH public key for initial ISO access (centralized in nix-secrets)
-  # This allows the bootstrap script to connect before nixos-anywhere runs
-  users.users.root.openssh.authorizedKeys.keys = [
-    inputs.nix-secrets.bootstrap.sshPublicKey
-  ];
-  users.users.${config.hostSpec.username}.openssh.authorizedKeys.keys = [
-    inputs.nix-secrets.bootstrap.sshPublicKey
-  ];
-
   nix = {
-    #FIXME(installer): registry and nixPath shouldn't be required here because flakes but removal results in warning spam on build
     registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
     nixPath = lib.mapAttrsToList (key: value: "${key}=${value.to.path}") config.nix.registry;
-
     settings = {
       experimental-features = [
         "nix-command"

@@ -12,14 +12,15 @@ in
   imports = [
     # Desktop environment (same as desktop role)
     ../modules/services/desktop
+    ../modules/services/display-manager
     ../modules/services/audio
 
     # Applications (same as desktop role)
     ../modules/apps/cli
-    ../modules/apps/fonts
+    ../modules/common/fonts.nix
     ../modules/apps/media
     ../modules/apps/gaming
-    ../modules/apps/theming
+    ../modules/theming
     ../modules/apps/development
 
     # Services (same as desktop role)
@@ -27,14 +28,18 @@ in
     ../modules/services/development
     ../modules/services/security
     ../modules/services/ai
-
-    # Desktop-relevant optional modules (files that exist)
-    (lib.custom.relativeToRoot "hosts/common/optional/hyprland.nix")
-    (lib.custom.relativeToRoot "hosts/common/optional/wayland.nix")
   ];
 
   # Laptop-specific config
   config = lib.mkIf cfg.laptop {
+    # Enable desktop modules
+    myModules.desktop.hyprland.enable = lib.mkDefault true;
+    myModules.desktop.wayland.enable = lib.mkDefault true;
+
+    # Enable CLI tools for laptop users
+    myModules.services.atuin.enable = lib.mkDefault true;
+    myModules.networking.ssh.enable = lib.mkDefault true;
+
     # Desktop-like defaults
     services.xserver.enable = lib.mkDefault true;
     hardware.graphics.enable = lib.mkDefault true;

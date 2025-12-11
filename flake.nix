@@ -34,7 +34,7 @@
         let
           # Try to import host config to read system architecture
           # Default to x86_64-linux if not specified
-          hostPath = ./hosts/nixos/${hostname};
+          hostPath = ./hosts/${hostname};
 
           # For now, all current hosts are x86_64-linux
           # Future hosts can override this by setting hostSpec.system in their default.nix
@@ -110,12 +110,12 @@
       # ========= Host Configurations =========
       #
       # Building configurations is available through `just rebuild` or `nixos-rebuild --flake .#hostname`
-      # Auto-discover hosts from hosts/nixos/ directory and build with mkHost helper
+      # Auto-discover hosts from hosts/ directory and build with mkHost helper
       nixosConfigurations = builtins.listToAttrs (
         map (host: {
           name = host;
           value = mkHost host;
-        }) (builtins.attrNames (builtins.readDir ./hosts/nixos))
+        }) (builtins.attrNames (builtins.readDir ./hosts))
       );
 
       # darwinConfigurations = builtins.listToAttrs (

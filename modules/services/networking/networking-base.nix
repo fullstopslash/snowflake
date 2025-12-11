@@ -28,6 +28,7 @@
 
   # Optional: soften DNSSEC to avoid flaky captive/Wi‑Fi resumes
   # Core network services; split others into dedicated roles
+  # SSH config is in modules/services/networking/openssh.nix
   services = {
     avahi = {
       enable = true;
@@ -46,14 +47,6 @@
       enable = true;
       dnssec = "allow-downgrade";
       # dnsovertls = "true";
-    };
-    openssh = {
-      enable = lib.mkDefault true;
-      settings = {
-        PasswordAuthentication = lib.mkDefault false;
-        AllowUsers = lib.mkDefault [ "rain" ];
-        StreamLocalBindUnlink = lib.mkDefault true;
-      };
     };
     # mullvad: roles/vpn.nix
     # tailscale: roles/tailscale.nix

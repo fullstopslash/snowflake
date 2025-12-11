@@ -1,13 +1,15 @@
 { ... }:
 {
   imports = [
-    ./networking
-    ./desktop
-    ./audio
-    ./storage
-    ./development
-    ./security
     ./ai
+    ./audio
+    ./cli
+    ./desktop
+    ./development
+    ./display-manager
     ./misc
+    ./networking
+    ./security
+    ./storage
   ];
 }

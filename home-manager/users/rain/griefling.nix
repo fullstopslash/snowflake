@@ -1,3 +1,8 @@
+# Griefling VM - Home Manager config for rain user
+#
+# Hyprland settings are in raw config files, not Nix:
+#   - home-manager/common/optional/desktops/hyprland/host-configs/common.conf
+#   - home-manager/common/optional/desktops/hyprland/host-configs/griefling.conf
 { lib, pkgs, ... }:
 {
   imports = (
@@ -43,14 +48,10 @@
     }
   ];
 
-  # Yubikey disabled for test VM (useYubikey = false in host config)
-  # services.yubikey-touch-detector.enable = false;
-
   # Terminal file manager
   programs.yazi.enable = true;
 
   # Install packages for programs whose config is managed by chezmoi
-  # When programs.X.enable = false, the package isn't installed, so add them here
   home.packages = with pkgs; [
     atuin
     kitty
@@ -63,16 +64,12 @@
     btop
   ];
 
-  # Disable ALL home-manager config generation - chezmoi manages dotfiles
+  # Disable HM config generation - chezmoi manages dotfiles
   programs.kitty.enable = lib.mkForce false;
   programs.btop.enable = lib.mkForce false;
-  # programs.atuin.enable = lib.mkForce false;  # Keep enabled for sync_address config
   programs.zsh.enable = lib.mkForce false;
   programs.bash.enable = lib.mkForce false;
   programs.git.enable = lib.mkForce false;
   programs.ssh.enable = lib.mkForce false;
   programs.direnv.enable = lib.mkForce false;
-
-  # Enable Hyprland config generation for VM
-  wayland.windowManager.hyprland.enable = lib.mkForce true;
 }

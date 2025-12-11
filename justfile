@@ -78,6 +78,98 @@ iso-install DRIVE: iso
   sudo dd if=$(eza --sort changed result/iso/*.iso | tail -n1) of={{DRIVE}} bs=4M status=progress oflag=sync
 
 # ============================================================================
+# Remote Installation via mDNS (mitosis.local)
+# ============================================================================
+# Workflow:
+#   1. Boot the ISO on target machine (builds with: just iso)
+#   2. ISO auto-discovers network via DHCP and broadcasts as mitosis.local
+#   3. Run: just install <hostname>
+#   4. Done! Full NixOS installation in one command.
+# ============================================================================
+
+# Install NixOS on a machine booted from the mitosis ISO
+# Usage: just install <hostname>
+# The ISO must be booted and reachable at mitosis.local (via mDNS/Avahi)
+install HOST:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Installing {{HOST}} on mitosis.local..."
+
+    # Verify the ISO is reachable
+    echo "📡 Checking if mitosis.local is reachable..."
+    if ! ping -c 1 -W 2 mitosis.local &>/dev/null; then
+        echo "❌ Cannot reach mitosis.local"
+        echo "   Make sure the ISO is booted and connected to the network."
+        echo "   The ISO broadcasts via mDNS/Avahi as 'mitosis.local'"
+        exit 1
+    fi
+    echo "✅ Found mitosis.local"
+
+    # Create temp directory for extra-files
+    EXTRA_FILES=$(mktemp -d)
+    trap "rm -rf $EXTRA_FILES" EXIT
+
+    # Step 1: Pre-generate SSH host key locally
+    echo "🔑 Pre-generating SSH host key..."
+    mkdir -p "$EXTRA_FILES/etc/ssh"
+    ssh-keygen -t ed25519 -f "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" -N "" -q
+    chmod 600 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
+    chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
+
+    # Step 2: Derive age key from SSH host key
+    echo "🔐 Deriving age key from SSH host key..."
+    mkdir -p "$EXTRA_FILES/var/lib/sops-nix"
+    nix-shell -p ssh-to-age --run "cat $EXTRA_FILES/etc/ssh/ssh_host_ed25519_key | ssh-to-age -private-key" > "$EXTRA_FILES/var/lib/sops-nix/key.txt"
+    chmod 600 "$EXTRA_FILES/var/lib/sops-nix/key.txt"
+
+    # Get age public key
+    AGE_PUBKEY=$(nix-shell -p ssh-to-age --run "cat $EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age")
+    echo "   Age public key: $AGE_PUBKEY"
+
+    # Step 3: Register age key in nix-secrets and rekey
+    echo "📝 Registering {{HOST}} age key in nix-secrets..."
+    just sops-update-host-age-key {{HOST}} "$AGE_PUBKEY"
+    just sops-add-creation-rules rain {{HOST}}
+
+    # Rekey all secrets
+    echo "   Rekeying secrets..."
+    cd ../nix-secrets && for file in sops/*.yaml; do
+        echo "     Rekeying $file..."
+        sops updatekeys -y "$file"
+    done
+
+    # Commit and push
+    echo "   Committing and pushing..."
+    cd ../nix-secrets && \
+        git add -u .sops.yaml sops/*.yaml && \
+        (git commit -m "chore: register {{HOST}} age key and rekey secrets" || true) && \
+        git push
+    cd "{{justfile_directory()}}"
+
+    # Step 4: Update local flake.lock to get rekeyed secrets
+    echo "📥 Updating local nix-secrets flake input..."
+    nix flake update nix-secrets
+
+    # Step 5: Clear known_hosts for mitosis.local and the hostname
+    echo "🧹 Clearing stale SSH host keys..."
+    sed -i '/mitosis\.local/d; /{{HOST}}/d' ~/.ssh/known_hosts 2>/dev/null || true
+
+    # Step 6: Run nixos-anywhere targeting mitosis.local
+    echo "🚀 Running nixos-anywhere to install {{HOST}}..."
+    cd nixos-installer
+    SHELL=/bin/sh nix run github:nix-community/nixos-anywhere -- \
+        --extra-files "$EXTRA_FILES" \
+        --flake .#{{HOST}} \
+        root@mitosis.local
+    cd - >/dev/null
+
+    echo ""
+    echo "✅ Installation complete!"
+    echo "   {{HOST}} is now installed and will reboot."
+    echo "   After reboot, SSH with: ssh root@{{HOST}}.local (if mDNS) or by IP"
+    echo ""
+
+# ============================================================================
 # VM Testing Workflow
 # ============================================================================
 # Full workflow: just vm-fresh griefling

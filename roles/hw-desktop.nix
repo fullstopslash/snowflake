@@ -12,14 +12,15 @@ in
   imports = [
     # Desktop environment
     ../modules/services/desktop
+    ../modules/services/display-manager
     ../modules/services/audio
 
     # Applications
     ../modules/apps/cli
-    ../modules/apps/fonts
+    ../modules/common/fonts.nix
     ../modules/apps/media
     ../modules/apps/gaming
-    ../modules/apps/theming
+    ../modules/theming
     ../modules/apps/development
 
     # Services
@@ -29,17 +30,23 @@ in
     ../modules/services/storage
     ../modules/services/misc
     ../modules/services/ai
-
-    # Desktop-relevant optional modules (files that exist)
-    (lib.custom.relativeToRoot "hosts/common/optional/hyprland.nix")
-    (lib.custom.relativeToRoot "hosts/common/optional/wayland.nix")
   ];
 
   # Config options are conditional on role being enabled
   config = lib.mkIf cfg.desktop {
+    # Enable desktop modules
+    myModules.desktop.hyprland.enable = lib.mkDefault true;
+    myModules.desktop.wayland.enable = lib.mkDefault true;
     # Desktop-specific defaults
     services.xserver.enable = lib.mkDefault true;
     hardware.graphics.enable = lib.mkDefault true;
+
+    # Display manager - LY by default (can be disabled in host config)
+    myModules.displayManager.ly.enable = lib.mkDefault true;
+
+    # Enable CLI tools for desktop users
+    myModules.services.atuin.enable = lib.mkDefault true;
+    myModules.networking.ssh.enable = lib.mkDefault true;
 
     # Desktop hostSpec defaults - hosts can override with lib.mkForce
     hostSpec = {

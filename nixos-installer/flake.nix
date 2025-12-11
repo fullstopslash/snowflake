@@ -32,11 +32,11 @@
           let
             diskSpecPath =
               if useLuks && useImpermanence then
-                ../hosts/common/disks/btrfs-luks-impermanence-disk.nix
+                ../modules/disks/btrfs-luks-impermanence-disk.nix
               else if !useLuks && useImpermanence then
-                ../hosts/common/disks/btrfs-impermanence-disk.nix
+                ../modules/disks/btrfs-impermanence-disk.nix
               else
-                ../hosts/common/disks/btrfs-disk.nix;
+                ../modules/disks/btrfs-disk.nix;
           in
           nixpkgs.lib.nixosSystem {
             system = "x86_64-linux";
@@ -52,7 +52,7 @@
                 };
               }
               ./minimal-configuration.nix
-              ../hosts/nixos/${name}/hardware-configuration.nix
+              ../hosts/${name}/hardware-configuration.nix
 
               {
                 networking.hostName = name;
@@ -68,28 +68,8 @@
       nixosConfigurations = {
         # host = newConfig "name" "disk" "swapSize" "useLuks" "useImpermanence" "username"
         # Swap size is in GiB
-        genoa = newConfig "genoa" "/dev/nvme0n1" 16 true true "${toString inputs.nix-secrets.user}";
-        grief = newConfig "grief" "/dev/vda" 0 false false "${toString inputs.nix-secrets.user}";
         griefling = newConfig "griefling" "/dev/vda" 8 false false "${toString inputs.nix-secrets.user}";
-        guppy = newConfig "guppy" "/dev/vda" 0 false false "${toString inputs.nix-secrets.user}";
-        gusto = newConfig "gusto" "/dev/nvme0n1" 8 false false "${toString inputs.nix-secrets.user}";
         malphas = newConfig "malphas" "/dev/vda" 4 false false "${toString inputs.nix-secrets.user}";
-
-        ghost = nixpkgs.lib.nixosSystem {
-          system = "x86_64-linux";
-          specialArgs = minimalSpecialArgs;
-          modules = [
-            inputs.disko.nixosModules.disko
-            ../hosts/common/disks/ghost.nix
-            ./minimal-configuration.nix
-            {
-              networking.hostName = "ghost";
-              hostSpec.primaryUsername = "${toString inputs.nix-secrets.user}";
-              hostSpec.username = "${toString inputs.nix-secrets.user}";
-            }
-            ../hosts/nixos/ghost/hardware-configuration.nix
-          ];
-        };
       };
     };
 }

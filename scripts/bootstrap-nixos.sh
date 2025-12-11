@@ -177,7 +177,7 @@ function nixos_anywhere() {
 		green "Generating hardware-configuration.nix on $target_hostname and adding it to the local nix-config."
 		$ssh_root_cmd "nixos-generate-config --no-filesystems --root /mnt"
 		$scp_cmd root@"$target_destination":/mnt/etc/nixos/hardware-configuration.nix \
-			"${git_root}"/hosts/nixos/"$target_hostname"/hardware-configuration.nix
+			"${git_root}"/hosts/"$target_hostname"/hardware-configuration.nix
 		generated_hardware_config=1
 	fi
 
@@ -268,7 +268,7 @@ if yes_or_no "Generate host (ssh-based) age key?"; then
 	# Clear any stale known_hosts entries that might conflict
 	green "Cleaning up known_hosts for $target_destination"
 	sed -i "/$target_hostname/d; /$target_destination/d" ~/.ssh/known_hosts || true
-	
+
 	# Wait for SSH to be fully ready after reboot
 	green "Waiting for SSH service to be ready..."
 	max_attempts=30
@@ -293,7 +293,7 @@ if yes_or_no "Generate host (ssh-based) age key?"; then
 		echo "Attempt $attempt/$max_attempts - waiting 2 seconds..."
 		sleep 2
 	done
-	
+
 	sops_generate_host_age_key
 	updated_age_keys=1
 fi
@@ -321,13 +321,13 @@ fi
 if yes_or_no "Do you want to copy your full nix-config and nix-secrets to $target_hostname?"; then
 	green "Adding ssh host fingerprint at $target_destination to ~/.ssh/known_hosts"
 	ssh-keyscan -4 -p "$ssh_port" "$target_destination" 2>/dev/null | grep -v '^#' >>~/.ssh/known_hosts || true
-	
+
 	green "Copying full nix-config to $target_hostname (as root, will fix permissions)"
 	# Use root for initial copy since user SSH keys aren't set up yet
 	rsync -av --mkpath --filter=':- .gitignore' -e "ssh -oControlMaster=no -oport=${ssh_port}" "${git_root}"/../nix-config root@"${target_destination}":/tmp/bootstrap/
 	green "Copying full nix-secrets to $target_hostname (as root, will fix permissions)"
 	rsync -av --mkpath --filter=':- .gitignore' -e "ssh -oControlMaster=no -oport=${ssh_port}" "${nix_secrets_dir}" root@"${target_destination}":/tmp/bootstrap/
-	
+
 	green "Moving files to ${nix_src_path} and setting ownership to ${target_user}"
 	$ssh_root_cmd "mkdir -p /home/${target_user}/${nix_src_path} && \
 		mv /tmp/bootstrap/nix-config /home/${target_user}/${nix_src_path}/ && \

@@ -37,7 +37,7 @@ let
     forwardAgentHosts ++ (genDomains forwardAgentHosts)
   );
 
-  pathToKeys = lib.custom.relativeToRoot "hosts/common/users/${config.hostSpec.primaryUsername}/keys/";
+  pathToKeys = lib.custom.relativeToRoot "modules/users/${config.hostSpec.primaryUsername}/keys/";
   yubikeys =
     lib.lists.forEach (builtins.attrNames (builtins.readDir pathToKeys))
       # Remove the .pub suffix

@@ -6,13 +6,11 @@
 # This module provides:
 # - Syncthing daemon running as the primary user
 # - Auto-configured default folder path
-# - Device IDs managed via sops secrets (configured via REST API at runtime)
+# - Device IDs from nix-secrets flake (configured via REST API at runtime)
 # - GUI access on localhost:8384
 # - Open firewall ports for discovery and sync
 #
-# Required secrets (in sops/shared.yaml):
-#   syncthing_waterbug_id  - Device ID for waterbug
-#   syncthing_pixel_id     - Device ID for pixel
+# Device IDs are sourced from: inputs.nix-secrets.syncthing
 #
 # Usage:
 #   myModules.services.syncthing.enable = true;
@@ -20,6 +18,7 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }:
 let
@@ -53,7 +52,7 @@ in
     };
 
     # Configure syncthing after initialization via REST API
-    # This reads device IDs from sops secrets and configures them at runtime
+    # This uses device IDs from nix-secrets flake and configures them at runtime
     systemd.services.syncthing-configure = {
       description = "Configure Syncthing devices and default folder path";
       after = [ "syncthing-init.service" ];
@@ -63,39 +62,39 @@ in
         User = username;
         RuntimeDirectory = "syncthing-configure";
       };
-      script = ''
-        configDir="${homeDir}/.config/syncthing"
+      script =
+        let
+          syncthingSecrets = inputs.nix-secrets.syncthing;
+        in
+        ''
+          configDir="${homeDir}/.config/syncthing"
 
-        # Wait for config.xml to exist
-        while [ ! -f "$configDir/config.xml" ]; do sleep 1; done
+          # Wait for config.xml to exist
+          while [ ! -f "$configDir/config.xml" ]; do sleep 1; done
 
-        # Get API key from config
-        API_KEY=$(${pkgs.gnugrep}/bin/grep -oP '(?<=<apikey>)[^<]+' "$configDir/config.xml")
+          # Get API key from config
+          API_KEY=$(${pkgs.gnugrep}/bin/grep -oP '(?<=<apikey>)[^<]+' "$configDir/config.xml")
 
-        # Read device IDs from sops secrets
-        WATERBUG_ID=$(cat ${config.sops.secrets."syncthing_waterbug_id".path})
-        PIXEL_ID=$(cat ${config.sops.secrets."syncthing_pixel_id".path})
+          # Set default folder path
+          ${pkgs.curl}/bin/curl -sSLk -H "X-API-Key: $API_KEY" -X PATCH \
+            -H "Content-Type: application/json" \
+            -d '{"path":"${homeDir}"}' \
+            "http://127.0.0.1:8384/rest/config/defaults/folder"
 
-        # Set default folder path
-        ${pkgs.curl}/bin/curl -sSLk -H "X-API-Key: $API_KEY" -X PATCH \
-          -H "Content-Type: application/json" \
-          -d '{"path":"${homeDir}"}' \
-          "http://127.0.0.1:8384/rest/config/defaults/folder"
+          # Configure waterbug device
+          ${pkgs.curl}/bin/curl -sSLk -H "X-API-Key: $API_KEY" -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"deviceID":"${syncthingSecrets.waterbug}","name":"waterbug","autoAcceptFolders":true}' \
+            "http://127.0.0.1:8384/rest/config/devices"
 
-        # Configure waterbug device
-        ${pkgs.curl}/bin/curl -sSLk -H "X-API-Key: $API_KEY" -X POST \
-          -H "Content-Type: application/json" \
-          -d "{\"deviceID\":\"$WATERBUG_ID\",\"name\":\"waterbug\",\"autoAcceptFolders\":true}" \
-          "http://127.0.0.1:8384/rest/config/devices"
+          # Configure pixel device (as introducer)
+          ${pkgs.curl}/bin/curl -sSLk -H "X-API-Key: $API_KEY" -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"deviceID":"${syncthingSecrets.pixel}","name":"pixel","autoAcceptFolders":true,"introducer":true}' \
+            "http://127.0.0.1:8384/rest/config/devices"
 
-        # Configure pixel device (as introducer)
-        ${pkgs.curl}/bin/curl -sSLk -H "X-API-Key: $API_KEY" -X POST \
-          -H "Content-Type: application/json" \
-          -d "{\"deviceID\":\"$PIXEL_ID\",\"name\":\"pixel\",\"autoAcceptFolders\":true,\"introducer\":true}" \
-          "http://127.0.0.1:8384/rest/config/devices"
-
-        echo "Syncthing configured with devices from sops secrets"
-      '';
+          echo "Syncthing configured with devices from nix-secrets"
+        '';
     };
   };
 }

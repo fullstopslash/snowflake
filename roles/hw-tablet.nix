@@ -13,7 +13,7 @@ in
     ../modules/services/desktop
     ../modules/services/audio
     ../modules/apps/cli
-    ../modules/apps/fonts
+    ../modules/common/fonts.nix
     ../modules/apps/media
   ];
 

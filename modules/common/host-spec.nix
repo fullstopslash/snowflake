@@ -47,7 +47,7 @@
         };
         handle = lib.mkOption {
           type = lib.types.str;
-          description = "The handle of the user (default: 'emergentmind' from common.nix)";
+          description = "The handle of the user (default: 'fullstopslash' from common.nix)";
         };
         networking = lib.mkOption {
           default = { };

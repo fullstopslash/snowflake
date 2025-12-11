@@ -24,13 +24,13 @@ in
       ports = [ sshPort ];
 
       settings = {
-        # Harden
-        PasswordAuthentication = false;
-        PermitRootLogin = "no";
+        # Harden (use mkDefault so roles/hosts can override)
+        PasswordAuthentication = lib.mkDefault false;
+        PermitRootLogin = lib.mkDefault "no";
         # Automatically remove stale sockets
-        StreamLocalBindUnlink = "yes";
+        StreamLocalBindUnlink = lib.mkDefault "yes";
         # Allow forwarding ports to everywhere
-        GatewayPorts = "clientspecified";
+        GatewayPorts = lib.mkDefault "clientspecified";
       };
 
       hostKeys = [
