@@ -36,6 +36,7 @@ in
             Options = [
               "noatime" # Don't update access times (performance)
               "nfsvers=4.2" # Use NFSv4.2 protocol
+              "sec=sys" # Use AUTH_SYS - traditional UNIX UID/GID auth (matches server)
               # "hard" # Commented out - soft mounts allow boot to continue if server unavailable
             ];
             TimeoutSec = "30"; # Give up after 30 seconds if server unreachable
