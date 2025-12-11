@@ -19,6 +19,6 @@ ssh -p 22222 -i ~/.ssh/id_ed25519 "${GRIEFLING_USER}"@127.0.0.1 'bash -c "rm -f 
 
 echo "🔄 Rebuilding on griefling..."
 # Rebuild (secrets are already updated via push)
-ssh -p 22222 -i ~/.ssh/id_ed25519 "${GRIEFLING_USER}"@127.0.0.1 'cd ~/src/nix/nix-config && nh os switch'
+ssh -p 22222 -i ~/.ssh/id_ed25519 "${GRIEFLING_USER}"@127.0.0.1 'cd ~/nix-config && nh os switch'
 
 echo "✅ Done!"
