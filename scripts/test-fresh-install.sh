@@ -228,11 +228,6 @@ success "Using ISO: $(basename "$ISO_PATH")"
 if [[ $USE_ANYWHERE == true ]]; then
 	info "Starting VM for nixos-anywhere deployment..."
 
-	# Verify host config exists before starting VM
-	if ! nix eval ".#nixosConfigurations.$HOSTNAME" &>/dev/null; then
-		die "Host '$HOSTNAME' not found in flake"
-	fi
-
 	# Start VM with SPICE display - boots from ISO first, then nixos-anywhere takes over
 	qemu-system-x86_64 \
 		-name "${HOSTNAME}-fresh-test" \
