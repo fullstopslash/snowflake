@@ -1,106 +1,80 @@
-# Network storage role
-_: {
-  # NFS support
-  services.rpcbind.enable = true;
-  boot.supportedFilesystems = [ "nfs" ];
-
-  # # Security wrappers for mount/umount
-  # security.wrappers.mount = {
-  #   owner = "root";
-  #   group = "root";
-  #   setuid = true;
-  #   source = "${pkgs.util-linux}/bin/mount";
-  # };
-  #
-  # security.wrappers.umount = {
-  #   owner = "root";
-  #   group = "root";
-  #   setuid = true;
-  #   source = "${pkgs.util-linux}/bin/umount";
-  # };
-
-  # NFS mounts with boot optimizations
-  fileSystems."/storage" = {
-    device = "waterbug.lan:/mnt/storage/storage";
-    fsType = "nfs";
-    options = [
-      "x-systemd.automount"
-      "nfsvers=4.2"
-      "rsize=1048576"
-      "wsize=1048576"
-      # "hard"
-      "intr"
-      "timeo=14"
-      # "noatime"
-      "lookupcache=positive"
-      "noauto"
-      "user"
-      "x-systemd.idle-timeout=0"
-      "x-systemd.device-timeout=30"
-    ];
+# Network storage module - NFS mounts for LAN storage access
+#
+# Provides automounted NFS shares from waterbug.lan storage server:
+# - /storage - Main storage pool
+# - /mnt/apps - Applications and shared software
+#
+# Uses systemd automount to avoid boot delays when storage server is unavailable.
+#
+# Enable via: services.networkStorage.enable = true;
+# Or import: hosts/common/optional/network-storage.nix
+{
+  config,
+  lib,
+  ...
+}:
+let
+  cfg = config.services.networkStorage;
+in
+{
+  options.services.networkStorage = {
+    enable = lib.mkEnableOption "Enable network storage NFS mounts";
   };
-  #
-  # fileSystems."/mnt/apps" = {
-  #   device = "waterbug.lan:/mnt/apps/apps";
-  #   fsType = "nfs";
-  #   options = [
-  #     "x-systemd.automount"
-  #     "nfsvers=4.2"
-  #     "rsize=1048576"
-  #     "wsize=1048576"
-  #     "hard"
-  #     "intr"
-  #     "timeo=14"
-  #     "noatime"
-  #     "lookupcache=positive"
-  #     "noauto"
-  #     "user"
-  #     "x-systemd.idle-timeout=0"
-  #     "x-systemd.device-timeout=30"
-  #   ];
-  # };
-  systemd.mounts =
-    let
-      commonMountOptions = {
-        type = "nfs";
-        mountConfig = {
-          Options = [
-            "noatime"
-            "nfsvers=4.2"
-            # "hard"
-          ];
-          TimeoutSec = "30";
-        };
-      };
-    in
-    [
-      (
-        commonMountOptions
-        // {
-          what = "waterbug.lan:/mnt/apps/apps";
-          where = "/mnt/apps";
-        }
-      )
-      (
-        commonMountOptions
-        // {
-          what = "waterbug.lan:/mnt/storage/storage";
-          where = "/storage";
-        }
-      )
-    ];
 
-  systemd.automounts =
-    let
-      commonAutoMountOptions = {
-        wantedBy = [ "multi-user.target" ];
-        automountConfig = {
-          TimeoutIdleSec = "600";
+  config = lib.mkIf cfg.enable {
+    # Enable NFS client support
+    services.rpcbind.enable = true;
+    boot.supportedFilesystems = [ "nfs" ];
+
+    # Define systemd mounts for NFS shares
+    # Using systemd.mounts instead of fileSystems for better control and clarity
+    systemd.mounts =
+      let
+        commonMountOptions = {
+          type = "nfs";
+          mountConfig = {
+            Options = [
+              "noatime" # Don't update access times (performance)
+              "nfsvers=4.2" # Use NFSv4.2 protocol
+              # "hard" # Commented out - soft mounts allow boot to continue if server unavailable
+            ];
+            TimeoutSec = "30"; # Give up after 30 seconds if server unreachable
+          };
         };
-      };
-    in
-    [
-      (commonAutoMountOptions // { where = "/storage"; })
-      (commonAutoMountOptions // { where = "/mnt/apps"; })
-    ];
+      in
+      [
+        # Main storage pool
+        (
+          commonMountOptions
+          // {
+            what = "waterbug.lan:/mnt/storage/storage";
+            where = "/storage";
+          }
+        )
+        # Applications directory
+        (
+          commonMountOptions
+          // {
+            what = "waterbug.lan:/mnt/apps/apps";
+            where = "/mnt/apps";
+          }
+        )
+      ];
+
+    # Configure automount behavior for NFS shares
+    # Mounts on first access, unmounts after idle timeout
+    systemd.automounts =
+      let
+        commonAutoMountOptions = {
+          wantedBy = [ "multi-user.target" ]; # Start automatically at boot
+          automountConfig = {
+            TimeoutIdleSec = "600"; # Unmount after 10 minutes of inactivity
+          };
+        };
+      in
+      [
+        (commonAutoMountOptions // { where = "/storage"; })
+        (commonAutoMountOptions // { where = "/mnt/apps"; })
+      ];
+  };
 }

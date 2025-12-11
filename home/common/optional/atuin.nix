@@ -1,7 +1,13 @@
 #Note: ctrl+r to cycle filter modes
 # Atuin configuration is minimal here - secrets and systemd services are handled
 # at the NixOS level via hosts/common/core/sops/cli.nix
+{ lib, ... }:
 {
+  # Force overwrite atuin config to avoid conflicts on fresh installs
+  # The config.toml might be created by sops-nix activation before home-manager runs
+  # mkForce needed to override the default `force = false` from programs.atuin module
+  xdg.configFile."atuin/config.toml".force = lib.mkForce true;
+
   programs.atuin = {
     enable = true;
 

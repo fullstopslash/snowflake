@@ -9,11 +9,19 @@ let
   primaryUser = config.hostSpec.primaryUsername;
 in
 {
-  # Create per-user profile directories before home-manager runs
-  # This fixes "Could not find suitable profile directory" on fresh installs
+  # Create directories needed for home-manager on fresh installs
+  # Home-manager looks for profiles in both locations:
+  # 1. /nix/var/nix/profiles/per-user/$USER (system-level)
+  # 2. ~/.local/state/nix/profiles (user-level, preferred)
   system.activationScripts.nix-profile-dirs = lib.stringAfter [ "users" ] ''
+    # System-level profile directory
     mkdir -p /nix/var/nix/profiles/per-user/${primaryUser}
     chown ${primaryUser}:users /nix/var/nix/profiles/per-user/${primaryUser}
+
+    # User-level profile directory (home-manager prefers this)
+    home="${config.hostSpec.home}"
+    mkdir -p "$home/.local/state/nix/profiles"
+    chown -R ${primaryUser}:users "$home/.local"
   '';
   # Add only the terminfo databases we actually need (kitty, ghostty)
   # enableAllTerminfo pulls in broken packages like contour/termbench-pro

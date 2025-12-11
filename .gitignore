@@ -8,3 +8,4 @@ nixos-test*
 quickemu/
 quickemu/*.socket
 quickemu/*.pid
+todo.md

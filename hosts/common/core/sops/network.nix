@@ -1,6 +1,6 @@
 # Network secrets category: VPN and network service credentials
 #
-# Includes Tailscale OAuth credentials and other network-related secrets.
+# Includes Tailscale OAuth credentials, Syncthing device IDs, and other network-related secrets.
 
 {
   lib,
@@ -25,6 +25,16 @@ in
       "tailscale/oauth_client_secret" = {
         sopsFile = "${sopsFolder}/shared.yaml";
         owner = "root";
+      };
+
+      # Syncthing device IDs
+      "syncthing_waterbug_id" = {
+        sopsFile = "${sopsFolder}/shared.yaml";
+        owner = config.hostSpec.username;
+      };
+      "syncthing_pixel_id" = {
+        sopsFile = "${sopsFolder}/shared.yaml";
+        owner = config.hostSpec.username;
       };
     };
   };
