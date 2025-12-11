@@ -84,6 +84,10 @@ iso-install DRIVE: iso
 # This creates a fresh VM, installs NixOS, sets up secrets, and rebuilds
 # ============================================================================
 
+# Helper: Get primary username for a host from flake
+_get-vm-primary-user HOST:
+    @nix eval --raw .#nixosConfigurations.{{HOST}}.config.hostSpec.primaryUsername
+
 # Complete fresh install: wipe, install, setup age key, sync config, rebuild
 vm-fresh HOST=DEFAULT_VM_HOST:
     #!/usr/bin/env bash
@@ -117,14 +121,38 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     # Step 5: Register age key in nix-secrets and rekey
     just vm-register-age {{HOST}}
 
-    # Step 6: Sync and rebuild
-    just vm-sync {{HOST}}
-    just vm-rebuild {{HOST}}
+    # Step 6: Clone repos and rebuild on VM (git-based workflow)
+    # The VM clones repos from GitHub and rebuilds with the rekeyed secrets
+    echo "📦 Setting up repos and rebuilding on VM..."
+    USER=$(just _get-vm-primary-user {{HOST}})
+    USER_HOME="/home/$USER"
+
+    # Clone nix-config if not present
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
+        "[ -d $USER_HOME/nix-config ] || sudo -u $USER git clone --branch dev https://github.com/fullstopslash/snowflake.git $USER_HOME/nix-config"
+
+    # Clone nix-secrets if not present
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
+        "[ -d $USER_HOME/nix-secrets ] || sudo -u $USER git clone --branch simple https://github.com/fullstopslash/snowflake-secrets.git $USER_HOME/nix-secrets"
+
+    # Update flake lock for nix-secrets (get the rekeyed version)
+    echo "📥 Updating nix-secrets flake input..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
+        "sudo -u $USER sh -c 'cd $USER_HOME/nix-config && nix flake update nix-secrets'"
+
+    # Add git safe.directory so root can access user-owned repo
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
+        "git config --global --add safe.directory $USER_HOME/nix-config"
+
+    # Rebuild with the new config
+    echo "🔨 Rebuilding NixOS..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
+        "cd $USER_HOME/nix-config && nixos-rebuild switch --flake .#{{HOST}}"
 
     echo ""
     echo "✅ Fresh install complete!"
     echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
-    echo "   SPICE: just vm-spice"
+    echo "   Display: just vm-start (SDL with GPU acceleration)"
 
 # Setup age key on VM from SSH host key (required for SOPS secrets)
 vm-setup-age HOST=DEFAULT_VM_HOST:
@@ -186,23 +214,22 @@ vm-register-age HOST=DEFAULT_VM_HOST:
         (git commit -m "chore: register {{HOST}} age key and rekey secrets" || true) && \
         git push
 
-    # Update nix-secrets on the VM to get the freshly rekeyed secrets
-    echo "   Updating nix-secrets on VM..."
-    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
-        "cd /root/nix-config && nix flake update nix-secrets"
-
     echo "✅ Age key registered and secrets rekeyed"
     echo "   Host {{HOST}} can now decrypt secrets on next rebuild"
+    echo "   Secrets pushed to GitHub - VM will pull on next rebuild"
 
-# Sync nix-config to running VM
+# Sync nix-config to running VM (for ad-hoc testing, not needed for ONE command flow)
 vm-sync HOST=DEFAULT_VM_HOST:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "📦 Syncing nix-config to VM..."
 
+    USER=$(just _get-vm-primary-user {{HOST}})
+    USER_HOME="/home/$USER"
+
     # Add git safe.directory on VM
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
-        "git config --global --add safe.directory /root/nix-config" 2>/dev/null || true
+        "git config --global --add safe.directory $USER_HOME/nix-config" 2>/dev/null || true
 
     # Rsync excluding large files, sockets, and .git
     rsync -avz --delete \
@@ -213,28 +240,25 @@ vm-sync HOST=DEFAULT_VM_HOST:
         --exclude='.git' \
         --exclude='result' \
         -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}}" \
-        . root@127.0.0.1:/root/nix-config/
+        . root@127.0.0.1:$USER_HOME/nix-config/
 
-    echo "✅ Config synced to /root/nix-config"
+    echo "✅ Config synced to $USER_HOME/nix-config"
 
-# Rebuild NixOS on running VM
+# Rebuild NixOS on running VM (uses user's home directory)
 vm-rebuild HOST=DEFAULT_VM_HOST:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "🔨 Rebuilding NixOS on VM..."
 
+    USER=$(just _get-vm-primary-user {{HOST}})
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
-        "cd /root/nix-config && nixos-rebuild switch --flake .#{{HOST}}"
+        "cd /home/$USER/nix-config && nixos-rebuild switch --flake .#{{HOST}}"
 
     echo "✅ Rebuild complete"
 
 # SSH into the VM
 vm-ssh HOST=DEFAULT_VM_HOST:
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1
-
-# Open SPICE viewer to see VM display
-vm-spice:
-    nix-shell -p spice-gtk --run "spicy -h 127.0.0.1 -p {{VM_SPICE_PORT}}"
 
 # Stop the running VM
 vm-stop HOST=DEFAULT_VM_HOST:
@@ -247,7 +271,7 @@ vm-status HOST=DEFAULT_VM_HOST:
     if [ -f "$PID_FILE" ] && ps -p "$(cat "$PID_FILE")" > /dev/null 2>&1; then
         echo "✅ VM {{HOST}} is running (PID: $(cat "$PID_FILE"))"
         echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
-        echo "   SPICE: just vm-spice"
+        echo "   Display: just vm-start (use SDL window)"
     else
         echo "❌ VM {{HOST}} is not running"
     fi

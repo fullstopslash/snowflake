@@ -1,7 +1,3 @@
-let
-  devDirectory = "~/src";
-  devNix = "${devDirectory}/nix";
-in
 {
   # Overrides those provided by OMZ libs, plugins, and themes.
   # For a full list of active aliases, run `alias`.
@@ -28,11 +24,13 @@ in
   ls = "eza";
   lsa = "eza -lah";
 
-  #------------Nix src navigation------------
-  cnc = "cd ${devNix}/nix-config";
-  cns = "cd ${devNix}/nix-secrets";
-  cnh = "cd ${devNix}/nixos-hardware";
-  cnp = "cd ${devNix}/nixpkgs";
+  #------------Nix config navigation------------
+  # Primary config directories (nh uses ~/nix-config via NH_FLAKE)
+  cnc = "cd $HOME/nix-config";
+  cns = "cd $HOME/nix-secrets";
+  # Secondary nix repos
+  cnh = "cd $HOME/src/nix/nixos-hardware";
+  cnp = "cd $HOME/src/nix/nixpkgs";
 
   #-----------Nix commands----------------
   nfc = "nix flake check";

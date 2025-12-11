@@ -1,8 +1,17 @@
 # Core functionality for every nixos host
-{ config, lib, ... }:
 {
-  # Database for aiding terminal-based programs
-  environment.enableAllTerminfo = true;
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+{
+  # Add only the terminfo databases we actually need (kitty, ghostty)
+  # enableAllTerminfo pulls in broken packages like contour/termbench-pro
+  environment.systemPackages = [
+    pkgs.kitty.terminfo
+    pkgs.ghostty.terminfo
+  ];
   # Enable firmware with a license allowing redistribution
   hardware.enableRedistributableFirmware = true;
 

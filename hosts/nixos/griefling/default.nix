@@ -50,6 +50,9 @@
       # Module system (host-spec, roles definitions)
       "modules/common"
 
+      # Core NixOS settings (includes nh for rebuild management)
+      "hosts/common/core/nixos.nix"
+
       # Sops secrets (role-based categories)
       "hosts/common/core/sops"
       "hosts/common/core/ssh.nix"
@@ -63,6 +66,9 @@
       "hosts/common/optional/services/ly.nix"
       "hosts/common/optional/tailscale.nix"
       "hosts/common/optional/services/openssh.nix"
+
+      # Config repo auto-clone for distributed management
+      "hosts/common/optional/nix-config-repo.nix"
 
       # Bitwarden automation
       "modules/services/security/bitwarden.nix"
@@ -120,6 +126,13 @@
     enableAutoLogin = true;
     syncInterval = 30;
   };
+
+  #
+  # ========== Config Repo Auto-Clone ==========
+  # Clones nix-config and nix-secrets to ~/nix-config and ~/nix-secrets
+  # for distributed config management (pull from GitHub, run nh os switch)
+  #
+  services.nixConfigRepo.enable = true;
 
   #
   # ========== Networking ==========
@@ -210,27 +223,24 @@
   };
 
   #
-  # ========== VM Display (SPICE/QXL) ==========
+  # ========== VM Display (virtio-gpu for SDL) ==========
   #
   boot.kernelParams = [
     "console=tty1"
     "console=ttyS0,115200"
   ];
   boot.kernelModules = [
-    "qxl"
-    "bochs_drm"
     "virtio-gpu"
+    "bochs_drm"
   ];
 
-  # SPICE/QXL graphics for VM
+  # virtio-gpu for SDL with hardware acceleration
   services.xserver.videoDrivers = [
-    "qxl"
     "modesetting"
   ];
   hardware.graphics = {
     enable = true;
     extraPackages = with pkgs; [
-      # Mesa drivers for VM graphics
       mesa
     ];
   };
@@ -242,7 +252,8 @@
   # ========== Services ==========
   #
   services.qemuGuest.enable = true;
-  services.spice-vdagentd.enable = true;
+  # Using SDL display, not SPICE
+  services.spice-vdagentd.enable = false;
   services.pipewire = {
     enable = true;
     alsa.enable = true;
