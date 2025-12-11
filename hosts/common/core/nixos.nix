@@ -5,7 +5,16 @@
   pkgs,
   ...
 }:
+let
+  primaryUser = config.hostSpec.primaryUsername;
+in
 {
+  # Create per-user profile directories before home-manager runs
+  # This fixes "Could not find suitable profile directory" on fresh installs
+  system.activationScripts.nix-profile-dirs = lib.stringAfter [ "users" ] ''
+    mkdir -p /nix/var/nix/profiles/per-user/${primaryUser}
+    chown ${primaryUser}:users /nix/var/nix/profiles/per-user/${primaryUser}
+  '';
   # Add only the terminfo databases we actually need (kitty, ghostty)
   # enableAllTerminfo pulls in broken packages like contour/termbench-pro
   environment.systemPackages = [

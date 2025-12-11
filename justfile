@@ -88,71 +88,68 @@ iso-install DRIVE: iso
 _get-vm-primary-user HOST:
     @nix eval --raw .#nixosConfigurations.{{HOST}}.config.hostSpec.primaryUsername
 
-# Complete fresh install: wipe, install, setup age key, sync config, rebuild
+# Complete fresh install: pre-generate keys, deploy FULL config directly via nixos-anywhere
+# Uses --extra-files to include SSH host key + age key, eliminating the need for a second rebuild
 vm-fresh HOST=DEFAULT_VM_HOST:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "🚀 Starting fresh VM install for {{HOST}}..."
 
-    # Step 1: Fresh install with nixos-anywhere (wipes and installs base system)
-    ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force
+    # Create temp directory for extra-files
+    EXTRA_FILES=$(mktemp -d)
+    trap "rm -rf $EXTRA_FILES" EXIT
 
-    # Step 2: Wait for VM to reboot after nixos-anywhere
-    echo ""
-    echo "⏳ Waiting 45s for VM to reboot..."
-    sleep 45
+    # Step 1: Pre-generate SSH host key locally
+    echo "🔑 Pre-generating SSH host key..."
+    mkdir -p "$EXTRA_FILES/etc/ssh"
+    ssh-keygen -t ed25519 -f "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" -N "" -q
+    chmod 600 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
+    chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
 
-    # Step 3: Wait for SSH
-    echo "🔌 Waiting for SSH..."
-    for i in {1..30}; do
-        if ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            -p {{VM_SSH_PORT}} root@127.0.0.1 true 2>/dev/null; then
-            echo "✅ SSH ready"
-            break
-        fi
-        sleep 2
-        printf "."
+    # Step 2: Derive age key from SSH host key
+    echo "🔐 Deriving age key from SSH host key..."
+    mkdir -p "$EXTRA_FILES/var/lib/sops-nix"
+    nix-shell -p ssh-to-age --run "cat $EXTRA_FILES/etc/ssh/ssh_host_ed25519_key | ssh-to-age -private-key" > "$EXTRA_FILES/var/lib/sops-nix/key.txt"
+    chmod 600 "$EXTRA_FILES/var/lib/sops-nix/key.txt"
+
+    # Get age public key
+    AGE_PUBKEY=$(nix-shell -p ssh-to-age --run "cat $EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age")
+    echo "   Age public key: $AGE_PUBKEY"
+
+    # Step 3: Register age key in nix-secrets and rekey
+    echo "📝 Registering {{HOST}} age key in nix-secrets..."
+    just sops-update-host-age-key {{HOST}} "$AGE_PUBKEY"
+    just sops-add-creation-rules rain {{HOST}}
+
+    # Rekey all secrets
+    echo "   Rekeying secrets..."
+    cd ../nix-secrets && for file in sops/*.yaml; do
+        echo "     Rekeying $file..."
+        sops updatekeys -y "$file"
     done
-    echo ""
 
-    # Step 4: Setup age key from SSH host key
-    just vm-setup-age {{HOST}}
+    # Commit and push
+    echo "   Committing and pushing..."
+    cd ../nix-secrets && \
+        git add -u .sops.yaml sops/*.yaml && \
+        (git commit -m "chore: register {{HOST}} age key and rekey secrets" || true) && \
+        git push
+    cd "{{justfile_directory()}}"
 
-    # Step 5: Register age key in nix-secrets and rekey
-    just vm-register-age {{HOST}}
+    # Step 4: Update local flake.lock to get rekeyed secrets
+    echo "📥 Updating local nix-secrets flake input..."
+    nix flake update nix-secrets
 
-    # Step 6: Clone repos and rebuild on VM (git-based workflow)
-    # The VM clones repos from GitHub and rebuilds with the rekeyed secrets
-    echo "📦 Setting up repos and rebuilding on VM..."
-    USER=$(just _get-vm-primary-user {{HOST}})
-    USER_HOME="/home/$USER"
-
-    # Clone nix-config if not present
-    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
-        "[ -d $USER_HOME/nix-config ] || sudo -u $USER git clone --branch dev https://github.com/fullstopslash/snowflake.git $USER_HOME/nix-config"
-
-    # Clone nix-secrets if not present
-    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
-        "[ -d $USER_HOME/nix-secrets ] || sudo -u $USER git clone --branch simple https://github.com/fullstopslash/snowflake-secrets.git $USER_HOME/nix-secrets"
-
-    # Update flake lock for nix-secrets (get the rekeyed version)
-    echo "📥 Updating nix-secrets flake input..."
-    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
-        "sudo -u $USER sh -c 'cd $USER_HOME/nix-config && nix flake update nix-secrets'"
-
-    # Add git safe.directory so root can access user-owned repo
-    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
-        "git config --global --add safe.directory $USER_HOME/nix-config"
-
-    # Rebuild with the new config
-    echo "🔨 Rebuilding NixOS..."
-    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
-        "cd $USER_HOME/nix-config && nixos-rebuild switch --flake .#{{HOST}}"
+    # Step 5: Start VM and run nixos-anywhere with FULL config
+    echo "🚀 Starting VM and deploying FULL configuration..."
+    ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force --extra-files "$EXTRA_FILES"
 
     echo ""
     echo "✅ Fresh install complete!"
     echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
     echo "   Display: just vm-start (SDL with GPU acceleration)"
+    echo ""
+    echo "   The system is fully configured - no second rebuild needed!"
 
 # Setup age key on VM from SSH host key (required for SOPS secrets)
 vm-setup-age HOST=DEFAULT_VM_HOST:

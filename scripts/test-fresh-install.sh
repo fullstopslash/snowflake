@@ -53,6 +53,7 @@ HOSTNAME=""
 GUI=false
 FORCE=false
 USE_ANYWHERE=false
+EXTRA_FILES=""
 SSH_PORT=22222
 MEMORY=8
 DISK_SIZE=50
@@ -77,6 +78,10 @@ while [[ $# -gt 0 ]]; do
 	--anywhere)
 		USE_ANYWHERE=true
 		shift
+		;;
+	--extra-files)
+		EXTRA_FILES="$2"
+		shift 2
 		;;
 	--ssh-port)
 		SSH_PORT="$2"
@@ -281,13 +286,23 @@ if [[ $USE_ANYWHERE == true ]]; then
 	echo ""
 	info "Deploying $HOSTNAME configuration..."
 
-	# Use nixos-installer flake which has minimal bootstrap configs with disko
-	cd "$REPO_ROOT/nixos-installer"
-	nix run github:nix-community/nixos-anywhere -- \
-		--flake ".#$HOSTNAME" \
-		-p "$SSH_PORT" \
-		root@127.0.0.1
+	# Build nixos-anywhere command with optional --extra-files
+	ANYWHERE_ARGS=(
+		--flake ".#$HOSTNAME"
+		-p "$SSH_PORT"
+	)
+
+	# Add --extra-files if provided (for pre-generated SSH host key + SOPS age key)
+	if [[ -n $EXTRA_FILES ]]; then
+		info "Using extra-files from: $EXTRA_FILES"
+		ANYWHERE_ARGS+=(--extra-files "$EXTRA_FILES")
+	fi
+
+	# Deploy FULL config directly from main flake (not nixos-installer)
 	cd "$REPO_ROOT"
+	nix run github:nix-community/nixos-anywhere -- \
+		"${ANYWHERE_ARGS[@]}" \
+		root@127.0.0.1
 
 	success "nixos-anywhere deployment complete!"
 	echo ""
