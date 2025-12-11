@@ -33,7 +33,7 @@ in
           type = "nfs";
           mountConfig = {
             # All options in one string for proper systemd mount handling
-            Options = "noatime,nfsvers=3,noresvport";
+            Options = "noatime,nfsvers=4.2,noresvport";
             TimeoutSec = "30";
           };
         };
