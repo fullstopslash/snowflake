@@ -50,6 +50,13 @@
       # Module system (host-spec, roles definitions)
       "modules/common"
 
+      # Module definitions for services (needed for myModules.* options)
+      "modules/services/networking"
+      "modules/services/desktop"
+      "modules/services/storage"
+      "modules/services/security"
+      "modules/services/misc"
+
       # Core NixOS settings (includes nh for rebuild management)
       "hosts/common/core/nixos.nix"
 
@@ -70,17 +77,11 @@
       # Config repo auto-clone for distributed management
       "hosts/common/optional/nix-config-repo.nix"
 
-      # Network storage module (defines services.networkStorage option)
-      "modules/services/storage/network-storage.nix"
-
       # Network storage (NFS mounts from waterbug.lan) - enables the service
       "hosts/common/optional/network-storage.nix"
 
       # Syncthing file synchronization
       "hosts/common/optional/syncthing.nix"
-
-      # Bitwarden automation
-      "modules/services/security/bitwarden.nix"
     ])
 
     # nix-index for comma
@@ -142,7 +143,7 @@
   # Clones nix-config and nix-secrets to ~/nix-config and ~/nix-secrets
   # for distributed config management (pull from GitHub, run nh os switch)
   #
-  services.nixConfigRepo.enable = true;
+  myModules.services.nixConfigRepo.enable = true;
 
   #
   # ========== Networking ==========
