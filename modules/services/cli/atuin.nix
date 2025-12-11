@@ -8,6 +8,10 @@
 # - Reads encryption key from ~/.local/share/atuin/key (placed by sops)
 # - Logs in and performs initial sync on startup/rebuild
 #
+# Shell integration:
+# - Adds `eval "$(atuin init zsh)"` to /etc/zshrc for all interactive shells
+# - Works even when home-manager's zsh is disabled (e.g., chezmoi-managed dotfiles)
+#
 # Usage:
 #   myModules.services.atuin.enable = true;
 {
@@ -48,6 +52,13 @@ in
         mode = "0400";
       };
     };
+
+    # System-level shell integration for zsh
+    # This adds to /etc/zshrc, works even when HM's zsh is disabled (chezmoi users)
+    programs.zsh.interactiveShellInit = ''
+      eval "$(${pkgs.atuin}/bin/atuin init zsh)"
+    '';
+
     # System service to auto-login to Atuin and sync
     # Runs at boot, on rebuilds, and periodically via timer for self-healing
     systemd.services."atuin-autologin" = {
