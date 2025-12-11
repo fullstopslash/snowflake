@@ -26,7 +26,7 @@ let
   # Access to nixpkgs-stable packages via pkgs.stable.*
   stable-packages = final: prev: {
     stable = import inputs.nixpkgs-stable {
-      inherit (final) system;
+      system = final.stdenv.hostPlatform.system;
       config.allowUnfree = true;
     };
   };
@@ -34,7 +34,7 @@ let
   # Access to nixpkgs-unstable packages via pkgs.unstable.*
   unstable-packages = final: prev: {
     unstable = import inputs.nixpkgs-unstable {
-      inherit (final) system;
+      system = final.stdenv.hostPlatform.system;
       config.allowUnfree = true;
     };
   };

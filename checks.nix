@@ -1,6 +1,5 @@
 {
   inputs,
-  system,
   pkgs,
   ...
 }:
@@ -17,7 +16,7 @@
         touch $out
       '';
 
-  pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
+  pre-commit-check = inputs.pre-commit-hooks.lib.${pkgs.stdenv.hostPlatform.system}.run {
     src = ./.;
     default_stages = [ "pre-commit" ];
     hooks = {
@@ -51,8 +50,10 @@
         enable = true;
         name = "destroyed-symlinks";
         description = "detects symlinks which are changed to regular files with a content of a path which that symlink was pointing to.";
-        package = inputs.pre-commit-hooks.checks.${system}.pre-commit-hooks;
-        entry = "${inputs.pre-commit-hooks.checks.${system}.pre-commit-hooks}/bin/destroyed-symlinks";
+        package = inputs.pre-commit-hooks.checks.${pkgs.stdenv.hostPlatform.system}.pre-commit-hooks;
+        entry = "${
+          inputs.pre-commit-hooks.checks.${pkgs.stdenv.hostPlatform.system}.pre-commit-hooks
+        }/bin/destroyed-symlinks";
         types = [ "symlink" ];
       };
 
