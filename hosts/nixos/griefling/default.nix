@@ -70,6 +70,12 @@
       # Config repo auto-clone for distributed management
       "hosts/common/optional/nix-config-repo.nix"
 
+      # Network storage (NFS mounts from waterbug.lan)
+      "hosts/common/optional/network-storage.nix"
+
+      # Syncthing file synchronization
+      "hosts/common/optional/syncthing.nix"
+
       # Bitwarden automation
       "modules/services/security/bitwarden.nix"
     ])
@@ -107,6 +113,7 @@
       base = true; # User password, age keys
       cli = true; # CLI tool secrets (atuin, etc)
       desktop = true; # Desktop app secrets
+      network = true; # Network secrets (syncthing device IDs, tailscale)
     };
 
     # Inherit secrets config from inputs
