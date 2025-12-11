@@ -1,4 +1,4 @@
-# The options set using this module are intended for use with logic defined in specific workspace management configurations. For example, see nix-config/home/ta/common/optional/hyprland/
+# Monitor configuration options for workspace management (e.g., hyprland)
 { lib, config, ... }:
 {
   options.monitors = lib.mkOption {

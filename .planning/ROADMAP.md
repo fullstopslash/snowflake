@@ -12,6 +12,7 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 - [ ] **Phase 4: Secrets & Security** - sops-nix across roles/hosts with secure bootstrapping
 - [ ] **Phase 5: Reference Host** - Migrate malphas, validate minimal host pattern
 - [ ] **Phase 6: Auto-Update System** - Daily rebuilds, WoL-triggered updates, git pull automation
+- [ ] **Phase 7: Structure Reorganization** - Unify modules, clean up hosts/common, rename home to home-manager
 
 ## Phase Details
 
@@ -78,6 +79,24 @@ Key work:
 - Multi-remote git sync (GitHub, Codeberg, self-hosted)
 - Rollback safety (keep N generations)
 
+### Phase 7: Structure Reorganization
+**Goal**: Clean, unified module structure with minimal home-manager usage
+**Depends on**: Phase 5 (working hosts)
+**Plans**: 4 plans
+
+Plans:
+- [x] 07-01: Remove user `ta` (delete all ta-related files and references)
+- [ ] 07-02: Convert hosts/common/optional to modules (32 files → proper mkOption modules)
+- [ ] 07-03: Rename /home/ to /home-manager/ (clearer naming, restructure users/)
+- [ ] 07-04: Migrate HM configs to NixOS (minimize home-manager, use NixOS where possible)
+
+Key work:
+- All option definitions in `/modules/` with mkOption/mkEnableOption
+- `/hosts/common/` for truly universal configs only
+- Features enabled via `myModules.*.enable = true` pattern
+- `/home-manager/` only for HM-required configs (nixvim, dotfiles)
+- Document why each remaining HM config is necessary
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -88,3 +107,4 @@ Key work:
 | 4. Secrets & Security | 4/4 | Complete | 2025-12-08 |
 | 5. Reference Host | 2/2 | Complete | 2025-12-08 |
 | 6. Auto-Update System | 0/? | Not started | - |
+| 7. Structure Reorganization | 1/4 | In progress | - |
