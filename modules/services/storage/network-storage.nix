@@ -26,13 +26,6 @@ in
     services.rpcbind.enable = true;
     boot.supportedFilesystems = [ "nfs" ];
 
-    # Ensure mount points exist
-    systemd.tmpfiles.rules = [
-      "d /mnt/waterbug 0755 root root -"
-      "d /storage 0755 root root -"
-      "d /mnt/apps 0755 root root -"
-    ];
-
     # Strategy:
     # - Mount NFSv4 pseudoroot at /mnt/waterbug
     # - Bind-mount desired subdirectories to stable targets
@@ -59,7 +52,10 @@ in
 
         # Bind mount a subdirectory from the NFS root to a target
         bindMount =
-          { from, to }:
+          {
+            from,
+            to,
+          }:
           {
             type = "none";
             what = from;
@@ -95,7 +91,6 @@ in
       in
       [
         # Automount the NFS root (so bind mounts can pull it in)
-        (commonAuto // { where = "/mnt/waterbug"; })
         # Automount user-facing bind mounts
         (commonAuto // { where = "/storage"; })
         (commonAuto // { where = "/mnt/apps"; })
