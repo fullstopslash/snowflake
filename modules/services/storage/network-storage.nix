@@ -32,11 +32,8 @@ in
         commonMountOptions = {
           type = "nfs";
           mountConfig = {
-            Options = [
-              "noatime"
-              "nfsvers=3"
-              "noresvport" # Use non-reserved ports (for NAT/VM environments)
-            ];
+            # All options in one string for proper systemd mount handling
+            Options = "noatime,nfsvers=3,noresvport";
             TimeoutSec = "30";
           };
         };
