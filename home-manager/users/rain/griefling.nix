@@ -6,16 +6,16 @@
         #
         # ========== Required Configs ==========
         #
-        "home/common/core"
-        "home/common/core/nixos.nix"
+        "home-manager/common/core"
+        "home-manager/common/core/nixos.nix"
 
-        "home/rain/common/nixos.nix"
+        "home-manager/users/rain/common/nixos.nix"
       ]
       ++
         #
         # ========== Host-specific Optional Configs ==========
         #
-        (map (f: "home/common/optional/${f}") [
+        (map (f: "home-manager/common/optional/${f}") [
           "desktops/hyprland"
           "desktops/hyprland/host-config-link.nix"
           "desktops/waybar.nix"

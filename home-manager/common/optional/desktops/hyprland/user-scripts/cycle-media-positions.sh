@@ -17,8 +17,8 @@ readonly DEFAULT_PATTERNS='[
 
 # Find media window (single hyprctl call, single jq pass)
 patterns=$([ -f "$CONFIG_FILE" ] &&
-    jq -Rs 'split("\n")|map(select(test("^[^#]")and length>0)|split("=")|{key:.[0],val:.[1]})' "$CONFIG_FILE" ||
-    echo "$DEFAULT_PATTERNS")
+	jq -Rs 'split("\n")|map(select(test("^[^#]")and length>0)|split("=")|{key:.[0],val:.[1]})' "$CONFIG_FILE" ||
+	echo "$DEFAULT_PATTERNS")
 
 result=$(hyprctl clients -j | jq -r --argjson p "$patterns" '
     first(.[]as$c|$p[]as$p|
@@ -39,7 +39,7 @@ state_file="/tmp/hypr_media_cycle_$(printf '%s' "$ident" | sed 's/[^a-zA-Z0-9]/_
 
 # Get current index (minimal I/O)
 idx=0
-[ -f "$state_file" ] && read -r idx < "$state_file"
+[ -f "$state_file" ] && read -r idx <"$state_file"
 [ "$idx" -ge "$num_positions" ] 2>/dev/null && idx=0
 
 # Parse position (pure shell, no external calls)
@@ -51,4 +51,4 @@ hyprctl dispatch movewindowpixel "exact $1 $2,address:$addr"
 hyprctl dispatch resizewindowpixel "exact $3 $4,address:$addr"
 
 # Update state (single write)
-echo $((  (idx + 1) % num_positions )) > "$state_file"
+echo $(((idx + 1) % num_positions)) >"$state_file"

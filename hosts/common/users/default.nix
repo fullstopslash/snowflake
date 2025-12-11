@@ -108,9 +108,9 @@ in
             "${user}".imports = lib.flatten [
               (lib.optional (!hostSpec.isMinimal) (
                 map (fullPathIfExists) [
-                  "home/${user}/${hostSpec.hostName}.nix"
-                  "home/${user}/common"
-                  "home/${user}/common/${platform}.nix"
+                  "home-manager/users/${user}/${hostSpec.hostName}.nix"
+                  "home-manager/users/${user}/common"
+                  "home-manager/users/${user}/common/${platform}.nix"
                 ]
               ))
               # Static module with common values avoids duplicate file per user
@@ -135,7 +135,7 @@ in
               plugins = [
                 {
                   name = "powerlevel10k-config";
-                  src = lib.custom.relativeToRoot "home/common/core/zsh/p10k";
+                  src = lib.custom.relativeToRoot "home-manager/common/core/zsh/p10k";
                   file = "p10k.zsh.theme";
                 }
                 {

@@ -6,9 +6,9 @@ app_command="$2"
 
 # Check if the application is already running
 if hyprctl clients | grep -q "class: $app_class"; then
-  # Focus the existing window
-  hyprctl dispatch focuswindow "class:$app_class"
+	# Focus the existing window
+	hyprctl dispatch focuswindow "class:$app_class"
 else
-  # Launch the application
-  exec $app_command &
+	# Launch the application
+	exec $app_command &
 fi

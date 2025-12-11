@@ -1,15 +1,16 @@
 {
   pkgs,
-  config,
   lib,
   ...
-}: let
+}:
+let
   # Custom scripts directory
   scriptsDir = ./user-scripts;
 
   # Make scripts available as derivations
   mkScript = name: pkgs.writeShellScript name (builtins.readFile "${scriptsDir}/${name}");
-in {
+in
+{
   wayland.windowManager.hyprland = {
     settings = {
       #

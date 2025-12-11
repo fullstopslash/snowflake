@@ -24,7 +24,7 @@
       pkgs.hyprlandPlugins.hy3
       #pkgs.unstable.hyprlandPlugins.hy3
     ];
-    
+
     # Enable config generation for VM
     # NOTE: Config is now managed by Nix for griefling VM
     # extraConfig = "# Config managed by chezmoi";

@@ -20,23 +20,23 @@ clients_json="$(hyprctl clients -j 2>/dev/null)"
 
 # Focus a window by address and exit
 focus_address() {
-  addr="$1"
-  [ -n "$addr" ] || return 1
-  hyprctl dispatch focuswindow "address:$addr"
-  exit 0
+	addr="$1"
+	[ -n "$addr" ] || return 1
+	hyprctl dispatch focuswindow "address:$addr"
+	exit 0
 }
 
 # Execute fallback command if provided
 run_fallback() {
-  if [ "$#" -eq 0 ]; then
-    exit 0
-  fi
-  if [ "$#" -eq 1 ]; then
-    sh -c "$1" &
-    exit 0
-  fi
-  "$@" &
-  exit 0
+	if [ "$#" -eq 0 ]; then
+		exit 0
+	fi
+	if [ "$#" -eq 1 ]; then
+		sh -c "$1" &
+		exit 0
+	fi
+	"$@" &
+	exit 0
 }
 
 # Parse arguments: collect matchers until '--', then fallback command
@@ -45,25 +45,25 @@ last_bare=""
 matchers_buf=""
 
 while [ "$#" -gt 0 ]; do
-  if [ "$in_fallback" -eq 1 ]; then
-    break
-  fi
-  case "$1" in
-  --)
-    in_fallback=1
-    shift
-    ;;
-  *=*)
-    # Append matcher token as its own line (key=value)
-    matchers_buf=$(printf '%s\n%s\n' "$matchers_buf" "$1")
-    shift
-    ;;
-  *)
-    # Keep last bare token to allow single-word fallback without '--'
-    last_bare="$1"
-    shift
-    ;;
-  esac
+	if [ "$in_fallback" -eq 1 ]; then
+		break
+	fi
+	case "$1" in
+	--)
+		in_fallback=1
+		shift
+		;;
+	*=*)
+		# Append matcher token as its own line (key=value)
+		matchers_buf=$(printf '%s\n%s\n' "$matchers_buf" "$1")
+		shift
+		;;
+	*)
+		# Keep last bare token to allow single-word fallback without '--'
+		last_bare="$1"
+		shift
+		;;
+	esac
 done
 
 # Resolve first matching address in one jq pass, respecting matcher order
@@ -101,9 +101,9 @@ addr=$(printf '%s' "$matchers_buf" | jq -r -R -s --argjson clients "$clients_jso
 
 # No matcher matched; run fallback
 if [ "$in_fallback" -eq 1 ]; then
-  run_fallback "$@"
+	run_fallback "$@"
 else
-  [ -n "$last_bare" ] && run_fallback "$last_bare"
+	[ -n "$last_bare" ] && run_fallback "$last_bare"
 fi
 
 exit 0

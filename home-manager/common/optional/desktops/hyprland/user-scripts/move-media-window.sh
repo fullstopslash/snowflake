@@ -15,8 +15,8 @@ readonly DEFAULT_PATTERNS='[
 
 # Find media window (single hyprctl call, single jq pass)
 patterns=$([ -f "$CONFIG_FILE" ] &&
-    jq -Rs 'split("\n")|map(select(test("^[^#]")and length>0)|split("=")|{key:.[0],val:.[1]})' "$CONFIG_FILE" ||
-    echo "$DEFAULT_PATTERNS")
+	jq -Rs 'split("\n")|map(select(test("^[^#]")and length>0)|split("=")|{key:.[0],val:.[1]})' "$CONFIG_FILE" ||
+	echo "$DEFAULT_PATTERNS")
 
 addr=$(hyprctl clients -j | jq -r --argjson p "$patterns" '
     first(.[]as$c|$p[]as$p|
