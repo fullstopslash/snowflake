@@ -86,8 +86,8 @@ Key work:
 
 Plans:
 - [x] 07-01: Remove user `ta` (delete all ta-related files and references)
-- [ ] 07-02: Convert hosts/common/optional to modules (32 files → proper mkOption modules)
-- [ ] 07-03: Rename /home/ to /home-manager/ (clearer naming, restructure users/)
+- [x] 07-02: Convert hosts/common/optional to modules (32 files → proper mkOption modules)
+- [x] 07-03: Rename /home/ to /home-manager/ (clearer naming, restructure users/)
 - [ ] 07-04: Migrate HM configs to NixOS (minimize home-manager, use NixOS where possible)
 
 Key work:
@@ -107,4 +107,4 @@ Key work:
 | 4. Secrets & Security | 4/4 | Complete | 2025-12-08 |
 | 5. Reference Host | 2/2 | Complete | 2025-12-08 |
 | 6. Auto-Update System | 0/? | Not started | - |
-| 7. Structure Reorganization | 1/4 | In progress | - |
+| 7. Structure Reorganization | 3/4 | In progress | - |
