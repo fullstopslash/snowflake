@@ -13,6 +13,7 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 - [ ] **Phase 5: Reference Host** - Migrate malphas, validate minimal host pattern
 - [ ] **Phase 6: Auto-Update System** - Daily rebuilds, WoL-triggered updates, git pull automation
 - [ ] **Phase 7: Structure Reorganization** - Unify modules, clean up hosts/common, rename home to home-manager
+- [ ] **Phase 8: Role System Refinement** - Common role base, task-based roles, minimal host pattern
 
 ## Phase Details
 
@@ -97,6 +98,34 @@ Key work:
 - `/home-manager/` only for HM-required configs (nixvim, dotfiles)
 - Document why each remaining HM config is necessary
 
+### Phase 8: Role System Refinement
+**Goal**: Perfect the role system so hosts are super minimal (~15-30 lines). Add task-based roles for composition.
+**Depends on**: Phase 7
+**Plans**: 4 plans
+
+Plans:
+- [x] 08-01: Create roles/common.nix with universal config, refactor default.nix
+- [x] 08-02: Add task-based roles (development, mediacenter) for composition
+- [x] 08-03: Refactor hostSpec so roles set most values, hosts only set identity
+- [x] 08-04: Migrate hosts to minimal pattern (griefling 286→204, malphas 47→42)
+
+Key work:
+- `roles/common.nix` with universal baseline all roles inherit
+- Hardware roles (desktop, laptop, vm) + task roles (development, mediacenter)
+- Roles compose: `roles.laptop + roles.development`
+- hostSpec options categorized: identity (host sets) vs behavioral (role sets)
+- Minimal host template: hardware-config + role + hostname + quirks
+
+Target host pattern:
+```nix
+{ lib, ... }: {
+  imports = [ ./hardware-configuration.nix ];
+  roles.desktop = true;
+  hostSpec.hostName = "myhost";
+  system.stateVersion = "23.11";
+}
+```
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -108,3 +137,4 @@ Key work:
 | 5. Reference Host | 2/2 | Complete | 2025-12-08 |
 | 6. Auto-Update System | 0/? | Not started | - |
 | 7. Structure Reorganization | 4/4 | Complete | 2025-12-11 |
+| 8. Role System Refinement | 4/4 | Complete | 2025-12-11 |

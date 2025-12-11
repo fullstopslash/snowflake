@@ -1,8 +1,8 @@
-{
-  config,
-  lib,
-  ...
-}:
+# Darwin role - macOS (placeholder)
+#
+# NOTE: This is a placeholder. Darwin hosts use nix-darwin, not NixOS modules.
+# Actual implementation requires nix-darwin integration.
+{ config, lib, ... }:
 let
   cfg = config.roles;
 in

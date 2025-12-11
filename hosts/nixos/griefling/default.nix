@@ -21,6 +21,7 @@
     #
     # ========== Home Manager (Unstable) ==========
     # Using unstable for newer features and nixpkgs-unstable compatibility
+    # NOTE: Can't use hosts/common/core because it imports stable home-manager
     #
     inputs.home-manager-unstable.nixosModules.home-manager
 
@@ -43,138 +44,63 @@
 
     #
     # ========== Core Modules ==========
-    # Import individually since we can't use hosts/common/core
-    # (it imports stable home-manager)
+    # Import individually since we can't use hosts/common/core (it imports stable home-manager)
     #
     (map lib.custom.relativeToRoot [
       # Module system (host-spec, roles definitions)
       "modules/common"
 
-      # Module definitions for services (needed for myModules.* options)
-      "modules/services/networking"
-      "modules/services/desktop"
-      "modules/services/storage"
-      "modules/services/security"
-      "modules/services/misc"
-
-      # Core NixOS settings (includes nh for rebuild management)
+      # Core NixOS settings
       "hosts/common/core/nixos.nix"
 
-      # Sops secrets (role-based categories)
+      # Sops secrets
       "hosts/common/core/sops"
       "hosts/common/core/ssh.nix"
 
       # User management (auto-imports home/rain/griefling.nix)
       "hosts/common/users"
 
-      # Desktop services
+      # Desktop services (provided by roles, but need these optional ones)
       "hosts/common/optional/hyprland.nix"
       "hosts/common/optional/wayland.nix"
       "hosts/common/optional/services/ly.nix"
       "hosts/common/optional/tailscale.nix"
       "hosts/common/optional/services/openssh.nix"
 
-      # Config repo auto-clone for distributed management
+      # Config repo auto-clone
       "hosts/common/optional/nix-config-repo.nix"
 
-      # Network storage (NFS mounts from waterbug.lan) - enables the service
+      # Network storage
       "hosts/common/optional/network-storage.nix"
 
-      # Syncthing file synchronization
+      # Syncthing
       "hosts/common/optional/syncthing.nix"
     ])
 
     # nix-index for comma
     inputs.nix-index-database.nixosModules.nix-index
-    { programs.nix-index-database.comma.enable = true; }
-
-    # Explicitly disable display managers we don't want
-    (
-      { lib, ... }:
-      {
-        services.displayManager.sddm.enable = lib.mkForce false;
-      }
-    )
   ];
 
-  #
-  # ========== Host Specification ==========
-  # isMinimal = false allows auto-import of home/rain/griefling.nix
-  #
+  # Desktop VM with development tools
+  roles.desktop = true;
+
   hostSpec = {
     hostName = "griefling";
-    primaryUsername = "rain";
-    username = "rain";
-    handle = "rain"; # Your handle, not emergentmind
-    users = [ "rain" ];
-    useWayland = true;
-    useYubikey = false;
-    isMinimal = false; # Allow full home-manager config import
-    hasSecrets = true; # Enable sops for testing
-
-    # Enable relevant secret categories
-    secretCategories = {
-      base = true; # User password, age keys
-      cli = true; # CLI tool secrets (atuin, etc)
-      desktop = true; # Desktop app secrets
-      network = true; # Network secrets (syncthing device IDs, tailscale)
-    };
-
-    # Inherit secrets config from inputs
-    inherit (inputs.nix-secrets)
-      domain
-      email
-      userFullName
-      networking
-      ;
+    # Desktop role provides: useWayland=true, isDevelopment=true, secretCategories
   };
 
-  #
-  # ========== Bitwarden Automation ==========
-  #
+  # Bitwarden automation for testing
   roles.bitwardenAutomation = {
     enable = true;
     enableAutoLogin = true;
     syncInterval = 30;
   };
 
-  #
-  # ========== Config Repo Auto-Clone ==========
-  # Clones nix-config and nix-secrets to ~/nix-config and ~/nix-secrets
-  # for distributed config management (pull from GitHub, run nh os switch)
-  #
+  # Config repo auto-clone for testing
   myModules.services.nixConfigRepo.enable = true;
 
-  #
-  # ========== Networking ==========
-  #
-  networking = {
-    hostName = config.hostSpec.hostName;
-    networkmanager.enable = true;
-    enableIPv6 = false;
-  };
-
-  #
-  # ========== Nix Settings ==========
-  #
-  nix.settings = {
-    experimental-features = [
-      "nix-command"
-      "flakes"
-    ];
-    warn-dirty = false;
-  };
-
-  #
-  # ========== Overlays ==========
-  #
-  nixpkgs = {
-    overlays = [ outputs.overlays.default ];
-    config = {
-      allowUnfree = true;
-      allowBroken = true;
-    };
-  };
+  # nix-index database
+  programs.nix-index-database.comma.enable = true;
 
   #
   # ========== Home Manager Configuration ==========
@@ -189,30 +115,28 @@
   };
 
   #
-  # ========== System Packages ==========
-  # Only packages needed for testing core services
+  # ========== Overlays ==========
   #
-  environment.systemPackages = with pkgs; [
-    # Core utilities
-    vim
-    git
-    curl
-    rsync
-
-    # Testing services
-    tailscale
-    ktailctl
-    easyeffects
-    kdePackages.kdeconnect-kde
-
-    # Desktop
-    ghostty # terminal
-    wofi # launcher
-  ];
+  nixpkgs.overlays = [ outputs.overlays.default ];
 
   #
-  # ========== Boot Configuration ==========
+  # ========== Nix Settings ==========
   #
+  nix.settings = {
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    warn-dirty = false;
+  };
+
+  # Networking
+  networking = {
+    networkmanager.enable = true;
+    enableIPv6 = false;
+  };
+
+  # VM-specific boot configuration
   boot.loader = {
     systemd-boot.enable = true;
     efi.canTouchEfiVariables = true;
@@ -233,9 +157,7 @@
     ];
   };
 
-  #
-  # ========== VM Display (virtio-gpu for SDL) ==========
-  #
+  # VM display (virtio-gpu for SDL)
   boot.kernelParams = [
     "console=tty1"
     "console=ttyS0,115200"
@@ -245,42 +167,38 @@
     "bochs_drm"
   ];
 
-  # virtio-gpu for SDL with hardware acceleration
-  services.xserver.videoDrivers = [
-    "modesetting"
-  ];
+  services.xserver.videoDrivers = [ "modesetting" ];
   hardware.graphics = {
     enable = true;
-    extraPackages = with pkgs; [
-      mesa
-    ];
+    extraPackages = with pkgs; [ mesa ];
   };
 
   # Ensure proper TTY for LY display manager
-  services.displayManager.ly.settings.tty = lib.mkForce 2; # Use tty2 to avoid conflicts
+  services.displayManager.ly.settings.tty = lib.mkForce 2;
 
-  #
-  # ========== Services ==========
-  #
+  # VM-specific services
   services.qemuGuest.enable = true;
-  # Using SDL display, not SPICE
-  services.spice-vdagentd.enable = false;
+  services.spice-vdagentd.enable = lib.mkForce false; # Using SDL, not SPICE
+
+  # Audio for desktop testing
   services.pipewire = {
     enable = true;
     alsa.enable = true;
     pulse.enable = true;
   };
 
-  # SSH: Enable password auth for test VM (no yubikey)
+  # SSH for test VM
   services.openssh.settings.PasswordAuthentication = lib.mkForce true;
   services.openssh.settings.PermitRootLogin = lib.mkForce "yes";
 
-  # Passwordless sudo for wheel group (dev VM only)
+  # Passwordless sudo for dev VM
   security.sudo.wheelNeedsPassword = false;
 
-  # Minimal docs
+  # Minimal docs for VM
   documentation.enable = false;
 
-  # https://wiki.nixos.org/wiki/FAQ/When_do_I_update_stateVersion
+  # Disable unwanted display managers
+  services.displayManager.sddm.enable = lib.mkForce false;
+
   system.stateVersion = "23.11";
 }

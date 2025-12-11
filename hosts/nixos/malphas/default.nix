@@ -3,30 +3,33 @@
 # A minimal QEMU VM for testing the role-based configuration system.
 # Uses roles.vm for minimal configuration without desktop overhead.
 #
-{
-  lib,
-  ...
-}:
+{ lib, ... }:
 {
   imports = [
     ./hardware-configuration.nix
     (lib.custom.relativeToRoot "hosts/common/core")
   ];
 
-  # VM role - minimal configuration for testing
+  # Minimal VM role
   roles.vm = true;
 
   hostSpec = {
     hostName = "malphas";
-    # VM doesn't have real secrets - use fixture or disable
-    hasSecrets = false;
+    hasSecrets = false; # VM doesn't have real secrets
   };
 
-  networking = {
-    networkmanager.enable = true;
-    enableIPv6 = false;
+  # VM-specific boot configuration
+  boot.loader = {
+    systemd-boot.enable = true;
+    efi.canTouchEfiVariables = true;
   };
 
+  boot.initrd.systemd.enable = true;
+
+  # Networking
+  networking.networkmanager.enable = true;
+
+  # SSH for test VM
   services.openssh = {
     enable = true;
     settings = {
@@ -34,14 +37,6 @@
       PasswordAuthentication = true;
     };
   };
-
-  boot.loader = {
-    systemd-boot.enable = true;
-    efi.canTouchEfiVariables = true;
-    timeout = 3;
-  };
-
-  boot.initrd.systemd.enable = true;
 
   system.stateVersion = "25.05";
 }
