@@ -1,8 +1,16 @@
 # Document processing role for wiki Makefile
-{ pkgs, ... }:
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.myModules.apps.development.documentProcessing;
+in
 {
-  # Document processing packages for wiki Makefile
-  environment.systemPackages = with pkgs; [
+  options.myModules.apps.development.documentProcessing = {
+    enable = lib.mkEnableOption "Document processing tools (pandoc, texlive, typst)";
+  };
+
+  config = lib.mkIf cfg.enable {
+    # Document processing packages for wiki Makefile
+    environment.systemPackages = with pkgs; [
     # Pandoc - Universal document converter
     pandoc
 
@@ -66,4 +74,5 @@
     qpdf
     pdf2svg
   ];
+  };
 }
