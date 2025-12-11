@@ -1,6 +1,7 @@
 # CLI secrets category: credentials for CLI tools
 #
 # Includes secrets for Atuin shell history sync and other CLI applications.
+# Credentials are stored in /run/secrets (tmpfs) for security - they never persist to disk.
 
 {
   lib,
@@ -13,65 +14,74 @@ let
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
   hasSecrets = config.hostSpec.hasSecrets;
   cliEnabled = config.hostSpec.secretCategories.cli or false;
+  primaryUser = config.hostSpec.primaryUsername;
 in
 {
   config = lib.mkIf (hasSecrets && cliEnabled) {
     sops.secrets = {
       # Atuin credentials for shell history sync
-      # Secret names map to nested YAML paths atuin/username, atuin/password, atuin/key
+      # Stored in /run/secrets (tmpfs) for security - readable only by the user
       "atuin/username" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = config.hostSpec.primaryUsername;
-        path = "/home/${config.hostSpec.primaryUsername}/.config/atuin/.username";
-        mode = "0600";
+        owner = primaryUser;
+        # Default path is /run/secrets/atuin/username (secure tmpfs)
+        mode = "0400";
       };
       "atuin/password" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = config.hostSpec.primaryUsername;
-        path = "/home/${config.hostSpec.primaryUsername}/.config/atuin/.password";
-        mode = "0600";
+        owner = primaryUser;
+        mode = "0400";
       };
       # Encryption key for syncing - must be the same across all devices
+      # This one goes to ~/.local/share/atuin/key since atuin reads it from there
       "atuin/key" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = config.hostSpec.primaryUsername;
-        path = "/home/${config.hostSpec.primaryUsername}/.local/share/atuin/key";
-        mode = "0600";
+        owner = primaryUser;
+        path = "/home/${primaryUser}/.local/share/atuin/key";
+        mode = "0400";
       };
     };
 
-    # Systemd service to auto-login to Atuin
+    # Systemd service to auto-login to Atuin and sync
+    # Runs after system activation and on first user login
     systemd.user.services."atuin-autologin" = {
       description = "Atuin auto-login and initial sync";
       wantedBy = [ "default.target" ];
       after = [ "network-online.target" ];
+      # Re-run on system activation (rebuilds)
+      restartIfChanged = true;
       serviceConfig = {
         Type = "oneshot";
+        # Retry on network failures
+        Restart = "on-failure";
+        RestartSec = 5;
+        RestartMaxDelaySec = 30;
       };
       script = ''
         set -eu
         echo "Starting Atuin auto-login..."
 
-        # Ensure directories exist (SOPS creates the key file via path)
+        # Ensure directories exist
         mkdir -p "$HOME/.config/atuin" "$HOME/.local/share/atuin"
         ATUIN_BIN="${pkgs.atuin}/bin/atuin"
         KEY_FILE="$HOME/.local/share/atuin/key"
-        USERNAME_FILE="$HOME/.config/atuin/.username"
-        PASSWORD_FILE="$HOME/.config/atuin/.password"
+        # Credentials are in /run/secrets (secure tmpfs)
+        USERNAME_FILE="/run/secrets/atuin/username"
+        PASSWORD_FILE="/run/secrets/atuin/password"
         SESSION_FILE="$HOME/.local/share/atuin/session"
 
         # Check for required SOPS-provided files
         if [ ! -f "$USERNAME_FILE" ]; then
-          echo "Username file not found at $USERNAME_FILE (SOPS secret not deployed yet), skipping..."
-          exit 0
+          echo "Username not found at $USERNAME_FILE (SOPS secret not deployed yet)"
+          exit 1  # Exit with error to trigger retry
         fi
         if [ ! -f "$PASSWORD_FILE" ]; then
-          echo "Password file not found at $PASSWORD_FILE (SOPS secret not deployed yet), skipping..."
-          exit 0
+          echo "Password not found at $PASSWORD_FILE (SOPS secret not deployed yet)"
+          exit 1
         fi
         if [ ! -f "$KEY_FILE" ] || [ ! -s "$KEY_FILE" ]; then
-          echo "Key file not found or empty at $KEY_FILE (SOPS secret not deployed yet), skipping..."
-          exit 0
+          echo "Key not found or empty at $KEY_FILE (SOPS secret not deployed yet)"
+          exit 1
         fi
 
         # Check if already logged in with valid session
@@ -95,9 +105,11 @@ in
         # Note: server is configured in ~/.config/atuin/config.toml (sync_address)
         if "$ATUIN_BIN" login -u "$USERNAME" -p "$PASSWORD" -k "$KEY"; then
           echo "Login successful!"
-          "$ATUIN_BIN" sync || true
+          "$ATUIN_BIN" sync
+          echo "Initial sync complete"
         else
           echo "Login failed" 1>&2
+          exit 1
         fi
       '';
     };
