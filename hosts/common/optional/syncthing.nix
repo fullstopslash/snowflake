@@ -69,29 +69,27 @@ in
       # Get API key from config
       API_KEY=$(${pkgs.gnugrep}/bin/grep -oP '(?<=<apikey>)[^<]+' "$configDir/config.xml")
 
-      # Helper function to call syncthing API
-      api() {
-        ${pkgs.curl}/bin/curl -sSLk -H "X-API-Key: $API_KEY" "$@" http://127.0.0.1:8384"$1"
-      }
-
-      # Set default folder path
-      api "/rest/config/defaults/folder" -X PATCH \
-        -H "Content-Type: application/json" \
-        -d '{"path":"${homeDir}"}'
-
       # Read device IDs from sops secrets
       WATERBUG_ID=$(cat ${config.sops.secrets."syncthing_waterbug_id".path})
       PIXEL_ID=$(cat ${config.sops.secrets."syncthing_pixel_id".path})
 
-      # Configure waterbug device
-      api "/rest/config/devices" -X POST \
+      # Set default folder path
+      ${pkgs.curl}/bin/curl -sSLk -H "X-API-Key: $API_KEY" -X PATCH \
         -H "Content-Type: application/json" \
-        -d "{\"deviceID\":\"$WATERBUG_ID\",\"name\":\"waterbug\",\"autoAcceptFolders\":true}"
+        -d '{"path":"${homeDir}"}' \
+        "http://127.0.0.1:8384/rest/config/defaults/folder"
+
+      # Configure waterbug device
+      ${pkgs.curl}/bin/curl -sSLk -H "X-API-Key: $API_KEY" -X POST \
+        -H "Content-Type: application/json" \
+        -d "{\"deviceID\":\"$WATERBUG_ID\",\"name\":\"waterbug\",\"autoAcceptFolders\":true}" \
+        "http://127.0.0.1:8384/rest/config/devices"
 
       # Configure pixel device (as introducer)
-      api "/rest/config/devices" -X POST \
+      ${pkgs.curl}/bin/curl -sSLk -H "X-API-Key: $API_KEY" -X POST \
         -H "Content-Type: application/json" \
-        -d "{\"deviceID\":\"$PIXEL_ID\",\"name\":\"pixel\",\"autoAcceptFolders\":true,\"introducer\":true}"
+        -d "{\"deviceID\":\"$PIXEL_ID\",\"name\":\"pixel\",\"autoAcceptFolders\":true,\"introducer\":true}" \
+        "http://127.0.0.1:8384/rest/config/devices"
 
       echo "Syncthing configured with devices from sops secrets"
     '';
