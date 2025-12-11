@@ -55,8 +55,8 @@ in
       # These extend the universal defaults in modules/common/universal.nix
       #
       hostSpec = {
-        # Universal behavioral defaults (all production hosts)
-        isProduction = lib.mkDefault true;
+        # Universal behavioral defaults
+        # Note: isProduction is set per hardware role (server/pi=true, vm=false)
         hasSecrets = lib.mkDefault true;
         useAtticCache = lib.mkDefault true;
 
