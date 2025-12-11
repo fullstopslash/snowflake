@@ -19,6 +19,9 @@ in
     # Test VMs need sops passwords, so override isMinimal from VM role
     hostSpec.isMinimal = lib.mkForce false;
 
+    # Enable CLI secret category for atuin credentials
+    hostSpec.secretCategories.cli = lib.mkDefault true;
+
     # Test-friendly settings (use plain values to override mkDefault in base modules)
     security.sudo.wheelNeedsPassword = false;
     services.openssh.settings.PasswordAuthentication = true;
@@ -28,10 +31,12 @@ in
     # Auto-clone nix-config and nix-secrets repos on first login
     myModules.services.nixConfigRepo.enable = true;
 
+    # Atuin shell history sync with auto-login
+    myModules.services.atuin.enable = true;
+
     # Useful apps for test VMs
     environment.systemPackages = with pkgs; [
       firefox
-      atuin
     ];
 
     # Syncthing for file sync
