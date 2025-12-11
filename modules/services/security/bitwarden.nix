@@ -10,12 +10,13 @@ let
   cfg = config.roles.bitwardenAutomation;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 
-  # Create a script that uses OAuth + KDE Wallet for full automation
+  # Create a script that uses OAuth + libsecret (gnome-keyring) for full automation
+  # This is the Hyprland-native approach instead of KDE Wallet
   bitwarden-autologin = pkgs.writeShellScript "bitwarden-autologin" ''
     #!/usr/bin/env sh
     set -eu
 
-    echo "Starting Bitwarden OAuth + KDE Wallet automation..."
+    echo "Starting Bitwarden OAuth + libsecret automation..."
 
     # Read secrets from SOPS - handle missing files gracefully
     SECRET_SERVER="${config.sops.secrets."bitwarden/server".path}"
@@ -82,15 +83,15 @@ let
         ;;
     esac
 
-    # If we're locked, try to unlock using KDE Wallet
+    # If we're locked, try to unlock using libsecret (gnome-keyring)
     if [ "$STATUS" = "locked" ]; then
-      echo "Attempting to unlock using KDE Wallet..."
+      echo "Attempting to unlock using libsecret keyring..."
 
-      # Try to get password from KDE Wallet
-      STORED_PASSWORD=$(${pkgs.kdePackages.kwallet}/bin/kwallet-query -f bitwarden -e bitwarden-master-password 2>/dev/null || echo "")
+      # Try to get password from libsecret (gnome-keyring)
+      STORED_PASSWORD=$(${pkgs.libsecret}/bin/secret-tool lookup service bitwarden attribute master-password 2>/dev/null || echo "")
 
       if [ -n "$STORED_PASSWORD" ]; then
-        echo "Found stored password in KDE Wallet, attempting unlock..."
+        echo "Found stored password in keyring, attempting unlock..."
         export BW_PASSWORD="$STORED_PASSWORD"
 
         if ${pkgs.bitwarden-cli}/bin/bw unlock --passwordenv BW_PASSWORD; then
@@ -109,14 +110,13 @@ let
         fi
       fi
 
-      # If still locked, prompt user and store in KDE Wallet
+      # If still locked, prompt user and store in keyring
       if [ "$STATUS" = "locked" ]; then
         echo "No stored password or stored password failed."
         echo "Please unlock manually with: bw unlock"
-        echo "After unlocking, run this script again to store the password in KDE Wallet."
         echo ""
         echo "To store password for future use, run:"
-        echo "echo 'your-master-password' | ${pkgs.kdePackages.kwallet}/bin/kwallet-query -f bitwarden -w bitwarden-master-password"
+        echo "echo 'your-master-password' | secret-tool store --label='Bitwarden Master Password' service bitwarden attribute master-password"
         exit 0
       fi
     fi
@@ -161,7 +161,7 @@ in
       rbw
       bitwarden-cli
       jq
-      kdePackages.kwallet
+      libsecret # For secret-tool CLI (gnome-keyring integration)
     ];
 
     # SOPS secrets for Bitwarden automation
@@ -195,7 +195,7 @@ in
     systemd.user = {
       services = {
         bitwarden-autologin = lib.mkIf cfg.enableAutoLogin {
-          description = "Automatically authenticate and unlock Bitwarden using OAuth + KDE Wallet";
+          description = "Automatically authenticate and unlock Bitwarden using OAuth + libsecret";
           wantedBy = [ "graphical-session.target" ];
           after = [ "graphical-session.target" ];
           serviceConfig = {
