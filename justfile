@@ -151,9 +151,12 @@ vm-sync HOST=DEFAULT_VM_HOST:
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
         "git config --global --add safe.directory /root/nix-config" 2>/dev/null || true
 
-    # Rsync excluding large files and .git
+    # Rsync excluding large files, sockets, and .git
     rsync -avz --delete \
         --exclude='*.qcow2' \
+        --exclude='*.socket' \
+        --exclude='*.pid' \
+        --exclude='quickemu/' \
         --exclude='.git' \
         --exclude='result' \
         -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}}" \
