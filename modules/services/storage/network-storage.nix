@@ -34,8 +34,7 @@ in
           mountConfig = {
             Options = [
               "noatime"
-              "nfsvers=4.2"
-              "sec=sys"
+              "nfsvers=3"
             ];
             TimeoutSec = "30";
           };
