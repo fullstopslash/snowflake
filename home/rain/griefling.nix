@@ -17,9 +17,10 @@
         #
         (map (f: "home/common/optional/${f}") [
           "desktops/hyprland"
+          "desktops/hyprland/host-config-link.nix"
           "desktops/waybar.nix"
           "desktops/rofi.nix"
-          
+
           "helper-scripts"
           "chezmoi.nix"
           "atuin.nix"
@@ -44,10 +45,10 @@
 
   # Yubikey disabled for test VM (useYubikey = false in host config)
   # services.yubikey-touch-detector.enable = false;
-  
+
   # Terminal file manager
   programs.yazi.enable = true;
-  
+
   # Install packages for programs whose config is managed by chezmoi
   # When programs.X.enable = false, the package isn't installed, so add them here
   home.packages = with pkgs; [
@@ -61,7 +62,7 @@
     wofi
     btop
   ];
-  
+
   # Enable atuin daemon for background sync (config is managed by chezmoi)
   systemd.user.sockets.atuin-daemon = lib.mkForce {
     Unit = {
@@ -73,7 +74,7 @@
     };
     Install.WantedBy = [ "sockets.target" ];
   };
-  
+
   systemd.user.services.atuin-daemon = lib.mkForce {
     Unit = {
       Description = "Atuin daemon for background sync";
@@ -85,7 +86,7 @@
       Restart = "on-failure";
     };
   };
-  
+
   # Disable ALL home-manager config generation - chezmoi manages dotfiles
   programs.kitty.enable = lib.mkForce false;
   programs.btop.enable = lib.mkForce false;
@@ -95,8 +96,7 @@
   programs.git.enable = lib.mkForce false;
   programs.ssh.enable = lib.mkForce false;
   programs.direnv.enable = lib.mkForce false;
-  
+
   # Enable Hyprland config generation for VM
   wayland.windowManager.hyprland.enable = lib.mkForce true;
 }
-
