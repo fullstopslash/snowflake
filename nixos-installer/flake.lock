@@ -20,10 +20,10 @@
     },
     "nix-secrets": {
       "locked": {
-        "lastModified": 1760405880,
-        "narHash": "sha256-7hDmj0WKxtBoGxDGr3ooUzilfrIp3LTlyIt/S/m2iMg=",
+        "lastModified": 1765409988,
+        "narHash": "sha256-XhvazMvTMC7RNncoWCnFy1D5x7gjTkVig4uDXucaaoM=",
         "ref": "simple",
-        "rev": "98dfc01b9d5218927bf84cf0ae1b74e77508691c",
+        "rev": "70435c29465c6cae5899ed05471953f12988ff22",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/fullstopslash/snowflake-secrets.git"
@@ -53,16 +53,16 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1732350895,
-        "narHash": "sha256-GcOQbOgmwlsRhpLGSwZJwLbo3pu9ochMETuRSS1xpz4=",
+        "lastModified": 1764939437,
+        "narHash": "sha256-4TLFHUwXraw9Df5mXC/vCrJgb50CRr3CzUzF0Mn3CII=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "0c582677378f2d9ffcb01490af2f2c678dcb29d3",
+        "rev": "00d2457e2f608b4be6fe8b470b0a36816324b0ae",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-24.11",
+        "ref": "nixos-25.05",
         "repo": "nixpkgs",
         "type": "github"
       }

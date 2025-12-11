@@ -54,7 +54,7 @@
               ./minimal-configuration.nix
               ../hosts/nixos/${name}/hardware-configuration.nix
 
-              { 
+              {
                 networking.hostName = name;
                 # Override username for minimal install to ensure correct SSH keys are used
                 hostSpec.primaryUsername = username;
@@ -82,10 +82,10 @@
             inputs.disko.nixosModules.disko
             ../hosts/common/disks/ghost.nix
             ./minimal-configuration.nix
-            { 
+            {
               networking.hostName = "ghost";
-              hostSpec.primaryUsername = config.hostSpec.username or "${toString inputs.nix-secrets.user}";
-              hostSpec.username = config.hostSpec.username or "${toString inputs.nix-secrets.user}";
+              hostSpec.primaryUsername = "${toString inputs.nix-secrets.user}";
+              hostSpec.username = "${toString inputs.nix-secrets.user}";
             }
             ../hosts/nixos/ghost/hardware-configuration.nix
           ];

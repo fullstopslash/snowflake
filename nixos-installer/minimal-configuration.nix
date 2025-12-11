@@ -71,15 +71,30 @@
 
   services = {
     qemuGuest.enable = true;
+    spice-vdagentd.enable = true;
+
+    # Display manager for VM testing
+    displayManager.ly = {
+      enable = true;
+      settings = {
+        default_user = config.hostSpec.username;
+        save = false;
+      };
+    };
+
     openssh = {
       enable = true;
       ports = [ 22 ];
       settings = {
-        PermitRootLogin = "prohibit-password"; # Only allow SSH key auth for root
-        PasswordAuthentication = false; # Disable password auth entirely
+        PermitRootLogin = "yes";
+        PasswordAuthentication = true; # Enable password auth for bootstrap
       };
     };
   };
+
+  # Disable other display managers
+  services.displayManager.sddm.enable = lib.mkForce false;
+  services.greetd.enable = lib.mkForce false;
 
   # SSH public key for initial ISO access (centralized in nix-secrets)
   # This allows the bootstrap script to connect before nixos-anywhere runs

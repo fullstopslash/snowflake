@@ -6,6 +6,12 @@ export HELPERS_PATH := justfile_directory() + "/scripts/helpers.sh"
 # Default host for VM testing
 DEFAULT_VM_HOST := "griefling"
 
+# VM Configuration
+VM_SSH_PORT := "22222"
+VM_SPICE_PORT := "5930"
+VM_MEMORY := "8"
+VM_DISK_SIZE := "50"
+
 # default recipe to display help information
 default:
   @just --list
@@ -71,18 +77,234 @@ iso:
 iso-install DRIVE: iso
   sudo dd if=$(eza --sort changed result/iso/*.iso | tail -n1) of={{DRIVE}} bs=4M status=progress oflag=sync
 
-# One-command fresh install test via nixos-anywhere (fully automated)
-test-install HOST=DEFAULT_VM_HOST:
-  ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force
+# ============================================================================
+# VM Testing Workflow
+# ============================================================================
+# Full workflow: just vm-fresh griefling
+# This creates a fresh VM, installs NixOS, sets up secrets, and rebuilds
+# ============================================================================
 
-# Interactive fresh install test (boots ISO, user runs commands manually)
-test-install-manual HOST=DEFAULT_VM_HOST:
-  ./scripts/test-fresh-install.sh {{HOST}} --gui --force
+# Complete fresh install: wipe, install, setup age key, sync config, rebuild
+vm-fresh HOST=DEFAULT_VM_HOST:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Starting fresh VM install for {{HOST}}..."
+
+    # Step 1: Fresh install with nixos-anywhere (wipes and installs base system)
+    ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force
+
+    # Step 2: Wait for VM to reboot after nixos-anywhere
+    echo ""
+    echo "⏳ Waiting 45s for VM to reboot..."
+    sleep 45
+
+    # Step 3: Wait for SSH
+    echo "🔌 Waiting for SSH..."
+    for i in {1..30}; do
+        if ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -p {{VM_SSH_PORT}} root@127.0.0.1 true 2>/dev/null; then
+            echo "✅ SSH ready"
+            break
+        fi
+        sleep 2
+        printf "."
+    done
+    echo ""
+
+    # Step 4: Setup age key from SSH host key
+    just vm-setup-age {{HOST}}
+
+    # Step 5: Sync and rebuild
+    just vm-sync {{HOST}}
+    just vm-rebuild {{HOST}}
+
+    echo ""
+    echo "✅ Fresh install complete!"
+    echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
+    echo "   SPICE: just vm-spice"
+
+# Setup age key on VM from SSH host key (required for SOPS secrets)
+vm-setup-age HOST=DEFAULT_VM_HOST:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔐 Setting up age key from SSH host key..."
+
+    # Get SSH host key and derive age key
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
+        "mkdir -p /var/lib/sops-nix && \
+         cat /etc/ssh/ssh_host_ed25519_key | nix-shell -p ssh-to-age --run 'ssh-to-age -private-key' > /var/lib/sops-nix/key.txt && \
+         chmod 600 /var/lib/sops-nix/key.txt"
+
+    # Show the public key for .sops.yaml
+    PUBKEY=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
+        "cat /etc/ssh/ssh_host_ed25519_key.pub | nix-shell -p ssh-to-age --run 'ssh-to-age'")
+    echo "✅ Age key installed"
+    echo "   Public key: $PUBKEY"
+
+# Sync nix-config to running VM
+vm-sync HOST=DEFAULT_VM_HOST:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Syncing nix-config to VM..."
+
+    # Add git safe.directory on VM
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
+        "git config --global --add safe.directory /root/nix-config" 2>/dev/null || true
+
+    # Rsync excluding large files and .git
+    rsync -avz --delete \
+        --exclude='*.qcow2' \
+        --exclude='.git' \
+        --exclude='result' \
+        -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}}" \
+        . root@127.0.0.1:/root/nix-config/
+
+    echo "✅ Config synced to /root/nix-config"
+
+# Rebuild NixOS on running VM
+vm-rebuild HOST=DEFAULT_VM_HOST:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔨 Rebuilding NixOS on VM..."
+
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
+        "cd /root/nix-config && nixos-rebuild switch --flake .#{{HOST}}"
+
+    echo "✅ Rebuild complete"
+
+# SSH into the VM
+vm-ssh HOST=DEFAULT_VM_HOST:
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1
+
+# Open SPICE viewer to see VM display
+vm-spice:
+    nix-shell -p spice-gtk --run "spicy -h 127.0.0.1 -p {{VM_SPICE_PORT}}"
+
+# Stop the running VM
+vm-stop HOST=DEFAULT_VM_HOST:
+    ./scripts/stop-vm.sh {{HOST}}
+
+# Check VM status
+vm-status HOST=DEFAULT_VM_HOST:
+    #!/usr/bin/env bash
+    PID_FILE="quickemu/{{HOST}}-test.pid"
+    if [ -f "$PID_FILE" ] && ps -p "$(cat "$PID_FILE")" > /dev/null 2>&1; then
+        echo "✅ VM {{HOST}} is running (PID: $(cat "$PID_FILE"))"
+        echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
+        echo "   SPICE: just vm-spice"
+    else
+        echo "❌ VM {{HOST}} is not running"
+    fi
+
+# Start existing VM with GUI (virtio-vga-gl + SDL for hardware acceleration)
+vm-start HOST=DEFAULT_VM_HOST:
+    #!/usr/bin/env nix-shell
+    #!nix-shell -i bash -p qemu
+    set -euo pipefail
+
+    QCOW2="quickemu/{{HOST}}-test.qcow2"
+    if [ ! -f "$QCOW2" ]; then
+        echo "❌ No disk image found. Run 'just vm-fresh {{HOST}}' first."
+        exit 1
+    fi
+
+    PID_FILE="quickemu/{{HOST}}-test.pid"
+    if [ -f "$PID_FILE" ] && ps -p "$(cat "$PID_FILE")" > /dev/null 2>&1; then
+        echo "VM {{HOST}} is already running (PID: $(cat "$PID_FILE"))"
+        exit 0
+    fi
+
+    echo "🚀 Starting VM {{HOST}} with GPU acceleration..."
+
+    # Get OVMF paths
+    OVMF_PATH=$(nix-build '<nixpkgs>' -A OVMF.fd --no-out-link 2>/dev/null)
+    OVMF_CODE="$OVMF_PATH/FV/OVMF_CODE.fd"
+    OVMF_VARS="quickemu/{{HOST}}-OVMF_VARS.fd"
+
+    # Use virtio-vga-gl with SDL for best Wayland/Hyprland performance
+    qemu-system-x86_64 \
+        -name "{{HOST}}-test" \
+        -machine q35,smm=off,vmport=off,accel=kvm \
+        -cpu host,topoext \
+        -smp cores=2,threads=2,sockets=1 \
+        -m {{VM_MEMORY}}G \
+        -pidfile "$PID_FILE" \
+        -vga none \
+        -device virtio-vga-gl,xres=1920,yres=1080 \
+        -display sdl,gl=on \
+        -device virtio-rng-pci,rng=rng0 \
+        -object rng-random,id=rng0,filename=/dev/urandom \
+        -device qemu-xhci,id=input \
+        -device usb-kbd,bus=input.0 \
+        -device usb-tablet,bus=input.0 \
+        -audiodev pipewire,id=audio0 \
+        -device intel-hda \
+        -device hda-micro,audiodev=audio0 \
+        -device virtio-net,netdev=nic \
+        -netdev "user,hostname={{HOST}},hostfwd=tcp::{{VM_SSH_PORT}}-:22,id=nic" \
+        -drive "if=pflash,format=raw,unit=0,file=$OVMF_CODE,readonly=on" \
+        -drive "if=pflash,format=raw,unit=1,file=$OVMF_VARS" \
+        -device virtio-blk-pci,drive=SystemDisk \
+        -drive "id=SystemDisk,if=none,format=qcow2,file=$QCOW2" &
+
+    sleep 2
+    echo "✅ VM started with SDL display (hardware accelerated)"
+    echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
+
+# Start VM headless (no display, SSH only)
+vm-start-headless HOST=DEFAULT_VM_HOST:
+    #!/usr/bin/env nix-shell
+    #!nix-shell -i bash -p qemu
+    set -euo pipefail
+
+    QCOW2="quickemu/{{HOST}}-test.qcow2"
+    if [ ! -f "$QCOW2" ]; then
+        echo "❌ No disk image found. Run 'just vm-fresh {{HOST}}' first."
+        exit 1
+    fi
+
+    PID_FILE="quickemu/{{HOST}}-test.pid"
+    if [ -f "$PID_FILE" ] && ps -p "$(cat "$PID_FILE")" > /dev/null 2>&1; then
+        echo "VM {{HOST}} is already running (PID: $(cat "$PID_FILE"))"
+        exit 0
+    fi
+
+    echo "🚀 Starting VM {{HOST}} headless..."
+
+    OVMF_PATH=$(nix-build '<nixpkgs>' -A OVMF.fd --no-out-link 2>/dev/null)
+    OVMF_CODE="$OVMF_PATH/FV/OVMF_CODE.fd"
+    OVMF_VARS="quickemu/{{HOST}}-OVMF_VARS.fd"
+
+    qemu-system-x86_64 \
+        -name "{{HOST}}-test" \
+        -machine q35,smm=off,vmport=off,accel=kvm \
+        -cpu host,topoext \
+        -smp cores=2,threads=2,sockets=1 \
+        -m {{VM_MEMORY}}G \
+        -pidfile "$PID_FILE" \
+        -display none \
+        -device virtio-rng-pci,rng=rng0 \
+        -object rng-random,id=rng0,filename=/dev/urandom \
+        -device virtio-net,netdev=nic \
+        -netdev "user,hostname={{HOST}},hostfwd=tcp::{{VM_SSH_PORT}}-:22,id=nic" \
+        -drive "if=pflash,format=raw,unit=0,file=$OVMF_CODE,readonly=on" \
+        -drive "if=pflash,format=raw,unit=1,file=$OVMF_VARS" \
+        -device virtio-blk-pci,drive=SystemDisk \
+        -drive "id=SystemDisk,if=none,format=qcow2,file=$QCOW2" \
+        -daemonize
+
+    echo "✅ VM started (headless)"
+    echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
+
+# Quick rebuild: sync and rebuild on running VM (no fresh install)
+vm-quick HOST=DEFAULT_VM_HOST: (vm-sync HOST) (vm-rebuild HOST)
 
 # Bootstrap a new NixOS host (disko + install via nixos-anywhere)
 # See nixos-installer/README.md for full documentation
-bootstrap HOST DEST:
-  ./scripts/bootstrap-nixos.sh -n {{HOST}} -d {{DEST}}
+# Usage: just bootstrap <host> <ip> <ssh-key> [port]
+# Example: just bootstrap griefling 127.0.0.1 ~/.ssh/id_ed25519 22222
+bootstrap HOST DEST KEY PORT="22":
+  ./scripts/bootstrap-nixos.sh -n {{HOST}} -d {{DEST}} -k {{KEY}} --port {{PORT}}
 
 # Copy all the config files to the remote host
 sync USER HOST PATH:

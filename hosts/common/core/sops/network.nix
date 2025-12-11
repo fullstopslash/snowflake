@@ -17,13 +17,12 @@ in
   config = lib.mkIf (hasSecrets && networkEnabled) {
     sops.secrets = {
       # Tailscale OAuth for automatic authentication
+      # Secret name maps to nested YAML path tailscale/oauth_client_id
       "tailscale/oauth_client_id" = {
-        key = "tailscale_oauth_client_id";
         sopsFile = "${sopsFolder}/shared.yaml";
         owner = "root";
       };
       "tailscale/oauth_client_secret" = {
-        key = "tailscale_oauth_client_secret";
         sopsFile = "${sopsFolder}/shared.yaml";
         owner = "root";
       };

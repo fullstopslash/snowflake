@@ -233,7 +233,7 @@ if [[ $USE_ANYWHERE == true ]]; then
 		die "Host '$HOSTNAME' not found in flake"
 	fi
 
-	# Start VM in background - boots from ISO first, then nixos-anywhere takes over
+	# Start VM with SPICE display - boots from ISO first, then nixos-anywhere takes over
 	qemu-system-x86_64 \
 		-name "${HOSTNAME}-fresh-test" \
 		-machine q35,smm=off,vmport=off,accel=kvm \
@@ -241,7 +241,11 @@ if [[ $USE_ANYWHERE == true ]]; then
 		-smp cores=2,threads=2,sockets=1 \
 		-m "${MEMORY}G" \
 		-pidfile "$PID_FILE" \
-		-display none \
+		-vga qxl \
+		-spice port=5930,disable-ticketing=on \
+		-device virtio-serial-pci \
+		-chardev spicevmc,id=spicechannel0,name=vdagent \
+		-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
 		-device virtio-rng-pci,rng=rng0 \
 		-object rng-random,id=rng0,filename=/dev/urandom \
 		-device virtio-net,netdev=nic \
@@ -340,26 +344,37 @@ if [[ $GUI == true ]]; then
 		die "GUI mode requires a local display. Remove --gui for headless mode."
 	fi
 
-	info "Starting GUI VM..."
-	echo ""
-	echo "  SSH: ssh -p $SSH_PORT root@127.0.0.1"
-	echo "  Stop: Close window or ./scripts/stop-vm.sh $HOSTNAME"
-	echo ""
+	info "Starting GUI VM with SPICE display..."
 
-	exec qemu-system-x86_64 \
+	# Start QEMU in background with SPICE
+	qemu-system-x86_64 \
 		"${QEMU_ARGS[@]}" \
-		-vga none \
-		-device virtio-vga-gl,xres=1920,yres=1080 \
-		-display sdl,gl=on \
-		-device qemu-xhci,id=spicepass \
-		-device usb-ehci,id=input \
+		-vga qxl \
+		-spice port=5930,disable-ticketing=on \
+		-device virtio-serial-pci \
+		-chardev spicevmc,id=spicechannel0,name=vdagent \
+		-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
+		-device qemu-xhci,id=input \
 		-device usb-kbd,bus=input.0 \
 		-k en-us \
 		-device usb-tablet,bus=input.0 \
-		-audiodev alsa,id=audio0 \
+		-audiodev spice,id=audio0 \
 		-device intel-hda \
 		-device hda-micro,audiodev=audio0 \
-		2>/dev/null
+		-daemonize
+
+	success "VM started (PID: $(cat "$PID_FILE"))"
+	echo ""
+	echo "  SSH: ssh -p $SSH_PORT root@127.0.0.1"
+	echo "  Stop: ./scripts/stop-vm.sh $HOSTNAME"
+	echo ""
+
+	# Wait a moment for SPICE to be ready
+	sleep 2
+
+	# Auto-launch SPICE viewer
+	info "Launching SPICE viewer..."
+	exec spicy -h 127.0.0.1 -p 5930
 else
 	# Headless mode
 	qemu-system-x86_64 \

@@ -3,10 +3,12 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }:
 let
   cfg = config.roles.bitwardenAutomation;
+  sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 
   # Create a script that uses OAuth + KDE Wallet for full automation
   bitwarden-autologin = pkgs.writeShellScript "bitwarden-autologin" ''
@@ -16,10 +18,10 @@ let
     echo "Starting Bitwarden OAuth + KDE Wallet automation..."
 
     # Read secrets from SOPS - handle missing files gracefully
-    SECRET_SERVER="${config.sops.secrets."bitwarden-server".path}"
-    SECRET_EMAIL="${config.sops.secrets."bitwarden-user-email".path}"
-    SECRET_CLIENT_ID="${config.sops.secrets."bitwarden-oauth-client-id".path}"
-    SECRET_CLIENT_SECRET="${config.sops.secrets."bitwarden-oauth-client-secret".path}"
+    SECRET_SERVER="${config.sops.secrets."bitwarden/server".path}"
+    SECRET_EMAIL="${config.sops.secrets."bitwarden/user_email".path}"
+    SECRET_CLIENT_ID="${config.sops.secrets."bitwarden/oauth_client_id".path}"
+    SECRET_CLIENT_SECRET="${config.sops.secrets."bitwarden/oauth_client_secret".path}"
 
     # Check if secrets exist and are readable
     if [ ! -r "$SECRET_SERVER" ] || [ ! -r "$SECRET_EMAIL" ] || [ ! -r "$SECRET_CLIENT_ID" ] || [ ! -r "$SECRET_CLIENT_SECRET" ]; then
@@ -163,24 +165,25 @@ in
     ];
 
     # SOPS secrets for Bitwarden automation
+    # Secret name maps to nested YAML path bitwarden/*
     sops.secrets = {
-      bitwarden-server = {
-        key = "bitwarden_server";
+      "bitwarden/server" = {
+        sopsFile = "${sopsFolder}/shared.yaml";
         owner = "root";
         neededForUsers = true;
       };
-      bitwarden-user-email = {
-        key = "bitwarden_user_email";
+      "bitwarden/user_email" = {
+        sopsFile = "${sopsFolder}/shared.yaml";
         owner = "root";
         neededForUsers = true;
       };
-      bitwarden-oauth-client-id = {
-        key = "bitwarden_oauth_client_id";
+      "bitwarden/oauth_client_id" = {
+        sopsFile = "${sopsFolder}/shared.yaml";
         owner = "root";
         neededForUsers = true;
       };
-      bitwarden-oauth-client-secret = {
-        key = "bitwarden_oauth_client_secret";
+      "bitwarden/oauth_client_secret" = {
+        sopsFile = "${sopsFolder}/shared.yaml";
         owner = "root";
         neededForUsers = true;
       };

@@ -4,7 +4,6 @@
 # Includes user password for login, age key for home-manager sops, and msmtp for mail.
 
 {
-  pkgs,
   lib,
   inputs,
   config,
@@ -18,14 +17,17 @@ in
 {
   config = lib.mkIf (hasSecrets && baseEnabled) {
     sops.secrets = {
-      # Age key for home-manager sops - unique per user per host
+      # Age key for home-manager sops - stored in host-specific file (default sopsFile)
+      # Secret name maps to nested YAML path keys/age
       "keys/age" = {
+        # No sopsFile specified - uses default host-specific file (e.g., griefling.yaml)
         owner = config.users.users.${config.hostSpec.username}.name;
         inherit (config.users.users.${config.hostSpec.username}) group;
         path = "${config.hostSpec.home}/.config/sops/age/keys.txt";
       };
 
       # User password for login
+      # Secret name maps to nested YAML path passwords/<username>
       "passwords/${config.hostSpec.username}" = {
         sopsFile = "${sopsFolder}/shared.yaml";
         neededForUsers = true;
