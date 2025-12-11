@@ -34,16 +34,12 @@ in
     # Atuin shell history sync with auto-login
     myModules.services.atuin.enable = true;
 
+    # Syncthing file sync with device IDs from nix-secrets
+    myModules.services.syncthing.enable = true;
+
     # Useful apps for test VMs
     environment.systemPackages = with pkgs; [
       firefox
     ];
-
-    # Syncthing for file sync
-    services.syncthing = {
-      enable = true;
-      user = config.hostSpec.primaryUsername;
-      dataDir = "/home/${config.hostSpec.primaryUsername}";
-    };
   };
 }
