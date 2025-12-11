@@ -173,6 +173,11 @@
                 default = false;
                 description = "Network secrets: tailscale, VPN";
               };
+              cli = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "CLI tool secrets: atuin credentials";
+              };
             };
           };
           default = { };

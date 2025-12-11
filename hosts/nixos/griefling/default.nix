@@ -99,6 +99,7 @@
     # Enable relevant secret categories
     secretCategories = {
       base = true; # User password, age keys
+      cli = true; # CLI tool secrets (atuin, etc)
       desktop = true; # Desktop app secrets
     };
 

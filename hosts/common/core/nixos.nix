@@ -23,8 +23,9 @@
     enable = true;
     clean.enable = true;
     clean.extraArgs = "--keep-since 20d --keep 20";
-    # Points to where bootstrap script copies nix-config
-    flake = "${config.hostSpec.home}/src/nix/nix-config";
+    # Points to where nix-config is located
+    # For VMs: /root/nix-config, for regular users: ~/nix-config
+    flake = "${config.hostSpec.home}/nix-config";
   };
 
   #

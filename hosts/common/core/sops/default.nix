@@ -5,6 +5,7 @@
 #
 # Categories:
 # - base: user passwords, age keys, msmtp (default: true)
+# - cli: atuin and other CLI tool credentials
 # - desktop: home assistant, desktop app secrets (set by desktop/laptop roles)
 # - server: backup credentials, service secrets (set by server role)
 # - network: tailscale, VPN configs (set by roles with networking needs)
@@ -35,6 +36,7 @@ in
 {
   imports = [
     ./base.nix
+    ./cli.nix
     ./desktop.nix
     ./server.nix
     ./network.nix
@@ -82,8 +84,8 @@ in
     };
 
     # Helpful warning if secrets directory is empty
-    warnings = lib.optional
-      (builtins.pathExists hostSecretsFile && builtins.readFile hostSecretsFile == "{}\n")
-      "SOPS: ${hostName}.yaml appears to be empty. Did you forget to add secrets?";
+    warnings = lib.optional (
+      builtins.pathExists hostSecretsFile && builtins.readFile hostSecretsFile == "{}\n"
+    ) "SOPS: ${hostName}.yaml appears to be empty. Did you forget to add secrets?";
   };
 }

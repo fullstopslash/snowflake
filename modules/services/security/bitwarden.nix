@@ -165,27 +165,29 @@ in
     ];
 
     # SOPS secrets for Bitwarden automation
-    # Secret name maps to nested YAML path bitwarden/*
+    # Secret names use slash path format to match nested YAML structure
+    # Note: Don't use neededForUsers - that puts secrets in /run/secrets-for-users/ instead of /run/secrets/
+    # Owner must be the user running the systemd user service, not root
     sops.secrets = {
       "bitwarden/server" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = "root";
-        neededForUsers = true;
+        owner = config.hostSpec.primaryUsername;
+        mode = "0400";
       };
       "bitwarden/user_email" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = "root";
-        neededForUsers = true;
+        owner = config.hostSpec.primaryUsername;
+        mode = "0400";
       };
       "bitwarden/oauth_client_id" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = "root";
-        neededForUsers = true;
+        owner = config.hostSpec.primaryUsername;
+        mode = "0400";
       };
       "bitwarden/oauth_client_secret" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = "root";
-        neededForUsers = true;
+        owner = config.hostSpec.primaryUsername;
+        mode = "0400";
       };
     };
 
@@ -199,6 +201,8 @@ in
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
+            # Don't restart on failure - secrets may not be available during rebuild
+            # User can manually restart if needed
             Restart = "no";
             ExecStart = bitwarden-autologin;
           };

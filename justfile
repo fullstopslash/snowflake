@@ -114,7 +114,10 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     # Step 4: Setup age key from SSH host key
     just vm-setup-age {{HOST}}
 
-    # Step 5: Sync and rebuild
+    # Step 5: Register age key in nix-secrets and rekey
+    just vm-register-age {{HOST}}
+
+    # Step 6: Sync and rebuild
     just vm-sync {{HOST}}
     just vm-rebuild {{HOST}}
 
@@ -140,6 +143,56 @@ vm-setup-age HOST=DEFAULT_VM_HOST:
         "cat /etc/ssh/ssh_host_ed25519_key.pub | nix-shell -p ssh-to-age --run 'ssh-to-age'")
     echo "✅ Age key installed"
     echo "   Public key: $PUBKEY"
+
+# Register VM's age key in nix-secrets repo and rekey secrets
+vm-register-age HOST=DEFAULT_VM_HOST:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📝 Registering {{HOST}} age key in nix-secrets..."
+
+    # Get the VM's age private key and derive public key locally
+    PRIVKEY=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
+        "cat /var/lib/sops-nix/key.txt" 2>/dev/null)
+
+    if [ -z "$PRIVKEY" ]; then
+        echo "❌ Age key not found on VM. Run 'just vm-setup-age {{HOST}}' first."
+        exit 1
+    fi
+
+    # Derive public key from private key locally
+    PUBKEY=$(echo "$PRIVKEY" | nix-shell -p age --run "age-keygen -y")
+
+    echo "   Age public key: $PUBKEY"
+
+    # Update .sops.yaml with the host age key
+    echo "   Updating .sops.yaml..."
+    just sops-update-host-age-key {{HOST}} "$PUBKEY"
+
+    # Add creation rules if they don't exist (user is 'rain' for test VMs)
+    echo "   Ensuring creation rules exist..."
+    just sops-add-creation-rules rain {{HOST}}
+
+    # Rekey all secrets to include the new host
+    echo "   Rekeying secrets..."
+    cd ../nix-secrets && for file in sops/*.yaml; do \
+        echo "     Rekeying $file..."; \
+        sops updatekeys -y "$file"; \
+    done
+
+    # Commit and push changes
+    echo "   Committing changes..."
+    cd ../nix-secrets && \
+        git add -u .sops.yaml sops/*.yaml && \
+        (git commit -m "chore: register {{HOST}} age key and rekey secrets" || true) && \
+        git push
+
+    # Update nix-secrets on the VM to get the freshly rekeyed secrets
+    echo "   Updating nix-secrets on VM..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
+        "cd /root/nix-config && nix flake update nix-secrets"
+
+    echo "✅ Age key registered and secrets rekeyed"
+    echo "   Host {{HOST}} can now decrypt secrets on next rebuild"
 
 # Sync nix-config to running VM
 vm-sync HOST=DEFAULT_VM_HOST:
