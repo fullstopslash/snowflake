@@ -98,10 +98,9 @@ in
         PASSWORD=$(cat "$PASSWORD_FILE")
         KEY=$(cat "$KEY_FILE")
 
-        echo "Logging in as $USERNAME to LAN server..."
-        if "$ATUIN_BIN" login \
-            --server "http://waterbug.lan:3333" \
-            -u "$USERNAME" -p "$PASSWORD" -k "$KEY"; then
+        echo "Logging in as $USERNAME..."
+        # Note: server is configured in ~/.config/atuin/config.toml (sync_address)
+        if "$ATUIN_BIN" login -u "$USERNAME" -p "$PASSWORD" -k "$KEY"; then
           echo "Login successful!"
           "$ATUIN_BIN" sync || true
         else
