@@ -48,24 +48,28 @@ in
         mode = "0400";
       };
     };
-    # Systemd service to auto-login to Atuin and sync
-    # Runs after system activation and on first user login
-    systemd.user.services."atuin-autologin" = {
+    # System service to auto-login to Atuin and sync
+    # Runs at boot and on rebuilds - before user login for immediate availability
+    systemd.services."atuin-autologin" = {
       description = "Atuin auto-login and initial sync";
-      wantedBy = [ "default.target" ];
-      after = [ "network-online.target" ];
-      # Re-run on system activation (rebuilds)
-      restartIfChanged = true;
+      wantedBy = [ "multi-user.target" ];
+      after = [ "network-online.target" "sops-nix.service" ];
+      wants = [ "network-online.target" ];
       serviceConfig = {
         Type = "oneshot";
+        User = primaryUser;
+        Group = "users";
+        RemainAfterExit = true;
         # Retry on network failures
         Restart = "on-failure";
         RestartSec = 5;
-        RestartMaxDelaySec = 30;
       };
       script = ''
         set -eu
         echo "Starting Atuin auto-login..."
+
+        HOME="/home/${primaryUser}"
+        export HOME
 
         # Ensure directories exist
         mkdir -p "$HOME/.config/atuin" "$HOME/.local/share/atuin"
