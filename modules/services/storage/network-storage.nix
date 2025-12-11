@@ -26,56 +26,79 @@ in
     services.rpcbind.enable = true;
     boot.supportedFilesystems = [ "nfs" ];
 
-    # Define systemd mounts for NFS shares
-    # Using systemd.mounts instead of fileSystems for better control and clarity
+    # Ensure mount points exist
+    systemd.tmpfiles.rules = [
+      "d /mnt/waterbug 0755 root root -"
+      "d /storage 0755 root root -"
+      "d /mnt/apps 0755 root root -"
+    ];
+
+    # Strategy:
+    # - Mount NFSv4 pseudoroot at /mnt/waterbug
+    # - Bind-mount desired subdirectories to stable targets
+    #
+    # This avoids v3 export permission issues and v4 subpath restrictions,
+    # while keeping user-facing paths unchanged.
     systemd.mounts =
       let
-        commonMountOptions = {
-          type = "nfs";
+        # Mount the NFSv4 pseudoroot
+        rootMount = {
+          type = "nfs4";
+          what = "waterbug.lan:/";
+          where = "/mnt/waterbug";
           mountConfig = {
             Options = [
-              "noatime" # Don't update access times (performance)
-              "nfsvers=4.2" # Use NFSv4.2 protocol
-              "sec=sys" # Use AUTH_SYS - traditional UNIX UID/GID auth (matches server)
-              # "hard" # Commented out - soft mounts allow boot to continue if server unavailable
+              "noatime"
+              "nfsvers=4"
+              "sec=sys"
             ];
-            TimeoutSec = "30"; # Give up after 30 seconds if server unreachable
+            TimeoutSec = "30";
           };
+          wantedBy = [ "multi-user.target" ];
         };
+
+        # Bind mount a subdirectory from the NFS root to a target
+        bindMount =
+          { from, to }:
+          {
+            type = "none";
+            what = from;
+            where = to;
+            mountConfig = {
+              Options = [ "bind" ];
+              # Ensure the NFS root is mounted prior to bind
+              Requires = [ "mnt-waterbug.mount" ];
+              After = [ "mnt-waterbug.mount" ];
+              TimeoutSec = "30";
+            };
+          };
       in
       [
-        # Main storage pool
-        (
-          commonMountOptions
-          // {
-            what = "waterbug.lan:/mnt/storage/storage";
-            where = "/storage";
-          }
-        )
-        # Applications directory
-        (
-          commonMountOptions
-          // {
-            what = "waterbug.lan:/mnt/apps/apps";
-            where = "/mnt/apps";
-          }
-        )
+        rootMount
+        (bindMount {
+          from = "/mnt/waterbug/mnt/storage/storage";
+          to = "/storage";
+        })
+        (bindMount {
+          from = "/mnt/waterbug/mnt/apps/apps";
+          to = "/mnt/apps";
+        })
       ];
 
-    # Configure automount behavior for NFS shares
-    # Mounts on first access, unmounts after idle timeout
+    # Automounts for laziness and to avoid boot delays
     systemd.automounts =
       let
-        commonAutoMountOptions = {
-          wantedBy = [ "multi-user.target" ]; # Start automatically at boot
-          automountConfig = {
-            TimeoutIdleSec = "600"; # Unmount after 10 minutes of inactivity
-          };
+        commonAuto = {
+          wantedBy = [ "multi-user.target" ];
+          automountConfig.TimeoutIdleSec = "600";
         };
       in
       [
-        (commonAutoMountOptions // { where = "/storage"; })
-        (commonAutoMountOptions // { where = "/mnt/apps"; })
+        # Automount the NFS root (so bind mounts can pull it in)
+        (commonAuto // { where = "/mnt/waterbug"; })
+        # Automount user-facing bind mounts
+        (commonAuto // { where = "/storage"; })
+        (commonAuto // { where = "/mnt/apps"; })
       ];
   };
 }
