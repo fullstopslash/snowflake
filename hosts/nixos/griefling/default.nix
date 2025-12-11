@@ -70,7 +70,10 @@
       # Config repo auto-clone for distributed management
       "hosts/common/optional/nix-config-repo.nix"
 
-      # Network storage (NFS mounts from waterbug.lan)
+      # Network storage module (defines services.networkStorage option)
+      "modules/services/storage/network-storage.nix"
+
+      # Network storage (NFS mounts from waterbug.lan) - enables the service
       "hosts/common/optional/network-storage.nix"
 
       # Syncthing file synchronization
