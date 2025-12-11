@@ -16,6 +16,9 @@ let
 in
 {
   config = lib.mkIf cfg.test {
+    # Test VMs need sops passwords, so override isMinimal from VM role
+    hostSpec.isMinimal = lib.mkForce false;
+
     # Test-friendly settings (use plain values to override mkDefault in base modules)
     security.sudo.wheelNeedsPassword = false;
     services.openssh.settings.PasswordAuthentication = true;
