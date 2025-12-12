@@ -4,7 +4,7 @@
 # Includes sops secrets for credentials - enabled when module is enabled.
 #
 # Services:
-# - atuin-autologin: Logs in and syncs on startup/rebuild (runs every 15min for self-healing)
+# - atuin-autologin: Logs in and syncs on startup/rebuild
 # - atuin-maintenance: Daily cleanup tasks (prune, sync, verify)
 # - atuin-daemon (user): Socket-activated background daemon
 #
@@ -147,16 +147,6 @@ in
           exit 1
         fi
       '';
-    };
-
-    # Timer for self-healing - check login status periodically
-    systemd.timers."atuin-autologin" = {
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnBootSec = "2min"; # Run shortly after boot if service didn't complete
-        OnUnitActiveSec = "15min"; # Re-check every 15 minutes
-        Unit = "atuin-autologin.service";
-      };
     };
 
     # Daily maintenance service - prune, sync, verify
