@@ -1,12 +1,12 @@
 # Atuin shell history sync service
 #
-# Provides socket-activated daemon and auto-login service for Atuin.
+# Provides socket-activated daemon, auto-login, and maintenance services for Atuin.
 # Includes sops secrets for credentials - enabled when module is enabled.
 #
-# The auto-login service:
-# - Reads credentials from /run/secrets/atuin/{username,password}
-# - Reads encryption key from ~/.local/share/atuin/key (placed by sops)
-# - Logs in and performs initial sync on startup/rebuild
+# Services:
+# - atuin-autologin: Logs in and syncs on startup/rebuild (runs every 15min for self-healing)
+# - atuin-maintenance: Daily cleanup tasks (prune, sync, verify)
+# - atuin-daemon (user): Socket-activated background daemon
 #
 # Shell integration:
 # - Adds `eval "$(atuin init zsh)"` to /etc/zshrc for all interactive shells
@@ -32,6 +32,19 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # Add atuin to system packages so users can run it from PATH
+    environment.systemPackages = [ pkgs.atuin ];
+
+    # Ensure atuin directories exist with correct ownership before sops-nix creates the key symlink
+    # Without this, sops-nix creates the directory as root and the service can't write to it
+    systemd.tmpfiles.rules = [
+      "d /home/${primaryUser}/.local 0755 ${primaryUser} users -"
+      "d /home/${primaryUser}/.local/share 0755 ${primaryUser} users -"
+      "d /home/${primaryUser}/.local/share/atuin 0755 ${primaryUser} users -"
+      "d /home/${primaryUser}/.config 0755 ${primaryUser} users -"
+      "d /home/${primaryUser}/.config/atuin 0755 ${primaryUser} users -"
+    ];
+
     # Sops secrets for atuin credentials
     sops.secrets = {
       "atuin/username" = {
@@ -64,7 +77,11 @@ in
     systemd.services."atuin-autologin" = {
       description = "Atuin auto-login and initial sync";
       wantedBy = [ "multi-user.target" ];
-      after = [ "network-online.target" "sops-nix.service" ];
+      after = [
+        "network-online.target"
+        "sops-nix.service"
+        "systemd-tmpfiles-setup.service"
+      ];
       wants = [ "network-online.target" ];
       serviceConfig = {
         Type = "oneshot";
@@ -139,6 +156,65 @@ in
         OnBootSec = "2min"; # Run shortly after boot if service didn't complete
         OnUnitActiveSec = "15min"; # Re-check every 15 minutes
         Unit = "atuin-autologin.service";
+      };
+    };
+
+    # Daily maintenance service - prune, sync, verify
+    systemd.services."atuin-maintenance" = {
+      description = "Atuin daily maintenance (prune, sync, verify)";
+      after = [
+        "network-online.target"
+        "atuin-autologin.service"
+      ];
+      wants = [ "network-online.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        User = primaryUser;
+        Group = "users";
+      };
+      script = ''
+        set -eu
+        echo "Starting Atuin maintenance..."
+
+        HOME="/home/${primaryUser}"
+        export HOME
+        ATUIN_BIN="${pkgs.atuin}/bin/atuin"
+        SESSION_FILE="$HOME/.local/share/atuin/session"
+
+        # Only run if logged in
+        if [ ! -f "$SESSION_FILE" ]; then
+          echo "Not logged in, skipping maintenance"
+          exit 0
+        fi
+
+        # Prune history matching exclusion filters
+        echo "Pruning history..."
+        "$ATUIN_BIN" history prune || echo "Prune failed (may have no exclusion filters configured)"
+
+        # Sync after prune
+        echo "Syncing..."
+        "$ATUIN_BIN" sync || echo "Sync failed"
+
+        # Verify store integrity
+        echo "Verifying store..."
+        if "$ATUIN_BIN" store verify; then
+          echo "Store verification OK"
+        else
+          echo "Store verification failed - may need attention" >&2
+        fi
+
+        echo "Maintenance complete"
+      '';
+    };
+
+    # Timer for daily maintenance
+    systemd.timers."atuin-maintenance" = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "daily"; # Run once per day
+        Persistent = true; # Run immediately if missed (e.g., machine was off)
+        RandomizedDelaySec = "1h"; # Spread load across machines
+        Unit = "atuin-maintenance.service";
       };
     };
 
