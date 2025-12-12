@@ -30,6 +30,15 @@ let
       }) yubikeys
     )
   );
+
+  # SSH key for non-yubikey hosts (like VMs) that need GitHub access
+  sshKeySecrets = lib.optionalAttrs (!config.hostSpec.useYubikey) {
+    "keys/ssh/ed25519" = {
+      sopsFile = "${sopsFolder}/shared.yaml";
+      path = "${homeDirectory}/.ssh/id_ed25519";
+      mode = "0600";
+    };
+  };
 in
 {
   imports = [ inputs.sops-nix.homeManagerModules.sops ];
@@ -45,6 +54,7 @@ in
       #"tokens/foo" = {
       #};
     }
-    // yubikeySecrets;
+    // yubikeySecrets
+    // sshKeySecrets;
   };
 }
