@@ -13,6 +13,8 @@ let
   yubikeys = [
     # Only populated when useYubikey = true
   ];
+  # Yubikey-specific secrets (U2F and SSH keys from yubikeys)
+  # Note: SSH key for non-yubikey hosts is deployed via system-level sops (modules/common/sops.nix)
   yubikeySecrets = lib.optionalAttrs config.hostSpec.useYubikey (
     # extract to default pam-u2f authfile location for passwordless sudo. see modules/common/yubikey
     {
@@ -30,15 +32,6 @@ let
       }) yubikeys
     )
   );
-
-  # SSH key for non-yubikey hosts (like VMs) that need GitHub access
-  sshKeySecrets = lib.optionalAttrs (!config.hostSpec.useYubikey) {
-    "keys/ssh/ed25519" = {
-      sopsFile = "${sopsFolder}/shared.yaml";
-      path = "${homeDirectory}/.ssh/id_ed25519";
-      mode = "0600";
-    };
-  };
 in
 {
   imports = [ inputs.sops-nix.homeManagerModules.sops ];
@@ -54,7 +47,6 @@ in
       #"tokens/foo" = {
       #};
     }
-    // yubikeySecrets
-    // sshKeySecrets;
+    // yubikeySecrets;
   };
 }

@@ -79,26 +79,38 @@ in
     ) "SOPS: ${hostName}.yaml appears to be empty. Did you forget to add secrets?";
 
     # Base secrets - enabled by default for all hosts with secrets
-    sops.secrets = lib.mkIf baseEnabled {
-      # Age key for home-manager sops - stored in host-specific file (default sopsFile)
-      "keys/age" = {
-        # No sopsFile specified - uses default host-specific file
-        owner = config.users.users.${config.hostSpec.username}.name;
-        inherit (config.users.users.${config.hostSpec.username}) group;
-        path = "${config.hostSpec.home}/.config/sops/age/keys.txt";
-      };
+    sops.secrets = lib.mkIf baseEnabled (
+      {
+        # Age key for home-manager sops - stored in host-specific file (default sopsFile)
+        "keys/age" = {
+          # No sopsFile specified - uses default host-specific file
+          owner = config.users.users.${config.hostSpec.username}.name;
+          inherit (config.users.users.${config.hostSpec.username}) group;
+          path = "${config.hostSpec.home}/.config/sops/age/keys.txt";
+        };
 
-      # User password for login
-      "passwords/${config.hostSpec.username}" = {
-        sopsFile = sharedSecretsFile;
-        neededForUsers = true;
-      };
+        # User password for login
+        "passwords/${config.hostSpec.username}" = {
+          sopsFile = sharedSecretsFile;
+          neededForUsers = true;
+        };
 
-      # msmtp password for system mail
-      "passwords/msmtp" = {
-        sopsFile = sharedSecretsFile;
-      };
-    };
+        # msmtp password for system mail
+        "passwords/msmtp" = {
+          sopsFile = sharedSecretsFile;
+        };
+      }
+      # SSH key for non-yubikey hosts (VMs, servers) - needed for GitHub access (chezmoi, etc.)
+      // lib.optionalAttrs (!config.hostSpec.useYubikey) {
+        "keys/ssh/ed25519" = {
+          sopsFile = sharedSecretsFile;
+          owner = config.users.users.${config.hostSpec.username}.name;
+          inherit (config.users.users.${config.hostSpec.username}) group;
+          path = "${config.hostSpec.home}/.ssh/id_ed25519";
+          mode = "0600";
+        };
+      }
+    );
 
     # Fix ownership of .config/sops directory
     system.activationScripts.sopsSetAgeKeyOwnership = lib.mkIf baseEnabled (
@@ -112,5 +124,21 @@ in
         chown -R ${user}:${group} ${config.hostSpec.home}/.config
       ''
     );
+
+    # Create .ssh directory with correct permissions for SSH key deployment
+    system.activationScripts.sopsSetSshDirOwnership =
+      lib.mkIf (baseEnabled && !config.hostSpec.useYubikey)
+        (
+          let
+            sshFolder = "${config.hostSpec.home}/.ssh";
+            user = config.users.users.${config.hostSpec.username}.name;
+            group = config.users.users.${config.hostSpec.username}.group;
+          in
+          ''
+            mkdir -p ${sshFolder} || true
+            chmod 700 ${sshFolder}
+            chown ${user}:${group} ${sshFolder}
+          ''
+        );
   };
 }
