@@ -64,6 +64,12 @@ in
         path = "/home/${primaryUser}/.local/share/atuin/key";
         mode = "0400";
       };
+      # Sync server address - used by autologin service
+      "atuin/sync_address" = {
+        sopsFile = "${sopsFolder}/shared.yaml";
+        owner = primaryUser;
+        mode = "0400";
+      };
     };
 
     # System-level shell integration for zsh
@@ -100,9 +106,11 @@ in
         mkdir -p "$HOME/.config/atuin" "$HOME/.local/share/atuin"
         ATUIN_BIN="${pkgs.atuin}/bin/atuin"
         KEY_FILE="$HOME/.local/share/atuin/key"
+        CONFIG_FILE="$HOME/.config/atuin/config.toml"
         # Credentials are in /run/secrets (secure tmpfs)
         USERNAME_FILE="/run/secrets/atuin/username"
         PASSWORD_FILE="/run/secrets/atuin/password"
+        SYNC_ADDRESS_FILE="/run/secrets/atuin/sync_address"
         SESSION_FILE="$HOME/.local/share/atuin/session"
 
         # Check for required SOPS-provided files
@@ -118,6 +126,30 @@ in
           echo "Key not found or empty at $KEY_FILE (SOPS secret not deployed yet)"
           exit 1
         fi
+        if [ ! -f "$SYNC_ADDRESS_FILE" ]; then
+          echo "Sync address not found at $SYNC_ADDRESS_FILE (SOPS secret not deployed yet)"
+          exit 1
+        fi
+
+        # Ensure sync_address is set in config.toml
+        SYNC_ADDRESS=$(cat "$SYNC_ADDRESS_FILE")
+        if [ -f "$CONFIG_FILE" ]; then
+          # Update existing config if sync_address is different
+          if grep -q "^sync_address" "$CONFIG_FILE"; then
+            ${pkgs.gnused}/bin/sed -i "s|^sync_address.*|sync_address = \"$SYNC_ADDRESS\"|" "$CONFIG_FILE"
+          else
+            # Add sync_address after the commented line or at the top
+            if grep -q "# sync_address" "$CONFIG_FILE"; then
+              ${pkgs.gnused}/bin/sed -i "/# sync_address/a sync_address = \"$SYNC_ADDRESS\"" "$CONFIG_FILE"
+            else
+              echo "sync_address = \"$SYNC_ADDRESS\"" >> "$CONFIG_FILE"
+            fi
+          fi
+        else
+          # Create minimal config with sync_address
+          echo "sync_address = \"$SYNC_ADDRESS\"" > "$CONFIG_FILE"
+        fi
+        echo "Configured sync_address: $SYNC_ADDRESS"
 
         # Check if already logged in with valid session
         if [ -f "$SESSION_FILE" ]; then
@@ -137,7 +169,6 @@ in
         KEY=$(cat "$KEY_FILE")
 
         echo "Logging in as $USERNAME..."
-        # Note: server is configured in ~/.config/atuin/config.toml (sync_address)
         if "$ATUIN_BIN" login -u "$USERNAME" -p "$PASSWORD" -k "$KEY"; then
           echo "Login successful!"
           "$ATUIN_BIN" sync
