@@ -4,6 +4,10 @@
 
 ## Short Term
 
+- Chezmoi SSH config fixes (dotfiles repo):
+  - `GSSAPIAuthentication no` - unsupported option on NixOS OpenSSH, wrap with IgnoreUnknown
+  - ControlPath socket directory (`~/.ssh/cm_socket/`) needs to be created on first run
+
 - fix nvim/neo-tree default directory
 - flesh out the nix-config-starter README as per alexschombs git comment
 

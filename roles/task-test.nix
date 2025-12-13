@@ -13,6 +13,17 @@
 }:
 {
   config = lib.mkIf (builtins.elem "test" config.roles) {
+    # ========================================
+    # MODULE SELECTIONS
+    # ========================================
+    # Paths mirror filesystem: modules/<top>/<category> = [ "<module>" ]
+    modules = {
+      services = {
+        cli = [ "atuin" ];
+        networking = [ "syncthing" ];
+      };
+    };
+
     # Test VMs need sops passwords, so override isMinimal from VM role
     hostSpec.isMinimal = lib.mkForce false;
 
@@ -28,12 +39,6 @@
     # Auto-clone nix-config and nix-secrets repos on first login
     # (path is in modules/common/ so not part of selection system)
     myModules.services.nixConfigRepo.enable = true;
-
-    # Atuin shell history sync with auto-login
-    myModules.services.cli.atuin.enable = true;
-
-    # Syncthing file sync with device IDs from nix-secrets
-    myModules.services.networking.syncthing.enable = true;
 
     # Useful apps for test VMs
     environment.systemPackages = with pkgs; [

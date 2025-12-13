@@ -19,7 +19,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    programs.direnv.enable = true;
+    programs.direnv = {
+      enable = true;
+      nix-direnv.enable = true; # Caches devShells, dramatically speeds up directory entry
+    };
 
     environment.systemPackages = with pkgs; [
       # GitHub/GitLab workflow tools

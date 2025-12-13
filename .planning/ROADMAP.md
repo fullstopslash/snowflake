@@ -6,15 +6,20 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 
 ## Phases
 
-- [ ] **Phase 1: Foundation** - Clean flake structure with multi-arch, merged lib/overlays
-- [ ] **Phase 2: Role System** - Base roles (desktop, server, pi, darwin, tablet) defining software and settings
-- [ ] **Phase 3: Host-Spec & Inheritance** - Minimal host definitions with automatic role inheritance
-- [ ] **Phase 4: Secrets & Security** - sops-nix across roles/hosts with secure bootstrapping
-- [ ] **Phase 5: Reference Host** - Migrate malphas, validate minimal host pattern
-- [ ] **Phase 6: Auto-Update System** - Daily rebuilds, WoL-triggered updates, git pull automation
-- [ ] **Phase 7: Structure Reorganization** - Unify modules, clean up hosts/common, rename home to home-manager
-- [ ] **Phase 8: Role System Refinement** - Common role base, task-based roles, minimal host pattern
-- [ ] **Phase 9: Griefling Minimal Fix** - Fix module imports so VM role is truly minimal
+- [x] **Phase 1: Foundation** - Clean flake structure with multi-arch, merged lib/overlays
+- [x] **Phase 2: Role System** - Base roles (desktop, server, pi, darwin, tablet) defining software and settings
+- [x] **Phase 3: Host-Spec & Inheritance** - Minimal host definitions with automatic role inheritance
+- [x] **Phase 4: Secrets & Security** - sops-nix across roles/hosts with secure bootstrapping
+- [x] **Phase 5: Reference Host** - Migrate malphas, validate minimal host pattern
+- [x] **Phase 6: Auto-Update System** - Daily rebuilds, WoL-triggered updates, git pull automation
+- [x] **Phase 7: Structure Reorganization** - Unify modules, clean up hosts/common, rename home to home-manager
+- [x] **Phase 8: Role System Refinement** - Common role base, task-based roles, minimal host pattern
+- [ ] **Phase 9: Griefling Minimal Fix** - (Superseded by Phase 10)
+- [x] **Phase 10: Griefling Speedup** - Fix unconditional module imports, reduce package count
+- [x] **Phase 11: Architecture Reorganization** - Clean three-tier: /modules, /hosts, /roles
+- [x] **Phase 12: Unified Module Selection** - List-based selection with LSP autocompletion
+- [x] **Phase 13: Filesystem-Driven Selection** - Auto-generate options from /modules filesystem
+- [x] **Phase 14: Role Elegance Audit** - Remove redundant enables, enforce selection-only pattern
 
 ## Phase Details
 
@@ -240,6 +245,39 @@ Plans:
 - [x] 12-04: Host migration & validation (malphas, griefling, documentation)
 - [x] 12-05: List-based role selection (roles = [...], extraModules.* for additive selections)
 
+### Phase 13: Filesystem-Driven Module Selection
+**Goal**: Auto-generate selection options from /modules filesystem. Selection paths mirror filesystem structure.
+**Depends on**: Phase 12
+**Plans**: 1 plan
+
+Key implementation:
+- `modules/selection.nix` scans `/modules/apps/` and `/modules/services/` directories
+- Options auto-generated: `modules.services.<category> = [ "module-names" ]`
+- Translation layer converts selections to `myModules.<top>.<category>.<module>.enable = true`
+- `extraModules.*` provides additive selection for hosts
+- No manual list updates when adding new modules - just create the .nix file
+
+Plans:
+- [x] 13-01: Implement filesystem-driven selection with auto-generated options
+
+### Phase 14: Role Elegance Audit
+**Goal**: Ensure roles ONLY use unified module selection. Remove redundant direct enables.
+**Depends on**: Phase 13
+**Plans**: 1 plan
+
+Audit findings:
+- Some roles still use `services.openssh.enable` alongside `modules.services.networking = [ "openssh" ]`
+- Some roles use direct `myModules.*.enable` instead of `modules.*` selection syntax
+- Hardware/boot config (no corresponding modules) is legitimate
+
+Key patterns enforced:
+1. Roles use `modules.<top>.<category> = [ "name" ]` for all module enables
+2. Direct NixOS options only for hardware/boot with no module wrapper
+3. Direct `myModules.*.enable` only for modules outside selection system (`modules/common/`)
+
+Plans:
+- [x] 14-01: Remove redundant enables from form-pi.nix, form-server.nix; convert task-test.nix to selection
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -256,3 +294,5 @@ Plans:
 | 10. Griefling Speedup | 4/4 | Complete | 2025-12-12 |
 | 11. Architecture Reorganization | 1/1 | Complete | 2025-12-12 |
 | 12. Unified Module Selection | 5/5 | Complete | 2025-12-13 |
+| 13. Filesystem-Driven Selection | 1/1 | Complete | 2025-12-13 |
+| 14. Role Elegance Audit | 1/1 | Complete | 2025-12-13 |

@@ -29,7 +29,6 @@
     # ========================================
     # SYSTEM DEFAULTS
     # ========================================
-    services.openssh.enable = lib.mkDefault true;
     networking.firewall.enable = lib.mkDefault true;
     services.xserver.enable = lib.mkDefault false;
 

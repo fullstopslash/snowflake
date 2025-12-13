@@ -27,7 +27,6 @@
     boot.loader.grub.enable = lib.mkDefault false;
     boot.loader.generic-extlinux-compatible.enable = lib.mkDefault true;
     documentation.enable = lib.mkDefault false;
-    services.openssh.enable = lib.mkDefault true;
 
     # ========================================
     # HOSTSPEC (non-derived options only)
