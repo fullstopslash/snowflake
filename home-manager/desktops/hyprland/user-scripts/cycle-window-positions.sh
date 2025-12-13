@@ -74,8 +74,8 @@ if [ -z "$target_window" ]; then
 fi
 
 # Move and resize the window
-hyprctl dispatch movewindowpixel exact $x $y,address:$target_window
-hyprctl dispatch resizewindowpixel exact $width $height,address:$target_window
+hyprctl dispatch movewindowpixel "exact $x $y,address:$target_window"
+hyprctl dispatch resizewindowpixel "exact $width $height,address:$target_window"
 
 # Calculate next index (cycle back to 0 after reaching the end)
 next_index=$(((current_index + 1) % num_positions))

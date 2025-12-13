@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # Cycle positions for any media window (does not change focus)
 # Usage: cycle-media-positions.sh position1 position2 [position3...]
 # Configure media windows in ~/.config/hypr/media-windows.conf
@@ -44,6 +44,7 @@ idx=0
 
 # Parse position (pure shell, no external calls)
 eval "pos=\${$((idx + 1))}"
+# shellcheck disable=SC2086,SC2154  # Intentional word splitting, pos assigned via eval
 set -- $pos
 
 # Apply position (sequential for pixel-exact positioning)

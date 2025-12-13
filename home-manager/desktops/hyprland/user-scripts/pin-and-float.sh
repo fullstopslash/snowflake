@@ -20,8 +20,6 @@ get_window_info() {
 	window_title=$(echo "$window_info" | grep "title:" | awk '{$1=""; print $0}' | sed 's/^ *//')
 	window_address=$(echo "$window_info" | head -n 1 | cut -f2 -d' ')
 	window_fullscreen=$(echo "$window_info" | grep "fullscreen:" | awk '{print $2}')
-	window_floating=$(echo "$window_info" | grep "floating:" | awk '{print $2}')
-	window_pinned=$(echo "$window_info" | grep "pinned:" | awk '{print $2}')
 }
 
 # Toggle floating and pin states (original behavior)
