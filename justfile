@@ -307,29 +307,18 @@ vm-register-age HOST=DEFAULT_VM_HOST:
     echo "   Host {{HOST}} can now decrypt secrets on next rebuild"
     echo "   Secrets pushed to GitHub - VM will pull on next rebuild"
 
-# Sync nix-config to running VM (for ad-hoc testing, not needed for ONE command flow)
+# Sync nix-config to running VM via git pull from origin
 vm-sync HOST=DEFAULT_VM_HOST:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "📦 Syncing nix-config to VM..."
+    echo "📦 Syncing nix-config to VM via git..."
 
     USER=$(just _get-vm-primary-user {{HOST}})
     USER_HOME="/home/$USER"
 
-    # Add git safe.directory on VM
-    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
-        "git config --global --add safe.directory $USER_HOME/nix-config" 2>/dev/null || true
-
-    # Rsync excluding large files, sockets, and .git
-    rsync -avz --delete \
-        --exclude='*.qcow2' \
-        --exclude='*.socket' \
-        --exclude='*.pid' \
-        --exclude='quickemu/' \
-        --exclude='.git' \
-        --exclude='result' \
-        -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}}" \
-        . root@127.0.0.1:$USER_HOME/nix-config/
+    # Pull latest from origin on the VM
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} $USER@127.0.0.1 \
+        "git -C $USER_HOME/nix-config fetch origin && git -C $USER_HOME/nix-config reset --hard origin/dev"
 
     echo "✅ Config synced to $USER_HOME/nix-config"
 
@@ -340,8 +329,10 @@ vm-rebuild HOST=DEFAULT_VM_HOST:
     echo "🔨 Rebuilding NixOS on VM..."
 
     USER=$(just _get-vm-primary-user {{HOST}})
-    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} root@127.0.0.1 \
-        "cd /home/$USER/nix-config && nixos-rebuild switch --flake .#{{HOST}}"
+    USER_HOME="/home/$USER"
+    # Use nh for better output; run as user (nh calls sudo internally)
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} $USER@127.0.0.1 \
+        "nh os switch $USER_HOME/nix-config"
 
     echo "✅ Rebuild complete"
 
