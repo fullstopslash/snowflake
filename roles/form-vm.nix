@@ -17,21 +17,26 @@
     # MODULE SELECTIONS (minimal by default)
     # ========================================
     # VMs start minimal - hosts add what they need
+    # Paths mirror filesystem: modules/<top>/<category> = [ "<module>" ]
     modules = {
-      desktop = [
-        "hyprland"
-        "wayland"
-      ];
-      displayManager = [ "ly" ];
-      cli = [
-        "shell"
-        "tools"
-      ];
-      services = [
-        "atuin"
-        "openssh"
-        "tailscale"
-      ];
+      apps = {
+        cli = [
+          "shell"
+          "tools"
+        ];
+      };
+      services = {
+        desktop = [
+          "hyprland"
+          "wayland"
+        ];
+        display-manager = [ "ly" ];
+        cli = [ "atuin" ];
+        networking = [
+          "openssh"
+          "tailscale"
+        ];
+      };
     };
 
     # ========================================

@@ -6,10 +6,10 @@
   ...
 }:
 let
-  cfg = config.myModules.displayManager.ly;
+  cfg = config.myModules.services.displayManager.ly;
 in
 {
-  options.myModules.displayManager.ly = {
+  options.myModules.services.displayManager.ly = {
     enable = lib.mkEnableOption "Ly display manager";
     tty = lib.mkOption {
       type = lib.types.int;

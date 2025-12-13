@@ -1,4 +1,6 @@
 # Bitwarden automation module
+#
+# Usage: modules.services.security = [ "bitwarden" ]
 {
   config,
   lib,
@@ -7,7 +9,7 @@
   ...
 }:
 let
-  cfg = config.myModules.services.security.bitwardenAutomation;
+  cfg = config.myModules.services.security.bitwarden;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 
   # Create a script that uses OAuth + libsecret (gnome-keyring) for full automation
@@ -156,7 +158,7 @@ let
   '';
 in
 {
-  options.myModules.services.security.bitwardenAutomation = {
+  options.myModules.services.security.bitwarden = {
     enable = lib.mkEnableOption "Enable Bitwarden automation";
     enableAutoLogin = lib.mkEnableOption "Enable automatic Bitwarden login on session start";
     syncInterval = lib.mkOption {

@@ -13,10 +13,10 @@
   ...
 }:
 let
-  cfg = config.myModules.networking.ssh;
+  cfg = config.myModules.services.networking.ssh;
 in
 {
-  options.myModules.networking.ssh = {
+  options.myModules.services.networking.ssh = {
     enable = lib.mkEnableOption "SSH client configuration";
   };
 

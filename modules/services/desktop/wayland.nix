@@ -6,10 +6,10 @@
   ...
 }:
 let
-  cfg = config.myModules.desktop.wayland;
+  cfg = config.myModules.services.desktop.wayland;
 in
 {
-  options.myModules.desktop.wayland = {
+  options.myModules.services.desktop.wayland = {
     enable = lib.mkEnableOption "Wayland support and utilities";
   };
 

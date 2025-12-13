@@ -7,6 +7,7 @@
 
   # Scan a directory and return module names (without .nix extension, excluding default.nix)
   # Used for generating enum values for the selection system
+  # Example: scanModuleNames ./modules/apps/media -> [ "media" "obs" ]
   # Example: scanModuleNames ./modules/services/desktop -> [ "common" "hyprland" "niri" "plasma" "waybar" "wayland" ]
   scanModuleNames =
     path:

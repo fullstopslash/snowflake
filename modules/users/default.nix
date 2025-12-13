@@ -10,6 +10,7 @@
 let
   platform = if isDarwin then "darwin" else "nixos";
   hostSpec = config.hostSpec;
+  sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 
   # List of yubikey public keys for the primary user
   pubKeys = lib.filesystem.listFilesRecursive (
@@ -81,6 +82,18 @@ in
     lib.optionalAttrs (!isDarwin) {
       mutableUsers = false; # Required for password to be set via sops during system activation!
     };
+
+  # SOPS secrets for user passwords (only when hasSecrets && !isMinimal)
+  sops.secrets = lib.mkIf (config.hostSpec.hasSecrets && !config.hostSpec.isMinimal) (
+    lib.mergeAttrsList (
+      map (user: {
+        "passwords/${user}" = {
+          sopsFile = "${sopsFolder}/shared.yaml";
+          neededForUsers = true;
+        };
+      }) config.hostSpec.users
+    )
+  );
 }
 // lib.optionalAttrs (inputs ? "home-manager") {
   home-manager =

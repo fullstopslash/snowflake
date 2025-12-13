@@ -7,7 +7,7 @@
   ...
 }:
 let
-  cfg = config.myModules.services.tailscale;
+  cfg = config.myModules.services.networking.tailscale;
 
   # Get the primary user for Tailscale operator permissions
   userNames = builtins.attrNames config.users.users;
@@ -15,7 +15,7 @@ let
   operatorUser = if normalUsers != [ ] then builtins.head normalUsers else "root";
 in
 {
-  options.myModules.services.tailscale = {
+  options.myModules.services.networking.tailscale = {
     enable = lib.mkEnableOption "Tailscale VPN";
   };
 

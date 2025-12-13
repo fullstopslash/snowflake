@@ -1,4 +1,6 @@
 # Sinkzone DNS blocking service for focus/productivity
+#
+# Usage: modules.services.networking = [ "sinkzone" ]
 {
   config,
   lib,
@@ -6,7 +8,7 @@
   ...
 }:
 let
-  cfg = config.services.sinkzone;
+  cfg = config.myModules.services.networking.sinkzone;
   sinkzonePkg = pkgs.callPackage ../pkgs/sinkzone/default.nix { };
 
   # Generate allowlist content from configuration
@@ -19,7 +21,7 @@ let
   '';
 in
 {
-  options.services.sinkzone = {
+  options.myModules.services.networking.sinkzone = {
     enable = lib.mkEnableOption "Sinkzone DNS blocking service";
 
     package = lib.mkOption {

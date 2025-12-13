@@ -37,8 +37,9 @@
   # ========================================
   # EXTRA MODULES (additive to role defaults)
   # ========================================
-  # extraModules.apps = [ "productivity" ];
-  # extraModules.services = [ "tailscale" ];
+  # Paths mirror filesystem: extraModules.<top>.<category> = [ "<module>" ]
+  # extraModules.apps.productivity = [ "default" ];
+  # extraModules.services.networking = [ "tailscale" ];
 
   # ========================================
   # HOST IDENTITY

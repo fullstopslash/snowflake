@@ -32,5 +32,6 @@
   # ========================================
   # EXTRA MODULES (additive to role defaults)
   # ========================================
-  extraModules.security = [ "bitwarden" ];
+  # Paths mirror filesystem: extraModules.<top>.<category> = [ "<module>" ]
+  extraModules.services.security = [ "bitwarden" ];
 }

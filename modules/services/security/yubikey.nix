@@ -1,5 +1,10 @@
-# This module supports multiple YubiKey 4 and/or 5 devices as well as a single Yubico Security Key device. The limitation to a single Security Key is because they do not have serial numbers and therefore the scripts in this module cannot uniquely identify them. See options.yubikey.identifies.description below for information on how to add a 'mock' serial number for a single Security key. Additional context is available in Issue 14 https://github.com/EmergentMind/nix-config/issues/14
-
+# YubiKey support module
+#
+# Usage: modules.services.security = [ "yubikey" ]
+#
+# This module supports multiple YubiKey 4 and/or 5 devices as well as a single Yubico Security Key device.
+# The limitation to a single Security Key is because they do not have serial numbers and therefore
+# the scripts in this module cannot uniquely identify them.
 {
   config,
   pkgs,
@@ -7,11 +12,12 @@
   ...
 }:
 let
+  cfg = config.myModules.services.security.yubikey;
   homeDirectory = "${config.hostSpec.home}";
   yubikey-up =
     let
       yubikeyIds = lib.concatStringsSep " " (
-        lib.mapAttrsToList (name: id: "[${name}]=\"${builtins.toString id}\"") config.yubikey.identifiers
+        lib.mapAttrsToList (name: id: "[${name}]=\"${builtins.toString id}\"") cfg.identifiers
       );
     in
     pkgs.writeShellApplication {
@@ -59,24 +65,23 @@ let
   };
 in
 {
-  options = {
-    yubikey = {
-      enable = lib.mkEnableOption "Enable yubikey support";
-      identifiers = lib.mkOption {
-        default = { };
-        type = lib.types.attrsOf (lib.types.either lib.types.int lib.types.str);
-        description = "Attrset of Yubikey serial numbers. NOTE: Yubico's 'Security Key' products do not use unique serial number therefore, the scripts in this module are unable to distinguish between multiple 'Security Key' devices and instead will detect a Security Key serial number as the string \"[FIDO]\". This means you can only use a single Security Key but can still mix it with YubiKey 4 and 5 devices.";
-        example = lib.literalExample ''
-          {
-            foo = 12345678;
-            bar = 87654321;
-            baz = "[FIDO]";
-          }
-        '';
-      };
+  options.myModules.services.security.yubikey = {
+    enable = lib.mkEnableOption "YubiKey support";
+    identifiers = lib.mkOption {
+      default = { };
+      type = lib.types.attrsOf (lib.types.either lib.types.int lib.types.str);
+      description = "Attrset of Yubikey serial numbers. NOTE: Yubico's 'Security Key' products do not use unique serial number therefore, the scripts in this module are unable to distinguish between multiple 'Security Key' devices and instead will detect a Security Key serial number as the string \"[FIDO]\". This means you can only use a single Security Key but can still mix it with YubiKey 4 and 5 devices.";
+      example = lib.literalExample ''
+        {
+          foo = 12345678;
+          bar = 87654321;
+          baz = "[FIDO]";
+        }
+      '';
     };
   };
-  config = lib.mkIf config.yubikey.enable {
+
+  config = lib.mkIf cfg.enable {
     environment.systemPackages = lib.flatten [
       (builtins.attrValues {
         inherit (pkgs)

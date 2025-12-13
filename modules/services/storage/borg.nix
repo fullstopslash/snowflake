@@ -1,3 +1,6 @@
+# Borg backup module
+#
+# Usage: modules.services.storage = [ "borg" ]
 {
   pkgs,
   lib,
@@ -6,7 +9,7 @@
   ...
 }:
 let
-  cfg = config.services.backup;
+  cfg = config.myModules.services.storage.borg;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
   isImpermanent =
     if config.system ? "impermanence" then
@@ -80,8 +83,8 @@ let
   );
 in
 {
-  options.services.backup = {
-    enable = lib.mkEnableOption "Enable borg-based backup service";
+  options.myModules.services.storage.borg = {
+    enable = lib.mkEnableOption "Borg-based backup service";
     borgUser = lib.mkOption {
       type = lib.types.str;
       default = "borg";

@@ -8,15 +8,17 @@
     # ========================================
     # MODULE SELECTIONS (minimal headless)
     # ========================================
+    # Paths mirror filesystem: modules/<top>/<category> = [ "<module>" ]
     modules = {
-      cli = [
-        "shell"
-        "tools"
-      ];
-      services = [
-        "openssh"
-        "auto-upgrade"
-      ];
+      apps = {
+        cli = [
+          "shell"
+          "tools"
+        ];
+      };
+      services = {
+        networking = [ "openssh" ];
+      };
     };
 
     # ========================================

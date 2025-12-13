@@ -10,12 +10,17 @@
     # ========================================
     # MODULE SELECTIONS (additive)
     # ========================================
+    # Paths mirror filesystem: modules/<top>/<category> = [ "<module>" ]
     modules = {
-      apps = [ "media" ];
-      audio = [
-        "pipewire"
-        "easyeffects"
-      ];
+      apps = {
+        media = [ "media" ];
+      };
+      services = {
+        audio = [
+          "pipewire"
+          "easyeffects"
+        ];
+      };
     };
   };
 }

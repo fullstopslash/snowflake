@@ -22,12 +22,12 @@
   ...
 }:
 let
-  cfg = config.myModules.services.atuin;
+  cfg = config.myModules.services.cli.atuin;
   primaryUser = config.hostSpec.primaryUsername;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 in
 {
-  options.myModules.services.atuin = {
+  options.myModules.services.cli.atuin = {
     enable = lib.mkEnableOption "Atuin shell history sync service";
   };
 

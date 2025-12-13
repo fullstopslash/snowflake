@@ -5,7 +5,7 @@
   ...
 }:
 let
-  cfg = config.myModules.networking.openssh;
+  cfg = config.myModules.services.networking.openssh;
   sshPort = config.hostSpec.networking.ports.tcp.ssh;
 
   # Sops needs access to the keys before the persist dirs are even mounted; so
@@ -14,7 +14,7 @@ let
   hasOptinPersistence = false;
 in
 {
-  options.myModules.networking.openssh = {
+  options.myModules.services.networking.openssh = {
     enable = lib.mkEnableOption "OpenSSH server";
   };
 

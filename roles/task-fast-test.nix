@@ -1,4 +1,7 @@
 # Fast test role - absolute minimum for deployment testing
+#
+# Note: With the filesystem-driven module system, modules are only enabled
+# if explicitly selected. This role provides minimal packages and disables docs.
 {
   config,
   lib,
@@ -7,16 +10,6 @@
 }:
 {
   config = lib.mkIf (builtins.elem "fastTest" config.roles) {
-    # Override any heavy defaults
-    myModules = {
-      apps.gaming.enable = lib.mkForce false;
-      apps.media.enable = lib.mkForce false;
-      desktop.plasma.enable = lib.mkForce false;
-      services.development.containers.enable = lib.mkForce false;
-      apps.development.latex.enable = lib.mkForce false;
-      apps.cli.tools.enable = lib.mkForce false;
-    };
-
     # Minimal test packages only
     environment.systemPackages = with pkgs; [
       git
@@ -24,7 +17,7 @@
       htop
     ];
 
-    # Disable documentation
+    # Disable documentation for faster builds
     documentation.enable = false;
     documentation.man.enable = false;
     documentation.nixos.enable = false;

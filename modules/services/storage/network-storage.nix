@@ -1,24 +1,19 @@
 # Network storage module - NFS mounts for LAN storage access
 #
+# Usage: modules.services.storage = [ "network-storage" ]
+#
 # Provides automounted NFS shares from waterbug.lan storage server:
 # - /storage - Main storage pool
 # - /mnt/apps - Applications and shared software
 #
 # Uses systemd automount to avoid boot delays when storage server is unavailable.
-#
-# Enable via: services.networkStorage.enable = true;
-# Or import: hosts/common/optional/network-storage.nix
-{
-  config,
-  lib,
-  ...
-}:
+{ config, lib, ... }:
 let
-  cfg = config.services.networkStorage;
+  cfg = config.myModules.services.storage.networkStorage;
 in
 {
-  options.services.networkStorage = {
-    enable = lib.mkEnableOption "Enable network storage NFS mounts";
+  options.myModules.services.storage.networkStorage = {
+    enable = lib.mkEnableOption "Network storage NFS mounts";
   };
 
   config = lib.mkIf cfg.enable {

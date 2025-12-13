@@ -7,7 +7,7 @@
     ./desktop
     ./development
     ./display-manager
-    ./flatpak.nix
+    ./misc
     ./networking
     ./security
     ./storage

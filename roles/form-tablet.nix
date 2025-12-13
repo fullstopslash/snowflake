@@ -8,12 +8,17 @@
     # ========================================
     # MODULE SELECTIONS (touch-optimized)
     # ========================================
+    # Paths mirror filesystem: modules/<top>/<category> = [ "<module>" ]
     modules = {
-      desktop = [ "wayland" ];
-      displayManager = [ "ly" ];
-      apps = [ "media" ];
-      cli = [ "shell" ];
-      audio = [ "pipewire" ];
+      apps = {
+        media = [ "media" ];
+        cli = [ "shell" ];
+      };
+      services = {
+        desktop = [ "wayland" ];
+        display-manager = [ "ly" ];
+        audio = [ "pipewire" ];
+      };
     };
 
     # ========================================

@@ -7,10 +7,10 @@
   ...
 }:
 let
-  cfg = config.myModules.displayManager.greetd;
+  cfg = config.myModules.services.displayManager.greetd;
 in
 {
-  options.myModules.displayManager.greetd = {
+  options.myModules.services.displayManager.greetd = {
     enable = lib.mkEnableOption "greetd display manager with tuigreet";
   };
 

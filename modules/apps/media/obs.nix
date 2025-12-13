@@ -1,4 +1,6 @@
-# OBS role
+# OBS Studio module
+#
+# Usage: modules.apps.media = [ "obs" ]
 {
   config,
   lib,
@@ -6,6 +8,7 @@
   ...
 }:
 let
+  cfg = config.myModules.apps.media.obs;
   # v4l2loopback 0.15.3 for kernel 6.18 compatibility
   v4l2loopback = config.boot.kernelPackages.v4l2loopback.overrideAttrs (_old: {
     version = "0.15.3";
@@ -18,23 +21,29 @@ let
   });
 in
 {
-  programs.obs-studio = {
-    enable = true;
-    enableVirtualCamera = true;
-    plugins = with pkgs.obs-studio-plugins; [
-      wlrobs
-      obs-backgroundremoval
-      obs-pipewire-audio-capture
-      obs-gstreamer
-      obs-vaapi
-      obs-vkcapture
-      obs-tuna
-      obs-teleport
-      input-overlay
-      waveform
-    ];
+  options.myModules.apps.media.obs = {
+    enable = lib.mkEnableOption "OBS Studio with virtual camera";
   };
 
-  # Override v4l2loopback module set by enableVirtualCamera
-  boot.extraModulePackages = lib.mkForce [ v4l2loopback ];
+  config = lib.mkIf cfg.enable {
+    programs.obs-studio = {
+      enable = true;
+      enableVirtualCamera = true;
+      plugins = with pkgs.obs-studio-plugins; [
+        wlrobs
+        obs-backgroundremoval
+        obs-pipewire-audio-capture
+        obs-gstreamer
+        obs-vaapi
+        obs-vkcapture
+        obs-tuna
+        obs-teleport
+        input-overlay
+        waveform
+      ];
+    };
+
+    # Override v4l2loopback module set by enableVirtualCamera
+    boot.extraModulePackages = lib.mkForce [ v4l2loopback ];
+  };
 }

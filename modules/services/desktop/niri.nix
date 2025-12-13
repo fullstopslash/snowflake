@@ -5,10 +5,10 @@
   ...
 }:
 let
-  cfg = config.myModules.desktop.niri;
+  cfg = config.myModules.services.desktop.niri;
 in
 {
-  options.myModules.desktop.niri = {
+  options.myModules.services.desktop.niri = {
     enable = lib.mkEnableOption "Niri compositor";
   };
 

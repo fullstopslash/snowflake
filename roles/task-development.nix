@@ -10,12 +10,18 @@
     # ========================================
     # MODULE SELECTIONS (additive)
     # ========================================
-    # These add to whatever the hardware role sets
-    modules.development = [
-      "latex"
-      "document-processing"
-      "containers"
-      "tools"
-    ];
+    # Paths mirror filesystem: modules/<top>/<category> = [ "<module>" ]
+    modules = {
+      apps = {
+        development = [
+          "latex"
+          "document-processing"
+          "tools"
+        ];
+      };
+      services = {
+        development = [ "containers" ];
+      };
+    };
   };
 }

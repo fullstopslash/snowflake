@@ -10,10 +10,10 @@
   ...
 }:
 let
-  cfg = config.myModules.desktop.hyprland;
+  cfg = config.myModules.services.desktop.hyprland;
 in
 {
-  options.myModules.desktop.hyprland = {
+  options.myModules.services.desktop.hyprland = {
     enable = lib.mkEnableOption "Hyprland desktop";
   };
 

@@ -6,10 +6,10 @@
   ...
 }:
 let
-  cfg = config.myModules.services.flatpak;
+  cfg = config.myModules.services.misc.flatpak;
 in
 {
-  options.myModules.services.flatpak = {
+  options.myModules.services.misc.flatpak = {
     enable = lib.mkEnableOption "Flatpak support";
   };
 

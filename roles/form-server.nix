@@ -9,17 +9,21 @@
     # ========================================
     # MODULE SELECTIONS (headless)
     # ========================================
+    # Paths mirror filesystem: modules/<top>/<category> = [ "<module>" ]
     modules = {
-      cli = [
-        "shell"
-        "tools"
-      ];
-      services = [
-        "atuin"
-        "ssh"
-        "openssh"
-        "auto-upgrade"
-      ];
+      apps = {
+        cli = [
+          "shell"
+          "tools"
+        ];
+      };
+      services = {
+        cli = [ "atuin" ];
+        networking = [
+          "ssh"
+          "openssh"
+        ];
+      };
     };
 
     # ========================================

@@ -1,19 +1,30 @@
-# AI tools role: install various AI development tools
-# FIXME: Many packages require custom overlays or flake inputs - commented out until added
-{ pkgs, config, ... }:
+# AI tools module: install various AI development tools
+#
+# Usage: modules.apps.ai = [ "ai-tools" ]
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
 let
+  cfg = config.myModules.apps.ai.aiTools;
   ollamaCfg = config.services.ollama;
 in
 {
-  environment.systemPackages = with pkgs; [
-    # Available in nixpkgs
-    aider-chat
-    aichat
-  ];
+  options.myModules.apps.ai.aiTools = {
+    enable = lib.mkEnableOption "AI development tools (aider, aichat)";
+  };
 
-  # Environment variables for AI tool integration
-  # References the ollama config to stay in sync
-  environment.sessionVariables = {
-    OLLAMA_HOST = "${ollamaCfg.host}:${toString ollamaCfg.port}";
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = with pkgs; [
+      aider-chat
+      aichat
+    ];
+
+    # Environment variables for AI tool integration
+    environment.sessionVariables = {
+      OLLAMA_HOST = "${ollamaCfg.host}:${toString ollamaCfg.port}";
+    };
   };
 }

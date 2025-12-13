@@ -1,4 +1,6 @@
-# https://discourse.nixos.org/t/imperative-declarative-wifi-networks-with-wpa-supplicant/12394/6
+# Wireless network configuration module
+#
+# Usage: modules.services.networking = [ "wireless" ]
 # NOTE: Not used for now because we can't have the PSK value come from nix-secrets
 # You would add something like:
 #  networking.wireless.networks."AP1" = { psk = "KEY" };
@@ -10,7 +12,8 @@
   ...
 }:
 let
-  cfg = config.networking.networkmanager;
+  cfg = config.myModules.services.networking.wireless;
+  nmCfg = config.networking.networkmanager;
 
   getFileName = lib.stringAsChars (x: if x == " " then "-" else x);
 
@@ -39,7 +42,11 @@ let
   keyFiles = lib.mapAttrs' createWifi config.networking.wireless.networks;
 in
 {
-  config = lib.mkIf cfg.enable {
+  options.myModules.services.networking.wireless = {
+    enable = lib.mkEnableOption "Wireless network configuration";
+  };
+
+  config = lib.mkIf (cfg.enable && nmCfg.enable) {
     environment.etc = keyFiles;
 
     systemd.services.NetworkManager-predefined-connections = {

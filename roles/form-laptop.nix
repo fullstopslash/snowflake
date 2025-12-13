@@ -9,34 +9,35 @@
     # ========================================
     # MODULE SELECTIONS (same as desktop)
     # ========================================
+    # Paths mirror filesystem: modules/<top>/<category> = [ "<module>" ]
     modules = {
-      desktop = [
-        "plasma"
-        "hyprland"
-        "wayland"
-        "common"
-      ];
-      displayManager = [ "ly" ];
-      apps = [
-        "media"
-        "gaming"
-        "comms"
-        "productivity"
-      ];
-      cli = [
-        "shell"
-        "tools"
-      ];
-      development = [
-        "latex"
-        "document-processing"
-        "containers"
-      ];
-      services = [
-        "atuin"
-        "ssh"
-      ];
-      audio = [ "pipewire" ];
+      apps = {
+        media = [ "media" ];
+        gaming = [ "gaming" ];
+        comms = [ "comms" ];
+        productivity = [ "productivity" ];
+        cli = [
+          "shell"
+          "tools"
+        ];
+        development = [
+          "latex"
+          "document-processing"
+        ];
+      };
+      services = {
+        desktop = [
+          "plasma"
+          "hyprland"
+          "wayland"
+          "common"
+        ];
+        display-manager = [ "ly" ];
+        development = [ "containers" ];
+        cli = [ "atuin" ];
+        networking = [ "ssh" ];
+        audio = [ "pipewire" ];
+      };
     };
 
     # ========================================

@@ -1,55 +1,65 @@
-# Networking role
-{ pkgs, lib, ... }:
+# Networking base module
+#
+# Usage: modules.services.networking = [ "networking-base" ]
 {
-  # Network packages
-  environment.systemPackages = with pkgs; [
-    wireguard-tools
-    ethtool
-    networkd-dispatcher
-    wol
-    wakeonlan
-  ];
-
-  # Network management - optimized for faster boot
-  networking = {
-    networkmanager = {
-      enable = true;
-      dns = "systemd-resolved";
-    };
-    firewall = {
-      enable = true;
-      allowedTCPPorts = [
-        10400
-        10700
-      ];
-      allowedUDPPorts = [ 41641 ];
-    };
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  cfg = config.myModules.services.networking.networkingBase;
+in
+{
+  options.myModules.services.networking.networkingBase = {
+    enable = lib.mkEnableOption "Base networking configuration";
   };
 
-  # Optional: soften DNSSEC to avoid flaky captive/Wi‑Fi resumes
-  # Core network services; split others into dedicated roles
-  # SSH config is in modules/services/networking/openssh.nix
-  services = {
-    avahi = {
-      enable = true;
-      nssmdns4 = true;
-      publish = {
+  config = lib.mkIf cfg.enable {
+    # Network packages
+    environment.systemPackages = with pkgs; [
+      wireguard-tools
+      ethtool
+      networkd-dispatcher
+      wol
+      wakeonlan
+    ];
+
+    # Network management - optimized for faster boot
+    networking = {
+      networkmanager = {
         enable = true;
-        addresses = true;
-        domain = true;
-        hinfo = true;
-        userServices = true;
-        workstation = true;
+        dns = "systemd-resolved";
       };
-      allowInterfaces = [ "tailscale0" ]; # optimized startup
+      firewall = {
+        enable = true;
+        allowedTCPPorts = [
+          10400
+          10700
+        ];
+        allowedUDPPorts = [ 41641 ];
+      };
     };
-    resolved = {
-      enable = true;
-      dnssec = "allow-downgrade";
-      # dnsovertls = "true";
+
+    # Core network services
+    services = {
+      avahi = {
+        enable = true;
+        nssmdns4 = true;
+        publish = {
+          enable = true;
+          addresses = true;
+          domain = true;
+          hinfo = true;
+          userServices = true;
+          workstation = true;
+        };
+        allowInterfaces = [ "tailscale0" ]; # optimized startup
+      };
+      resolved = {
+        enable = true;
+        dnssec = "allow-downgrade";
+      };
     };
-    # mullvad: roles/vpn.nix
-    # tailscale: roles/tailscale.nix
-    # avahi: roles/mdns.nix
   };
 }

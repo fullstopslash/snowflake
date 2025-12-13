@@ -26,13 +26,14 @@
     documentation.enable = false;
 
     # Auto-clone nix-config and nix-secrets repos on first login
+    # (path is in modules/common/ so not part of selection system)
     myModules.services.nixConfigRepo.enable = true;
 
     # Atuin shell history sync with auto-login
-    myModules.services.atuin.enable = true;
+    myModules.services.cli.atuin.enable = true;
 
     # Syncthing file sync with device IDs from nix-secrets
-    myModules.services.syncthing.enable = true;
+    myModules.services.networking.syncthing.enable = true;
 
     # Useful apps for test VMs
     environment.systemPackages = with pkgs; [

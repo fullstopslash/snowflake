@@ -2,7 +2,7 @@
 #
 # The unified module selection system:
 # - roles = [...] selects your hardware form factor and optional task roles
-# - Roles set default module selections via lib.mkDefault
+# - Roles set default module selections
 # - extraModules.* adds host-specific modules to role defaults (additive)
 # - modules.* can be overridden with lib.mkForce if needed (replaces)
 #
@@ -10,10 +10,11 @@
 #   Form factors (pick ONE):  desktop, laptop, vm, server, pi, tablet, darwin
 #   Task roles (composable):  development, mediacenter, test, fastTest
 #
-# Available module categories (for extraModules.*):
-#   desktop, displayManager, apps, cli, development, services, audio, ai, security
+# Module selection paths mirror filesystem structure:
+#   modules.apps.<category> = [ "<module>" ]     -> modules/apps/<category>/<module>.nix
+#   modules.services.<category> = [ "<module>" ] -> modules/services/<category>/<module>.nix
 #
-# To see available modules for each category, check modules/selection.nix
+# To see available modules for each category, browse the modules/ directory
 # or use your LSP - values are typed enums for autocompletion.
 #
 { ... }:
@@ -35,15 +36,17 @@
   # EXTRA MODULES (additive to role defaults)
   # ========================================
   # Add host-specific modules without replacing role defaults
-  # extraModules.apps = [ "productivity" ];
-  # extraModules.services = [ "tailscale" "syncthing" ];
-  # extraModules.development = [ "rust" ];
+  # Paths mirror filesystem: extraModules.<top>.<category> = [ "<module>" ]
+  #
+  # extraModules.apps.productivity = [ "default" ];
+  # extraModules.services.networking = [ "tailscale" "syncthing" ];
+  # extraModules.apps.development = [ "rust" ];
 
   # ========================================
   # MODULE OVERRIDES (replaces role defaults)
   # ========================================
   # Use lib.mkForce to completely replace a category
-  # modules.desktop = lib.mkForce [ "niri" "wayland" ];
+  # modules.services.desktop = lib.mkForce [ "niri" "wayland" ];
 
   # ========================================
   # HOST IDENTITY (required)

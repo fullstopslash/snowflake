@@ -7,12 +7,12 @@
   ...
 }:
 let
-  cfg = config.myModules.desktop.common;
+  cfg = config.myModules.services.desktop.common;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
   hasDesktopSecrets = config.hostSpec.hasSecrets && config.hostSpec.secretCategories.desktop or false;
 in
 {
-  options.myModules.desktop.common = {
+  options.myModules.services.desktop.common = {
     enable = lib.mkEnableOption "common desktop environment";
   };
 

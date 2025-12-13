@@ -22,12 +22,12 @@
   ...
 }:
 let
-  cfg = config.myModules.services.syncthing;
+  cfg = config.myModules.services.networking.syncthing;
   username = config.hostSpec.username;
   homeDir = config.hostSpec.home;
 in
 {
-  options.myModules.services.syncthing = {
+  options.myModules.services.networking.syncthing = {
     enable = lib.mkEnableOption "Syncthing file synchronization";
   };
 

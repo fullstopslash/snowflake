@@ -1,21 +1,29 @@
-# Neovim role with mcphub.nvim integration
+# Neovim module with mcphub.nvim integration
+#
+# Usage: modules.apps.development = [ "neovim" ]
 {
+  config,
+  lib,
   pkgs,
   inputs,
   ...
 }:
+let
+  cfg = config.myModules.apps.development.neovim;
+in
 {
-  # Install Neovim and related tools
-  environment.systemPackages = with pkgs; [
-    neovim
-    # Add mcphub.nvim package
-    inputs.mcp-hub.packages."${pkgs.stdenv.hostPlatform.system}".default
-    # Additional tools that might be needed for mcphub.nvim
-    nodejs_20 # Required for mcp-hub binary
-    jq # Optional, for better servers.json formatting
+  options.myModules.apps.development.neovim = {
+    enable = lib.mkEnableOption "Neovim with mcphub.nvim";
+  };
 
-    # Luajit packages for neovim plugins
-    luajitPackages.luarocks
-    luajitPackages.magick
-  ];
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = with pkgs; [
+      neovim
+      inputs.mcp-hub.packages."${pkgs.stdenv.hostPlatform.system}".default
+      nodejs_20
+      jq
+      luajitPackages.luarocks
+      luajitPackages.magick
+    ];
+  };
 }
