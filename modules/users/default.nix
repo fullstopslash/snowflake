@@ -140,7 +140,7 @@ in
               plugins = [
                 {
                   name = "powerlevel10k-config";
-                  src = lib.custom.relativeToRoot "home-manager/common/themes/p10k";
+                  src = lib.custom.relativeToRoot "home-manager/themes/p10k";
                   file = "p10k.zsh.theme";
                 }
                 {
