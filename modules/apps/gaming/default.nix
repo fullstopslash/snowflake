@@ -1,5 +1,10 @@
 # Gaming role
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.myModules.apps.gaming;
 in
@@ -65,6 +70,9 @@ in
 
     # Gaming packages
     environment.systemPackages = with pkgs; [
+      # Run non-NixOS binaries
+      steam-run
+
       # Games
       cataclysm-dda-git
       crawl

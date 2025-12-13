@@ -41,9 +41,10 @@ in
               let
                 # Only reference SOPS secret if hasSecrets is true and not minimal
                 sopsHashedPasswordFile =
-                  if config.hostSpec.hasSecrets && !config.hostSpec.isMinimal
-                  then config.sops.secrets."passwords/${user}".path
-                  else null;
+                  if config.hostSpec.hasSecrets && !config.hostSpec.isMinimal then
+                    config.sops.secrets."passwords/${user}".path
+                  else
+                    null;
                 platformPath = lib.custom.relativeToRoot "modules/users/${user}/${platform}.nix";
               in
               {
@@ -108,6 +109,8 @@ in
         (lib.mergeAttrsList (
           map (user: {
             "${user}".imports = lib.flatten [
+              # Chezmoi dotfiles management - applies to all non-minimal users
+              (lib.optional (!hostSpec.isMinimal) (lib.custom.relativeToRoot "home-manager/chezmoi.nix"))
               (lib.optional (!hostSpec.isMinimal) (
                 map (fullPathIfExists) [
                   "home-manager/users/${user}/${hostSpec.hostName}.nix"
@@ -137,7 +140,7 @@ in
               plugins = [
                 {
                   name = "powerlevel10k-config";
-                  src = lib.custom.relativeToRoot "home-manager/common/core/zsh/p10k";
+                  src = lib.custom.relativeToRoot "home-manager/common/themes/p10k";
                   file = "p10k.zsh.theme";
                 }
                 {

@@ -27,6 +27,7 @@ in
     myModules.desktop.hyprland.enable = lib.mkDefault true;
     myModules.desktop.wayland.enable = lib.mkDefault true;
     myModules.services.tailscale.enable = lib.mkDefault true;
+    myModules.services.atuin.enable = lib.mkDefault true;
     myModules.networking.openssh.enable = lib.mkDefault true;
     #
     # ========== Boot Configuration ==========

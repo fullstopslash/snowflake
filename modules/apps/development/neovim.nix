@@ -13,5 +13,9 @@
     # Additional tools that might be needed for mcphub.nvim
     nodejs_20 # Required for mcp-hub binary
     jq # Optional, for better servers.json formatting
+
+    # Luajit packages for neovim plugins
+    luajitPackages.luarocks
+    luajitPackages.magick
   ];
 }

@@ -73,8 +73,9 @@ in
     };
 
     # System-level shell integration for zsh
+    # Uses shellInit (not interactiveShellInit) so it runs for ALL shells including SSH commands
     # This adds to /etc/zshrc, works even when HM's zsh is disabled (chezmoi users)
-    programs.zsh.interactiveShellInit = ''
+    programs.zsh.shellInit = ''
       eval "$(${pkgs.atuin}/bin/atuin init zsh)"
     '';
 
