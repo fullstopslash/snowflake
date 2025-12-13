@@ -18,10 +18,6 @@
   ...
 }:
 let
-  # Only enable auto upgrade if current config came from a clean tree
-  # This avoids accidental auto-upgrades when working locally.
-  isClean = inputs.self ? rev;
-
   # Config repo settings
   repoCfg = config.myModules.services.nixConfigRepo;
   user = config.hostSpec.primaryUsername;
@@ -161,28 +157,9 @@ in
       #
       # ========== NixOS-only: Auto-upgrade ==========
       #
-      # Automatically pulls and applies updates from the flake repo.
-      # Only runs when current config came from a clean git tree (has rev).
-      system.autoUpgrade = lib.mkIf pkgs.stdenv.isLinux {
-        enable = isClean;
-        dates = "hourly";
-        flags = [ "--refresh" ];
-        flake = "github:fullstopslash/snowflake?ref=dev";
-      };
-
-      # Only run if current config (self) is older than the new one.
-      systemd.services.nixos-upgrade =
-        lib.mkIf (pkgs.stdenv.isLinux && config.system.autoUpgrade.enable)
-          {
-            serviceConfig.ExecCondition = lib.getExe (
-              pkgs.writeShellScriptBin "check-date" ''
-                lastModified() {
-                  nix flake metadata "$1" --refresh --json | ${lib.getExe pkgs.jq} '.lastModified'
-                }
-                test "$(lastModified "${config.system.autoUpgrade.flake}")" -gt "$(lastModified "self")"
-              ''
-            );
-          };
+      # Auto-upgrade is now handled by myModules.services.autoUpgrade
+      # See modules/services/misc/auto-upgrade.nix for configuration
+      #
     }
 
     #

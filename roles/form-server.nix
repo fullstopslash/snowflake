@@ -15,6 +15,9 @@ in
     services.openssh.enable = lib.mkDefault true;
     networking.firewall.enable = lib.mkDefault true;
 
+    # Enable auto-upgrade for production servers
+    myModules.services.autoUpgrade.enable = lib.mkDefault true;
+
     # Enable CLI tools for server admin
     myModules.services.atuin.enable = lib.mkDefault true;
     myModules.networking.ssh.enable = lib.mkDefault true;

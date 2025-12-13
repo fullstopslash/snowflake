@@ -14,6 +14,9 @@ in
     boot.loader.grub.enable = lib.mkDefault false;
     boot.loader.generic-extlinux-compatible.enable = lib.mkDefault true;
 
+    # Enable auto-upgrade for Pi (typically always-on home servers)
+    myModules.services.autoUpgrade.enable = lib.mkDefault true;
+
     # Minimal footprint
     documentation.enable = lib.mkDefault false;
     services.openssh.enable = lib.mkDefault true;

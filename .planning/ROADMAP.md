@@ -72,14 +72,21 @@ Plans:
 ### Phase 6: Auto-Update System
 **Goal**: Self-updating machines via daily git pull + rebuild, or WoL-triggered updates
 **Depends on**: Phase 5
-**Plans**: TBD
+**Plans**: 1 plan (done inline)
 
-Key work:
-- systemd timer for daily git pull + nh rebuild
-- WoL integration: wake → pull → rebuild → sleep
-- Push notification option (webhook triggers rebuild)
-- Multi-remote git sync (GitHub, Codeberg, self-hosted)
-- Rollback safety (keep N generations)
+Completed work:
+- [x] Created `modules/services/misc/auto-upgrade.nix` with full options
+- [x] Two modes: `remote` (flake URL) and `local` (git pull + nh rebuild)
+- [x] Configurable: schedule, flakeUrl, keepGenerations, keepDays, rebootWindow
+- [x] Safety check: only upgrades if remote is newer than local
+- [x] Integrated with nh for clean garbage collection
+- [x] Enabled by default for server and pi roles
+- [x] Removed duplicate config from nix-management.nix
+
+Not implemented (optional future work):
+- WoL integration (wake → pull → rebuild → sleep)
+- Push notification (webhook triggers rebuild)
+- Multi-remote git sync
 
 ### Phase 7: Structure Reorganization
 **Goal**: Clean, unified module structure with minimal home-manager usage
@@ -197,7 +204,7 @@ Completed work:
 | 3. Host-Spec & Inheritance | 3/3 | Complete | 2025-12-08 |
 | 4. Secrets & Security | 4/4 | Complete | 2025-12-08 |
 | 5. Reference Host | 2/2 | Complete | 2025-12-08 |
-| 6. Auto-Update System | 0/? | Not started | - |
+| 6. Auto-Update System | 1/1 | Complete | 2025-12-12 |
 | 7. Structure Reorganization | 4/4 | Complete | 2025-12-11 |
 | 8. Role System Refinement | 4/4 | Complete | 2025-12-11 |
 | 9. Griefling Minimal Fix | - | Superseded | - |
