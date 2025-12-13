@@ -112,6 +112,7 @@ in
       ryubing
       freeciv
       winetricks
+      unstable.path-of-building
       usbutils
 
       # Gaming utilities
