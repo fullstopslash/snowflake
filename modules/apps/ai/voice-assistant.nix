@@ -6,10 +6,11 @@
   ...
 }:
 let
-  cfg = config.myModules.services.voiceAssistant;
+  cfg = config.myModules.apps.ai.voiceAssistant;
+  openwakewordCfg = config.services.wyoming.openwakeword;
 in
 {
-  options.myModules.services.voiceAssistant = {
+  options.myModules.apps.ai.voiceAssistant = {
     enable = lib.mkEnableOption "Wyoming voice assistant";
   };
 
@@ -22,7 +23,7 @@ in
         user = "rain";
         extraArgs = [
           "--wake-word-name=ok_nabu"
-          "--wake-uri=tcp://127.0.0.1:10400"
+          "--wake-uri=tcp://127.0.0.1:${toString openwakewordCfg.port}"
         ];
         microphone = {
           command = "${pkgs.pipewire}/bin/pw-cat --record --target alsa_input.usb-audio-technica____AT2020_USB-00.iec958-stereo --format=s16 --channels=1 --rate=16000 -";
