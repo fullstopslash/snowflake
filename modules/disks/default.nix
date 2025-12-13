@@ -135,10 +135,6 @@ let
               passwordFile = "/tmp/disko-password";
               settings = {
                 allowDiscards = true;
-                crypttabExtraOpts = [
-                  "fido2-device=auto"
-                  "token-timeout=10"
-                ];
               };
               content = {
                 type = "btrfs";
@@ -218,10 +214,5 @@ in
 
   config = lib.mkIf cfg.enable {
     disko.devices.disk = selectedLayout;
-
-    # Add yubikey-manager for LUKS layouts (needed for fido2 enrollment)
-    environment.systemPackages = lib.mkIf (cfg.layout == "btrfs-luks-impermanence") [
-      pkgs.yubikey-manager
-    ];
   };
 }

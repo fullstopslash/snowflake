@@ -2,12 +2,12 @@
 # FIXME: Requires nix-ai-tools flake input - disabled until added
 { config, lib, ... }:
 let
-  cfg = config.myModules.services.ai.crush;
+  cfg = config.myModules.apps.ai.crush;
   ollamaCfg = config.services.ollama;
   ollamaUrl = "http://${ollamaCfg.host}:${toString ollamaCfg.port}";
 in
 {
-  options.myModules.services.ai.crush = {
+  options.myModules.apps.ai.crush = {
     enable = lib.mkEnableOption "Crush AI coding agent";
   };
 

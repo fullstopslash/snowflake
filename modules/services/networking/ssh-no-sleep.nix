@@ -7,7 +7,7 @@
   ...
 }:
 let
-  cfg = config.myModules.services.misc.sshNoSleep;
+  cfg = config.myModules.services.networking.sshNoSleep;
 
   PID_PATH = "/tmp/ssh_sleep_block.pid";
   PID_PIPE = "pid_pipe";
@@ -69,7 +69,7 @@ let
   '';
 in
 {
-  options.myModules.services.misc.sshNoSleep = {
+  options.myModules.services.networking.sshNoSleep = {
     enable = lib.mkEnableOption "SSH session sleep inhibitor";
   };
 

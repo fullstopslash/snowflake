@@ -1,10 +1,10 @@
 # Secrets role
 { config, pkgs, lib, ... }:
 let
-  cfg = config.myModules.services.security.secrets;
+  cfg = config.myModules.apps.security.secrets;
 in
 {
-  options.myModules.services.security.secrets = {
+  options.myModules.apps.security.secrets = {
     enable = lib.mkEnableOption "secrets management tools";
   };
 

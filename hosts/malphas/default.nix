@@ -1,12 +1,12 @@
-# Malphas - Minimal VM Test Host
+# Malphas - Primary Desktop Workstation
 #
-# A minimal QEMU VM for testing the role-based configuration system.
-# Core modules come from roles/common.nix; disk config via modules/disks.
+# Main development machine with audio production capabilities.
 #
 { ... }:
 {
   imports = [
     ./hardware-configuration.nix
+    ./audio-tuning.nix
   ];
 
   # Roles: minimal VM + test settings
