@@ -7,6 +7,13 @@
   # Install chezmoi (git is already installed by home/common/core/git.nix)
   home.packages = [ pkgs.chezmoi ];
 
+  # Chezmoi config - use symlink mode so editing dotfiles edits the source directly
+  home.file.".config/chezmoi/chezmoi.toml".text = ''
+    # Symlink mode: dotfiles are symlinked to source directory
+    # Edit files directly without needing to run chezmoi add
+    mode = "symlink"
+  '';
+
   # Add GitHub's SSH host keys to known_hosts
   home.file.".ssh/known_hosts".text = ''
     github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
@@ -51,8 +58,10 @@
           echo "To init manually: chezmoi init --apply $DOTFILES_REPO"
         fi
       else
-        echo "Chezmoi already initialized, updating..."
-        ${pkgs.chezmoi}/bin/chezmoi update --apply --force 2>&1 || echo "⚠️  Chezmoi update failed"
+        echo "Chezmoi already initialized, updating and re-applying..."
+        ${pkgs.chezmoi}/bin/chezmoi update --force 2>&1 || echo "⚠️  Chezmoi update failed"
+        # Force re-apply to convert existing files to symlinks if mode changed
+        ${pkgs.chezmoi}/bin/chezmoi apply --force 2>&1 || echo "⚠️  Chezmoi apply failed"
       fi
 
       echo "========================================"
