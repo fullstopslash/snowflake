@@ -11,11 +11,8 @@
   pkgs,
   ...
 }:
-let
-  cfg = config.roles;
-in
 {
-  config = lib.mkIf cfg.test {
+  config = lib.mkIf (builtins.elem "test" config.roles) {
     # Test VMs need sops passwords, so override isMinimal from VM role
     hostSpec.isMinimal = lib.mkForce false;
 

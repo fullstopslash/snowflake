@@ -4,22 +4,39 @@
 # Uses unified module selection - hosts can override individual categories
 # Secret categories: base, desktop, network
 { config, lib, ... }:
-let
-  cfg = config.roles;
-in
 {
-  config = lib.mkIf cfg.laptop {
+  config = lib.mkIf (builtins.elem "laptop" config.roles) {
     # ========================================
     # MODULE SELECTIONS (same as desktop)
     # ========================================
     modules = {
-      desktop = lib.mkDefault [ "plasma" "hyprland" "wayland" "common" ];
-      displayManager = lib.mkDefault [ "ly" ];
-      apps = lib.mkDefault [ "media" "gaming" "comms" "productivity" ];
-      cli = lib.mkDefault [ "shell" "tools" ];
-      development = lib.mkDefault [ "latex" "document-processing" "containers" ];
-      services = lib.mkDefault [ "atuin" "ssh" ];
-      audio = lib.mkDefault [ "pipewire" ];
+      desktop = [
+        "plasma"
+        "hyprland"
+        "wayland"
+        "common"
+      ];
+      displayManager = [ "ly" ];
+      apps = [
+        "media"
+        "gaming"
+        "comms"
+        "productivity"
+      ];
+      cli = [
+        "shell"
+        "tools"
+      ];
+      development = [
+        "latex"
+        "document-processing"
+        "containers"
+      ];
+      services = [
+        "atuin"
+        "ssh"
+      ];
+      audio = [ "pipewire" ];
     };
 
     # ========================================

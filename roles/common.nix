@@ -10,14 +10,11 @@
   config,
   inputs,
   lib,
-  pkgs,
   ...
 }:
 let
-  cfg = config.roles;
-  # Check if any hardware role is enabled
-  anyRoleEnabled =
-    cfg.desktop || cfg.laptop || cfg.server || cfg.pi || cfg.tablet || cfg.darwin || cfg.vm;
+  # Check if any role is enabled (roles is now a list)
+  anyRoleEnabled = config.roles != [ ];
 in
 {
   # Core modules that all role-based hosts need

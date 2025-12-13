@@ -1,7 +1,12 @@
 # Fast test role - absolute minimum for deployment testing
-{ config, lib, pkgs, ... }:
-let cfg = config.roles; in {
-  config = lib.mkIf cfg.fastTest {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+{
+  config = lib.mkIf (builtins.elem "fastTest" config.roles) {
     # Override any heavy defaults
     myModules = {
       apps.gaming.enable = lib.mkForce false;

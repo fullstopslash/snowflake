@@ -10,8 +10,10 @@
   ];
 
   # Roles: minimal VM + test settings
-  roles.vm = true;
-  roles.test = true;
+  roles = [
+    "vm"
+    "test"
+  ];
 
   # Disk configuration
   disks = {

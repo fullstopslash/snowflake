@@ -11,23 +11,27 @@
   pkgs,
   ...
 }:
-let
-  cfg = config.roles;
-in
 {
-  config = lib.mkIf cfg.vm {
+  config = lib.mkIf (builtins.elem "vm" config.roles) {
     # ========================================
     # MODULE SELECTIONS (minimal by default)
     # ========================================
     # VMs start minimal - hosts add what they need
     modules = {
-      desktop = lib.mkDefault [ "hyprland" "wayland" ];
-      displayManager = lib.mkDefault [ "ly" ];
-      apps = lib.mkDefault [ ];
-      cli = lib.mkDefault [ "shell" "tools" ];
-      development = lib.mkDefault [ ];
-      services = lib.mkDefault [ "atuin" "openssh" "tailscale" ];
-      audio = lib.mkDefault [ ];
+      desktop = [
+        "hyprland"
+        "wayland"
+      ];
+      displayManager = [ "ly" ];
+      cli = [
+        "shell"
+        "tools"
+      ];
+      services = [
+        "atuin"
+        "openssh"
+        "tailscale"
+      ];
     };
 
     # ========================================
@@ -53,19 +57,31 @@ in
       ];
     };
 
-    boot.kernelParams = lib.mkDefault [ "console=tty1" "console=ttyS0,115200" ];
-    boot.kernelModules = lib.mkDefault [ "virtio-gpu" "bochs_drm" ];
+    boot.kernelParams = lib.mkDefault [
+      "console=tty1"
+      "console=ttyS0,115200"
+    ];
+    boot.kernelModules = lib.mkDefault [
+      "virtio-gpu"
+      "bochs_drm"
+    ];
 
     # ========================================
     # VM HARDWARE
     # ========================================
+    services.xserver.videoDrivers = lib.mkDefault [ "modesetting" ];
     hardware.graphics = {
       enable = lib.mkDefault true;
       extraPackages = lib.mkDefault (with pkgs; [ mesa ]);
     };
 
-    networking.networkmanager.enable = lib.mkDefault true;
+    networking = {
+      networkmanager.enable = lib.mkDefault true;
+      enableIPv6 = lib.mkDefault false;
+    };
+
     services.qemuGuest.enable = lib.mkDefault true;
+    services.spice-vdagentd.enable = lib.mkDefault false;
     documentation.enable = lib.mkDefault false;
 
     # ========================================

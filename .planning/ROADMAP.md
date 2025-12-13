@@ -198,7 +198,7 @@ Completed work:
 ### Phase 12: Unified Module Selection System
 **Goal**: List-based module selection with LSP autocompletion. Roles and hosts use same syntax.
 **Depends on**: Phase 11
-**Plans**: 4 plans
+**Plans**: 4 plans + extension
 
 Transform module selection from:
 ```nix
@@ -215,17 +215,30 @@ modules = {
 };
 ```
 
+Transform role selection from:
+```nix
+roles.vm = true;
+roles.test = true;
+```
+
+To unified list-based selection:
+```nix
+roles = [ "vm" "test" "secretManagement" ];
+extraModules.apps = [ "productivity" ];  # Additive to role defaults
+```
+
 Key features:
-- LSP autocompletion via `lib.types.enum` derived from filesystem
-- Roles are "selection presets" - same syntax as hosts
+- LSP autocompletion via `lib.types.enum` for both roles and modules
+- Roles are "selection presets" - same list syntax as hosts
 - hostSpec behavioral options derived from selections (useWayland, isDevelopment, etc.)
-- Hosts inherit from roles, can override specific categories
+- Hosts inherit from roles, can extend with `extraModules.*` or override with `lib.mkForce`
 
 Plans:
 - [x] 12-01: Selection system foundation (lib/modules.nix, modules/selection.nix)
 - [x] 12-02: hostSpec simplification (derive behavioral options from selections)
 - [x] 12-03: Role migration (convert all roles to selection syntax)
 - [x] 12-04: Host migration & validation (malphas, griefling, documentation)
+- [x] 12-05: List-based role selection (roles = [...], extraModules.* for additive selections)
 
 ## Progress
 
@@ -242,4 +255,4 @@ Plans:
 | 9. Griefling Minimal Fix | - | Superseded | - |
 | 10. Griefling Speedup | 4/4 | Complete | 2025-12-12 |
 | 11. Architecture Reorganization | 1/1 | Complete | 2025-12-12 |
-| 12. Unified Module Selection | 4/4 | Complete | 2025-12-13 |
+| 12. Unified Module Selection | 5/5 | Complete | 2025-12-13 |

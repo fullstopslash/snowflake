@@ -5,7 +5,7 @@
   ...
 }:
 let
-  cfg = config.roles.stylix;
+  cfg = config.myModules.theming.stylix;
   inherit (lib)
     mkEnableOption
     mkOption
@@ -14,7 +14,7 @@ let
     ;
 in
 {
-  options.roles.stylix = {
+  options.myModules.theming.stylix = {
     enable = mkEnableOption "stylix theming system";
 
     theme = mkOption {

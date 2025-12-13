@@ -3,22 +3,17 @@
 # Uses unified module selection - touch-optimized setup
 # Secret categories: base, desktop, network
 { config, lib, ... }:
-let
-  cfg = config.roles;
-in
 {
-  config = lib.mkIf cfg.tablet {
+  config = lib.mkIf (builtins.elem "tablet" config.roles) {
     # ========================================
     # MODULE SELECTIONS (touch-optimized)
     # ========================================
     modules = {
-      desktop = lib.mkDefault [ "wayland" ];
-      displayManager = lib.mkDefault [ "ly" ];
-      apps = lib.mkDefault [ "media" ];
-      cli = lib.mkDefault [ "shell" ];
-      development = lib.mkDefault [ ];
-      services = lib.mkDefault [ ];
-      audio = lib.mkDefault [ "pipewire" ];
+      desktop = [ "wayland" ];
+      displayManager = [ "ly" ];
+      apps = [ "media" ];
+      cli = [ "shell" ];
+      audio = [ "pipewire" ];
     };
 
     # ========================================

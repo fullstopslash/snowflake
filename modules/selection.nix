@@ -5,19 +5,23 @@
 # - Unified syntax for roles and hosts
 # - Automatic translation to myModules.*.enable flags
 #
-# Usage:
-#   modules.desktop = [ "hyprland" "wayland" ];
-#   modules.apps = [ "media" "gaming" ];
-#   modules.development = [ "latex" "containers" ];
+# Usage in roles (sets defaults):
+#   modules.desktop = lib.mkDefault [ "hyprland" "wayland" ];
+#   modules.apps = lib.mkDefault [ "media" "gaming" ];
 #
-# Roles set defaults with lib.mkDefault, hosts can override.
+# Usage in hosts (additive):
+#   extraModules.apps = [ "productivity" ];  # Adds to role's defaults
+#
+# Roles set defaults with lib.mkDefault, hosts extend with extraModules.
 #
 { config, lib, ... }:
 let
   cfg = config.modules;
+  extraCfg = config.extraModules;
 
-  # Helper to check if a module is selected
-  isSelected = category: name: builtins.elem name cfg.${category};
+  # Helper to check if a module is selected (from modules or extraModules)
+  isSelected =
+    category: name: builtins.elem name cfg.${category} || builtins.elem name extraCfg.${category};
 
   # ========================================
   # AVAILABLE MODULE ENUMS
@@ -112,7 +116,10 @@ in
       type = lib.types.listOf (lib.types.enum desktopModules);
       default = [ ];
       description = "Desktop environments and window managers to enable";
-      example = [ "hyprland" "wayland" ];
+      example = [
+        "hyprland"
+        "wayland"
+      ];
     };
 
     displayManager = lib.mkOption {
@@ -126,35 +133,52 @@ in
       type = lib.types.listOf (lib.types.enum appModules);
       default = [ ];
       description = "Application categories to enable";
-      example = [ "media" "gaming" "browsers" ];
+      example = [
+        "media"
+        "gaming"
+        "browsers"
+      ];
     };
 
     cli = lib.mkOption {
       type = lib.types.listOf (lib.types.enum cliModules);
       default = [ ];
       description = "CLI tools and shell configuration to enable";
-      example = [ "shell" "tools" ];
+      example = [
+        "shell"
+        "tools"
+      ];
     };
 
     development = lib.mkOption {
       type = lib.types.listOf (lib.types.enum developmentModules);
       default = [ ];
       description = "Development tools to enable";
-      example = [ "latex" "containers" ];
+      example = [
+        "latex"
+        "containers"
+      ];
     };
 
     services = lib.mkOption {
       type = lib.types.listOf (lib.types.enum serviceModules);
       default = [ ];
       description = "System services to enable";
-      example = [ "atuin" "syncthing" "tailscale" ];
+      example = [
+        "atuin"
+        "syncthing"
+        "tailscale"
+      ];
     };
 
     audio = lib.mkOption {
       type = lib.types.listOf (lib.types.enum audioModules);
       default = [ ];
       description = "Audio services and tools to enable";
-      example = [ "pipewire" "easyeffects" ];
+      example = [
+        "pipewire"
+        "easyeffects"
+      ];
     };
 
     ai = lib.mkOption {
@@ -168,7 +192,75 @@ in
       type = lib.types.listOf (lib.types.enum securityModules);
       default = [ ];
       description = "Security tools to enable";
-      example = [ "secrets" "yubikey" ];
+      example = [
+        "secrets"
+        "yubikey"
+      ];
+    };
+  };
+
+  # ========================================
+  # EXTRA MODULES OPTIONS (additive)
+  # ========================================
+  # Host-specific additions that extend role defaults.
+  # These are merged with modules.* selections.
+
+  options.extraModules = {
+    desktop = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum desktopModules);
+      default = [ ];
+      description = "Additional desktop modules to add to role defaults";
+      example = [ "niri" ];
+    };
+
+    displayManager = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum displayManagerModules);
+      default = [ ];
+      description = "Additional display managers to add to role defaults";
+    };
+
+    apps = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum appModules);
+      default = [ ];
+      description = "Additional app categories to add to role defaults";
+      example = [ "productivity" ];
+    };
+
+    cli = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum cliModules);
+      default = [ ];
+      description = "Additional CLI tools to add to role defaults";
+    };
+
+    development = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum developmentModules);
+      default = [ ];
+      description = "Additional development tools to add to role defaults";
+      example = [ "rust" ];
+    };
+
+    services = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum serviceModules);
+      default = [ ];
+      description = "Additional services to add to role defaults";
+    };
+
+    audio = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum audioModules);
+      default = [ ];
+      description = "Additional audio modules to add to role defaults";
+    };
+
+    ai = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum aiModules);
+      default = [ ];
+      description = "Additional AI tools to add to role defaults";
+    };
+
+    security = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum securityModules);
+      default = [ ];
+      description = "Additional security tools to add to role defaults";
     };
   };
 
@@ -202,9 +294,11 @@ in
 
     # Development -> myModules.apps.development.* and myModules.services.development.*
     myModules.apps.development.latex.enable = lib.mkIf (isSelected "development" "latex") true;
-    myModules.apps.development.documentProcessing.enable = lib.mkIf (isSelected "development" "document-processing") true;
+    myModules.apps.development.documentProcessing.enable =
+      lib.mkIf (isSelected "development" "document-processing") true;
     myModules.apps.development.tools.enable = lib.mkIf (isSelected "development" "tools") true;
-    myModules.services.development.containers.enable = lib.mkIf (isSelected "development" "containers") true;
+    myModules.services.development.containers.enable =
+      lib.mkIf (isSelected "development" "containers") true;
 
     # Services -> myModules.services.*
     myModules.services.atuin.enable = lib.mkIf (isSelected "services" "atuin") true;
@@ -228,5 +322,10 @@ in
 
     # Security -> myModules.apps.security.* and myModules.services.security.*
     myModules.apps.security.secrets.enable = lib.mkIf (isSelected "security" "secrets") true;
+    myModules.services.security.bitwardenAutomation = lib.mkIf (isSelected "security" "bitwarden") {
+      enable = true;
+      enableAutoLogin = true;
+      syncInterval = 30;
+    };
   };
 }

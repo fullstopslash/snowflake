@@ -5,15 +5,17 @@
 #
 # This is a task-based role, not mutually exclusive with hardware roles.
 { config, lib, ... }:
-let
-  cfg = config.roles;
-in
 {
-  config = lib.mkIf cfg.development {
+  config = lib.mkIf (builtins.elem "development" config.roles) {
     # ========================================
     # MODULE SELECTIONS (additive)
     # ========================================
     # These add to whatever the hardware role sets
-    modules.development = lib.mkDefault [ "latex" "document-processing" "containers" "tools" ];
+    modules.development = [
+      "latex"
+      "document-processing"
+      "containers"
+      "tools"
+    ];
   };
 }

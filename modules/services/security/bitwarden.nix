@@ -1,4 +1,4 @@
-# Bitwarden automation role
+# Bitwarden automation module
 {
   config,
   lib,
@@ -7,7 +7,7 @@
   ...
 }:
 let
-  cfg = config.roles.bitwardenAutomation;
+  cfg = config.myModules.services.security.bitwardenAutomation;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 
   # Create a script that uses OAuth + libsecret (gnome-keyring) for full automation
@@ -156,7 +156,7 @@ let
   '';
 in
 {
-  options.roles.bitwardenAutomation = {
+  options.myModules.services.security.bitwardenAutomation = {
     enable = lib.mkEnableOption "Enable Bitwarden automation";
     enableAutoLogin = lib.mkEnableOption "Enable automatic Bitwarden login on session start";
     syncInterval = lib.mkOption {

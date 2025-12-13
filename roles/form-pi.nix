@@ -3,22 +3,20 @@
 # Uses unified module selection - minimal headless setup
 # Secret categories: base, network
 { config, lib, ... }:
-let
-  cfg = config.roles;
-in
 {
-  config = lib.mkIf cfg.pi {
+  config = lib.mkIf (builtins.elem "pi" config.roles) {
     # ========================================
     # MODULE SELECTIONS (minimal headless)
     # ========================================
     modules = {
-      desktop = lib.mkDefault [ ];
-      displayManager = lib.mkDefault [ ];
-      apps = lib.mkDefault [ ];
-      cli = lib.mkDefault [ "shell" "tools" ];
-      development = lib.mkDefault [ ];
-      services = lib.mkDefault [ "openssh" "auto-upgrade" ];
-      audio = lib.mkDefault [ ];
+      cli = [
+        "shell"
+        "tools"
+      ];
+      services = [
+        "openssh"
+        "auto-upgrade"
+      ];
     };
 
     # ========================================

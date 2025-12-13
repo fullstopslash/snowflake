@@ -5,17 +5,17 @@
 #
 # This is a task-based role, not mutually exclusive with hardware roles.
 { config, lib, ... }:
-let
-  cfg = config.roles;
-in
 {
-  config = lib.mkIf cfg.mediacenter {
+  config = lib.mkIf (builtins.elem "mediacenter" config.roles) {
     # ========================================
     # MODULE SELECTIONS (additive)
     # ========================================
     modules = {
-      apps = lib.mkDefault [ "media" ];
-      audio = lib.mkDefault [ "pipewire" "easyeffects" ];
+      apps = [ "media" ];
+      audio = [
+        "pipewire"
+        "easyeffects"
+      ];
     };
   };
 }

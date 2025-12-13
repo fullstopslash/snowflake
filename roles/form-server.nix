@@ -4,22 +4,22 @@
 # Uses unified module selection - headless by default
 # Secret categories: base, server, network
 { config, lib, ... }:
-let
-  cfg = config.roles;
-in
 {
-  config = lib.mkIf cfg.server {
+  config = lib.mkIf (builtins.elem "server" config.roles) {
     # ========================================
     # MODULE SELECTIONS (headless)
     # ========================================
     modules = {
-      desktop = lib.mkDefault [ ];
-      displayManager = lib.mkDefault [ ];
-      apps = lib.mkDefault [ ];
-      cli = lib.mkDefault [ "shell" "tools" ];
-      development = lib.mkDefault [ ];
-      services = lib.mkDefault [ "atuin" "ssh" "openssh" "auto-upgrade" ];
-      audio = lib.mkDefault [ ];
+      cli = [
+        "shell"
+        "tools"
+      ];
+      services = [
+        "atuin"
+        "ssh"
+        "openssh"
+        "auto-upgrade"
+      ];
     };
 
     # ========================================
