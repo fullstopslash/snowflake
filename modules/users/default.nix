@@ -39,9 +39,11 @@ in
           map (user: {
             "${user}" =
               let
-                sopsHashedPasswordFile = lib.optionalString (
-                  !config.hostSpec.isMinimal
-                ) config.sops.secrets."passwords/${user}".path;
+                # Only reference SOPS secret if hasSecrets is true and not minimal
+                sopsHashedPasswordFile =
+                  if config.hostSpec.hasSecrets && !config.hostSpec.isMinimal
+                  then config.sops.secrets."passwords/${user}".path
+                  else null;
                 platformPath = lib.custom.relativeToRoot "modules/users/${user}/${platform}.nix";
               in
               {

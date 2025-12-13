@@ -8,12 +8,6 @@ let
   cfg = config.roles;
 in
 {
-  # Raspberry Pi - aarch64, headless by default
-  imports = [
-    ../modules/apps/cli
-    ../modules/services/networking
-  ];
-
   # Pi-specific config
   config = lib.mkIf cfg.pi {
     # Pi-specific bootloader

@@ -10,12 +10,6 @@ let
   cfg = config.roles;
 in
 {
-  # Development imports
-  imports = [
-    ../modules/apps/development
-    ../modules/services/development
-  ];
-
   # Development-specific config (only when role is enabled)
   config = lib.mkIf cfg.development {
     # Set hostSpec flag for other modules to check

@@ -169,7 +169,7 @@ Target griefling packages (after fix):
 ### Phase 11: Architecture Reorganization
 **Goal**: Clean three-tier architecture: /modules (settings), /hosts (minimal), /roles (meta-modules)
 **Depends on**: Phase 10
-**Plans**: TBD (research complete)
+**Plans**: 1 plan (done inline)
 
 Target architecture:
 ```
@@ -181,11 +181,12 @@ Target architecture:
             Just enable options, no imports
 ```
 
-Key work:
-- Central module import in roles/common.nix
-- Roles only set `myModules.*.enable = true`
-- Host template with absolute minimum config
-- Document new architecture patterns
+Completed work:
+- [x] Central module import in roles/common.nix (already done in Phase 10)
+- [x] Removed redundant imports from form-pi.nix, form-server.nix, form-vm.nix, task-development.nix
+- [x] Roles only set `myModules.*.enable = true` - no more top-level imports
+- [x] Fixed SOPS hasSecrets check in modules/users/default.nix
+- [x] Added template host hardware-configuration.nix and disk config
 
 ## Progress
 
@@ -200,5 +201,5 @@ Key work:
 | 7. Structure Reorganization | 4/4 | Complete | 2025-12-11 |
 | 8. Role System Refinement | 4/4 | Complete | 2025-12-11 |
 | 9. Griefling Minimal Fix | - | Superseded | - |
-| 10. Griefling Speedup | 0/4 | **Ready** | - |
-| 11. Architecture Reorganization | 0/? | Research done | - |
+| 10. Griefling Speedup | 4/4 | Complete | 2025-12-12 |
+| 11. Architecture Reorganization | 1/1 | Complete | 2025-12-12 |

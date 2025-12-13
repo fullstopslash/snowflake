@@ -56,10 +56,18 @@
   #
   hostSpec = {
     hostName = "myhost";
+    hasSecrets = false; # Template doesn't have SOPS secrets
     # Optional overrides (roles provide defaults):
     # primaryUsername = "rain";
-    # hasSecrets = true;
     # useWayland = true;
+  };
+
+  # Disk config (template uses disko)
+  disks = {
+    enable = true;
+    layout = "btrfs";
+    device = "/dev/sda";
+    withSwap = false;
   };
 
   #

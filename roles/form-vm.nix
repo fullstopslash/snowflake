@@ -18,11 +18,6 @@ let
   cfg = config.roles;
 in
 {
-  # Virtual machine - full VM support
-  imports = [
-    ../modules/services/display-manager
-  ];
-
   # VM-specific config
   config = lib.mkIf cfg.vm {
     # Enable Ly display manager for GUI access
