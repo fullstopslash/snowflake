@@ -3,6 +3,7 @@
 # Configures the system-wide SSH client including:
 # - SSH agent with askpass integration
 # - Known hosts for GitHub, GitLab, and private infrastructure
+# - SSH key deployment from SOPS
 #
 # Note: This module is NixOS-only (programs.ssh doesn't exist on Darwin)
 {
@@ -14,13 +15,28 @@
 }:
 let
   cfg = config.myModules.services.networking.ssh;
+  sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 in
 {
   options.myModules.services.networking.ssh = {
     enable = lib.mkEnableOption "SSH client configuration";
+    deployUserKey = lib.mkOption {
+      type = lib.types.bool;
+      default = !config.hostSpec.useYubikey or false;
+      description = "Deploy user SSH key from SOPS (disabled for Yubikey hosts)";
+    };
   };
 
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
+    # Deploy SSH key from SOPS for non-Yubikey hosts
+    # The key is symlinked to ~/.ssh/id_ed25519 by chezmoi dotfiles
+    sops.secrets = lib.mkIf (cfg.deployUserKey && config.hostSpec.hasSecrets) {
+      "keys/ssh/ed25519" = {
+        sopsFile = "${sopsFolder}/shared.yaml";
+        owner = config.hostSpec.primaryUsername;
+        mode = "0400";
+      };
+    };
     programs.ssh = {
       startAgent = true;
       enableAskPassword = true;

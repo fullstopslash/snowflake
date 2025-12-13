@@ -2,9 +2,9 @@
 
 ## New Host: griefling
 
-**Purpose**: Dev Lab VM with Hyprland desktop  
-**User**: rain  
-**Base**: Copied from grief host  
+**Purpose**: Dev Lab VM with Hyprland desktop
+**User**: rain
+**Base**: Copied from grief host
 **Disk**: /dev/vda (VM virtual disk)
 
 ## Configuration
@@ -138,4 +138,3 @@ rm griefling-test-*.socket
 ## Ready to Test!
 
 The griefling host is fully configured and ready for bootstrap testing.
-

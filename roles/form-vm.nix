@@ -34,6 +34,7 @@
         cli = [ "atuin" ];
         networking = [
           "openssh"
+          "ssh"
           "tailscale"
         ];
       };

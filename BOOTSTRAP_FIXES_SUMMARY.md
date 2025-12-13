@@ -6,17 +6,17 @@ The bootstrap script would fail and disconnect immediately when opting to genera
 ## Root Causes Fixed
 
 ### 1. SSH Readiness Issue (Primary Bug)
-**Problem**: Script didn't wait for SSH to be ready after reboot  
-**Fix**: Added 60-second wait loop with connection verification  
+**Problem**: Script didn't wait for SSH to be ready after reboot
+**Fix**: Added 60-second wait loop with connection verification
 **Location**: `scripts/bootstrap-nixos.sh` lines 265-292
 
 ### 2. IPv4/IPv6 Resolution Issue (Discovered during testing)
-**Problem**: `localhost` resolved to IPv6 but VMs only listened on IPv4  
-**Fix**: Added `-4` flag to all `ssh-keyscan` commands  
+**Problem**: `localhost` resolved to IPv6 but VMs only listened on IPv4
+**Fix**: Added `-4` flag to all `ssh-keyscan` commands
 **Locations**: Lines 153, 195, 209, 275, 320
 
 ### 3. Enhanced Error Handling
-**Added**: Detailed debug output showing exact commands and results  
+**Added**: Detailed debug output showing exact commands and results
 **Location**: `sops_generate_host_age_key()` function lines 204-236
 
 ## Configuration Fixes in nix-secrets
@@ -32,13 +32,13 @@ During testing, we discovered missing structure in the "simple" variant of nix-s
 ## Additional Improvements
 
 ### NH_FLAKE Path Fix
-**Problem**: `programs.nh.flake` had incorrect path `/home/user/${config.hostSpec.home}/nix-config`  
-**Fix**: Changed to `${config.hostSpec.home}/src/nix/nix-config`  
+**Problem**: `programs.nh.flake` had incorrect path `/home/user/${config.hostSpec.home}/nix-config`
+**Fix**: Changed to `${config.hostSpec.home}/src/nix/nix-config`
 **File**: `hosts/common/core/nixos.nix`
 
 ### Per-Host User Configuration
-**Problem**: All hosts defaulted to user 'ta'  
-**Solution**: Override `primaryUsername` and `username` in host config  
+**Problem**: All hosts defaulted to user 'ta'
+**Solution**: Override `primaryUsername` and `username` in host config
 **Example**: `hosts/nixos/guppy/default.nix` now uses 'rain'
 
 ## Files Modified
@@ -104,4 +104,3 @@ The bootstrap script will now handle:
 - ✅ Secrets management
 - ✅ Automatic rekeying and git push
 - ✅ File syncing with correct permissions
-

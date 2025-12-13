@@ -70,11 +70,11 @@ echo $FLAKE  # Should show /home/rain/src/nix/nix-config
 
 ## Configuration Summary
 
-**Host**: griefling  
-**User**: rain  
-**Desktop**: Hyprland + Wayland  
-**RAM**: 8GB  
-**Disk**: 32GB virtual (no swap, no LUKS)  
+**Host**: griefling
+**User**: rain
+**Desktop**: Hyprland + Wayland
+**RAM**: 8GB
+**Disk**: 32GB virtual (no swap, no LUKS)
 **SSH Port**: 22221
 
 ## Troubleshooting
@@ -108,4 +108,3 @@ rm griefling-test.qcow2 griefling-test.pid griefling-test-*.socket
 4. Ready to use this process for real hardware!
 
 🎉 You now have a production-ready bootstrap process!
-
