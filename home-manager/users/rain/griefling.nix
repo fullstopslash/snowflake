@@ -28,7 +28,6 @@
 
           "helper-scripts"
           "chezmoi.nix"
-          "atuin.nix"
           "sops.nix"
         ])
     )

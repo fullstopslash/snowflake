@@ -208,11 +208,12 @@ in
       };
     };
 
-    # Socket-activated Atuin daemon (default socket: %t/atuin.sock)
+    # Socket-activated Atuin daemon
+    # Note: socket path must match config.toml's daemon.socket_path (chezmoi dotfiles)
     systemd.user.sockets."atuin-daemon" = {
       wantedBy = [ "sockets.target" ];
       socketConfig = {
-        ListenStream = "%t/atuin.sock";
+        ListenStream = "%t/atuin.socket";
         SocketMode = "0600";
       };
     };
