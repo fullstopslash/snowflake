@@ -1,5 +1,5 @@
 {
-  description = "EmergentMind's Nix-Config";
+  description = "fullstopsash's Nix-Config";
   outputs =
     {
       self,
@@ -100,7 +100,6 @@
             )
           ];
         };
-
     in
     {
       #
