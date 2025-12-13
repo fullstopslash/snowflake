@@ -307,7 +307,7 @@ vm-register-age HOST=DEFAULT_VM_HOST:
     echo "   Host {{HOST}} can now decrypt secrets on next rebuild"
     echo "   Secrets pushed to GitHub - VM will pull on next rebuild"
 
-# Sync nix-config to running VM via git pull from origin
+# Sync nix-config to running VM via git push over SSH
 vm-sync HOST=DEFAULT_VM_HOST:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -315,10 +315,22 @@ vm-sync HOST=DEFAULT_VM_HOST:
 
     USER=$(just _get-vm-primary-user {{HOST}})
     USER_HOME="/home/$USER"
+    VM_REMOTE="vm-{{HOST}}"
+    VM_URL="ssh://$USER@127.0.0.1:{{VM_SSH_PORT}}$USER_HOME/nix-config"
 
-    # Pull latest from origin on the VM
+    # Add VM as git remote if not exists, update URL if changed
+    if git remote get-url "$VM_REMOTE" &>/dev/null; then
+        git remote set-url "$VM_REMOTE" "$VM_URL"
+    else
+        git remote add "$VM_REMOTE" "$VM_URL"
+    fi
+
+    # Configure VM repo to receive pushes to checked-out branch
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {{VM_SSH_PORT}} $USER@127.0.0.1 \
-        "git -C $USER_HOME/nix-config fetch origin && git -C $USER_HOME/nix-config reset --hard origin/dev"
+        "git -C $USER_HOME/nix-config config receive.denyCurrentBranch updateInstead"
+
+    # Push current HEAD to the VM
+    git push --force "$VM_REMOTE" HEAD:dev
 
     echo "✅ Config synced to $USER_HOME/nix-config"
 
