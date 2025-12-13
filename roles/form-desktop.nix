@@ -8,33 +8,11 @@ let
   cfg = config.roles;
 in
 {
-  # Module imports - always evaluated, functionality controlled by enable options
-  imports = [
-    # Desktop environment
-    ../modules/services/desktop
-    ../modules/services/display-manager
-    ../modules/services/audio
-
-    # Applications
-    ../modules/apps/cli
-    ../modules/common/fonts.nix
-    ../modules/apps/media
-    ../modules/apps/gaming
-    ../modules/theming
-    ../modules/apps/development
-
-    # Services
-    ../modules/services/networking
-    ../modules/services/development
-    ../modules/services/security
-    ../modules/services/storage
-    ../modules/services/misc
-    ../modules/services/ai
-  ];
-
   # Config options are conditional on role being enabled
   config = lib.mkIf cfg.desktop {
     # Enable desktop modules
+    myModules.desktop.plasma.enable = lib.mkDefault true;
+    myModules.apps.media.enable = lib.mkDefault true;
     myModules.desktop.hyprland.enable = lib.mkDefault true;
     myModules.desktop.wayland.enable = lib.mkDefault true;
     # Desktop-specific defaults

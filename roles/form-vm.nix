@@ -87,7 +87,7 @@ in
     # ========== VM Guest Services ==========
     #
     services.qemuGuest.enable = lib.mkDefault true;
-    # SPICE: Hosts can enable with lib.mkForce if needed instead of SDL
+    # SPICE: Configured in task-vm-hardware.nix (disabled by default)
 
     #
     # ========== Minimal Configuration ==========

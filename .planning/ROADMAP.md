@@ -127,39 +127,65 @@ Target host pattern:
 }
 ```
 
-### Phase 9: Griefling Minimal Fix
-**Goal**: Fix module imports so VMs using `roles.vm` are truly minimal (no steam, docker, latex, compilers)
+### Phase 9: Griefling Minimal Fix (SUPERSEDED by Phase 10)
+**Status**: Superseded - root cause analysis led to more comprehensive fix in Phase 10
+
+### Phase 10: Griefling Speedup - Fix Unconditional Module Imports
+**Goal**: Fix role system so griefling VM deploys in minutes, not ages. Reduce from 300+ packages to <100.
 **Depends on**: Phase 8
 **Plans**: 4 plans
 
+Root cause analysis (performed 2025-12-12):
+- `roles/default.nix` imports ALL role files (hw-*.nix, task-*.nix) unconditionally
+- Role files have `imports = [...]` OUTSIDE their `lib.mkIf` blocks
+- These imports pull in modules via `scanPaths ./` which loads all .nix files
+- Modules like `plasma.nix`, `media/default.nix` have NO enable guards
+- Result: griefling (roles.vm = true) gets full KDE Plasma 6, Jellyfin, Spotify, etc.
+
+Evidence (griefling system-path):
+- 300+ direct derivation inputs
+- 39 KDE/Plasma packages (plasma-desktop, kwin, dolphin, konsole, etc.)
+- 5 Jellyfin packages
+- Spotify, VLC, quickemu
+
 Plans:
-- [ ] 09-01: Add enable options to gaming, latex, containers, cli modules
-- [ ] 09-02: Fix hw-vm role imports and add Ly display manager
-- [ ] 09-03: Enable modules in desktop role, verify both roles work
-- [ ] 09-04: Commit with jj, push, verify on griefling host
+- [ ] 10-01: Add enable options to plasma.nix, media/default.nix; move hw-desktop.nix imports inside mkIf
+- [ ] 10-02: Fix remaining role files (hw-laptop, hw-tablet, task-mediacenter)
+- [ ] 10-03: Audit all scanPaths directories, add enable guards to all modules
+- [ ] 10-04: Create fast-test role, validate griefling closure <100 packages
+
+Key patterns to apply:
+1. Every module: `options.myModules.X.enable = lib.mkEnableOption "...";`
+2. Every module: `config = lib.mkIf cfg.enable { ... };`
+3. Role files: NO `imports = [...]` outside mkIf blocks
+4. Roles: Use `myModules.X.enable = lib.mkDefault true;` to enable modules
+
+Target griefling packages (after fix):
+- Ly (display manager) + Hyprland
+- Firefox, htop, curl, git
+- Tailscale, Atuin, Syncthing
+- NO: Plasma, KDE, Jellyfin, Spotify, VLC, Steam, Docker, LaTeX
+
+### Phase 11: Architecture Reorganization
+**Goal**: Clean three-tier architecture: /modules (settings), /hosts (minimal), /roles (meta-modules)
+**Depends on**: Phase 10
+**Plans**: TBD (research complete)
+
+Target architecture:
+```
+/modules  - Pure settings only (mkOption/mkEnableOption)
+            No role logic, just atomic configurable units
+/hosts    - Super minimal (~15-30 lines)
+            hardware-config + disk + role + hostname
+/roles    - Meta-modules composing /modules
+            Just enable options, no imports
+```
 
 Key work:
-- Convert unconditional modules to `myModules.*.enable` pattern
-- Remove unconditional imports from role files
-- Add Ly display manager to vm role for GUI access
-- Enable modules explicitly in desktop role
-- Verify griefling is minimal, ghost still has full functionality
-
-Root cause found:
-- `roles/default.nix` imports ALL role files unconditionally
-- Each role file's `imports` section loads modules even when role disabled
-- `modules/apps/gaming`, `modules/apps/development/latex.nix`, etc. lack enable options
-- `hw-vm.nix` imports `modules/apps/cli` outside its `mkIf` block
-
-Target griefling packages:
-- Ly (display manager)
-- Hyprland + Waybar
-- Firefox
-- Tailscale + autologin
-- Atuin
-- Syncthing
-- Basic networking tools
-- NO: Steam, Docker, LaTeX, compilers, gaming tools
+- Central module import in roles/common.nix
+- Roles only set `myModules.*.enable = true`
+- Host template with absolute minimum config
+- Document new architecture patterns
 
 ## Progress
 
@@ -173,4 +199,6 @@ Target griefling packages:
 | 6. Auto-Update System | 0/? | Not started | - |
 | 7. Structure Reorganization | 4/4 | Complete | 2025-12-11 |
 | 8. Role System Refinement | 4/4 | Complete | 2025-12-11 |
-| 9. Griefling Minimal Fix | 0/4 | In Progress | - |
+| 9. Griefling Minimal Fix | - | Superseded | - |
+| 10. Griefling Speedup | 0/4 | **Ready** | - |
+| 11. Architecture Reorganization | 0/? | Research done | - |

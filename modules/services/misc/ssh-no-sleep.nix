@@ -1,11 +1,14 @@
 # This expression was written by `cbrauchli` at https://discourse.nixos.org/t/disable-suspend-if-ssh-sessions-are-active/11655/4
 # with minor modifications by Dominic Mayhew
 {
+  config,
   lib,
   pkgs,
   ...
 }:
 let
+  cfg = config.myModules.services.misc.sshNoSleep;
+
   PID_PATH = "/tmp/ssh_sleep_block.pid";
   PID_PIPE = "pid_pipe";
 
@@ -66,7 +69,13 @@ let
   '';
 in
 {
-  security.pam.services.sshd.text = lib.mkDefault (
-    lib.mkAfter "# Prevent sleep on active SSH\nsession optional pam_exec.so quiet ${ssh_script}"
-  );
+  options.myModules.services.misc.sshNoSleep = {
+    enable = lib.mkEnableOption "SSH session sleep inhibitor";
+  };
+
+  config = lib.mkIf cfg.enable {
+    security.pam.services.sshd.text = lib.mkDefault (
+      lib.mkAfter "# Prevent sleep on active SSH\nsession optional pam_exec.so quiet ${ssh_script}"
+    );
+  };
 }

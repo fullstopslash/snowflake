@@ -8,37 +8,28 @@ let
   cfg = config.roles;
 in
 {
-  # Laptop imports same modules as desktop plus laptop-specific ones
-  imports = [
-    # Desktop environment (same as desktop role)
-    ../modules/services/desktop
-    ../modules/services/display-manager
-    ../modules/services/audio
-
-    # Applications (same as desktop role)
-    ../modules/apps/cli
-    ../modules/common/fonts.nix
-    ../modules/apps/media
-    ../modules/apps/gaming
-    ../modules/theming
-    ../modules/apps/development
-
-    # Services (same as desktop role)
-    ../modules/services/networking
-    ../modules/services/development
-    ../modules/services/security
-    ../modules/services/ai
-  ];
-
   # Laptop-specific config
   config = lib.mkIf cfg.laptop {
-    # Enable desktop modules
+    # Enable desktop modules (same as desktop role)
+    myModules.desktop.plasma.enable = lib.mkDefault true;
     myModules.desktop.hyprland.enable = lib.mkDefault true;
     myModules.desktop.wayland.enable = lib.mkDefault true;
+    myModules.apps.media.enable = lib.mkDefault true;
+
+    # Display manager - LY by default (can be disabled in host config)
+    myModules.displayManager.ly.enable = lib.mkDefault true;
 
     # Enable CLI tools for laptop users
     myModules.services.atuin.enable = lib.mkDefault true;
     myModules.networking.ssh.enable = lib.mkDefault true;
+    myModules.apps.cli.tools.enable = lib.mkDefault true;
+    myModules.apps.cli.shell.enable = lib.mkDefault true;
+
+    # Enable full desktop software stack
+    myModules.apps.gaming.enable = lib.mkDefault true;
+    myModules.apps.development.latex.enable = lib.mkDefault true;
+    myModules.apps.development.documentProcessing.enable = lib.mkDefault true;
+    myModules.services.development.containers.enable = lib.mkDefault true;
 
     # Desktop-like defaults
     services.xserver.enable = lib.mkDefault true;

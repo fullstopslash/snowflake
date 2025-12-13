@@ -10,16 +10,13 @@ let
   cfg = config.roles;
 in
 {
-  # Media imports
-  imports = [
-    ../modules/apps/media
-    ../modules/services/audio
-  ];
-
   # Mediacenter-specific config (only when role is enabled)
   config = lib.mkIf cfg.mediacenter {
-    # Enable audio by default for media playback
-    # (pipewire/pulseaudio handled by modules/services/audio)
+    # Enable media apps
+    myModules.apps.media.enable = lib.mkDefault true;
+
+    # Note: Audio is handled by modules/services/audio which is imported globally
+    # in roles/common.nix. PipeWire/PulseAudio will be configured automatically.
 
     # Media consumption optimizations could go here
     # e.g., hardware video acceleration, codec support, etc.

@@ -1,8 +1,14 @@
 # Media role
-{ pkgs, ... }:
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.myModules.apps.media;
+in
 {
-  # Media packages
-  environment.systemPackages = with pkgs; [
+  options.myModules.apps.media.enable = lib.mkEnableOption "Media apps (Jellyfin, Spotify, VLC, etc)";
+
+  config = lib.mkIf cfg.enable {
+    # Media packages
+    environment.systemPackages = with pkgs; [
     # Media servers
     jellyfin
     jellyfin-tui
@@ -37,9 +43,6 @@
     stable.vcv-rack
     cardinal
   ];
-
-  # Spice agent for VMs
-  services.spice-vdagentd.enable = true;
 
   # Systemd user service for jellyfin-mpv-shim
   # Relies on jellyfin-mpv-shim's built-in health check (health_check_interval: 300)
@@ -107,4 +110,9 @@
   #     AccuracySec = "1s";
   #   };
   # };
+  };
 }
+
+# Spice agent for VMs - moved from media module (VM-specific, not media)
+# This should be enabled in hw-vm.nix or a VM-specific module
+# services.spice-vdagentd.enable = true;

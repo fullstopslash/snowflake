@@ -8,17 +8,13 @@ let
   cfg = config.roles;
 in
 {
-  # Tablet - touch-friendly desktop
-  imports = [
-    ../modules/services/desktop
-    ../modules/services/audio
-    ../modules/apps/cli
-    ../modules/common/fonts.nix
-    ../modules/apps/media
-  ];
-
   # Tablet-specific config
   config = lib.mkIf cfg.tablet {
+    # Enable desktop modules
+    myModules.desktop.wayland.enable = lib.mkDefault true;
+    myModules.apps.media.enable = lib.mkDefault true;
+    myModules.apps.cli.shell.enable = lib.mkDefault true;
+
     # Touch input
     services.libinput.enable = lib.mkDefault true;
 

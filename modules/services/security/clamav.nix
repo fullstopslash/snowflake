@@ -6,56 +6,56 @@
   ...
 }:
 let
-  cfg = config.semi-active-av;
-  sus-user-dirs = [
-    "downloads"
-    ".mozilla"
-  ];
-  all-normal-users = lib.attrsets.filterAttrs (
-    username: config: config.isNormalUser
-  ) config.users.users;
-  all-sus-dirs = builtins.concatMap (
-    dir: lib.attrsets.mapAttrsToList (username: config: config.home + "/" + dir) all-normal-users
-  ) sus-user-dirs;
-  all-user-folders = lib.attrsets.mapAttrsToList (username: config: config.home) all-normal-users;
-  all-system-folders = [
-    "/boot"
-    "/etc"
-    "/nix"
-    "/opt"
-    "/root"
-    "/usr"
-  ];
-
-  clamav-notify = pkgs.writeScript "clamav-notify" ''
-    #!/bin/sh
-    ALERT="Signature detected by clamav: $CLAM_VIRUSEVENT_VIRUSNAME in $CLAM_VIRUSEVENT_FILENAME"
-    # Send an alert to all graphical users.
-    for ADDRESS in /run/user/*; do
-        USERID=''${ADDRESS#/run/user/}
-        sudo -u "#$USERID" DBUS_SESSION_BUS_ADDRESS="unix:path=$ADDRESS/bus" ${pkgs.libnotify}/bin/notify-send -u critical -i dialog-warning "Suspicious file" "$ALERT"
-    done
-    TMPDIR=$(mktemp -d)
-    cat >"$TMPDIR"/clamav-mail.txt <<-EOF
-        From:${config.hostSpec.email.notifier}
-        Subject: [$(hostname)] $(date) Suspicious file detected!
-
-        $ALERT
-        EOF
-          msmtp -t $(hostname).alerts.net@${config.hostSpec.domain} <"$TMPDIR"/clamav-mail.txt
-  '';
+  cfg = config.myModules.services.security.clamav;
 in
 {
-  options = {
-    semi-active-av = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-      };
-    };
+  options.myModules.services.security.clamav = {
+    enable = lib.mkEnableOption "semi-active antivirus with ClamAV";
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (
+    let
+      sus-user-dirs = [
+        "downloads"
+        ".mozilla"
+      ];
+      all-normal-users = lib.attrsets.filterAttrs (
+        username: config: config.isNormalUser
+      ) config.users.users;
+      all-sus-dirs = builtins.concatMap (
+        dir: lib.attrsets.mapAttrsToList (username: config: config.home + "/" + dir) all-normal-users
+      ) sus-user-dirs;
+      all-user-folders = lib.attrsets.mapAttrsToList (username: config: config.home) all-normal-users;
+      all-system-folders = [
+        "/boot"
+        "/etc"
+        "/nix"
+        "/opt"
+        "/root"
+        "/usr"
+      ];
+
+      clamav-notify = pkgs.writeScript "clamav-notify" ''
+        #!/bin/sh
+        ALERT="Signature detected by clamav: $CLAM_VIRUSEVENT_VIRUSNAME in $CLAM_VIRUSEVENT_FILENAME"
+        # Send an alert to all graphical users.
+        for ADDRESS in /run/user/*; do
+            USERID=''${ADDRESS#/run/user/}
+            sudo -u "#$USERID" DBUS_SESSION_BUS_ADDRESS="unix:path=$ADDRESS/bus" ${pkgs.libnotify}/bin/notify-send -u critical -i dialog-warning "Suspicious file" "$ALERT"
+        done
+        ${lib.optionalString (config.hostSpec ? email && config.hostSpec.email ? notifier && config.hostSpec ? domain) ''
+          TMPDIR=$(mktemp -d)
+          cat >"$TMPDIR"/clamav-mail.txt <<-EOF
+              From:${config.hostSpec.email.notifier}
+              Subject: [$(hostname)] $(date) Suspicious file detected!
+
+              $ALERT
+              EOF
+                msmtp -t $(hostname).alerts.net@${config.hostSpec.domain} <"$TMPDIR"/clamav-mail.txt
+        ''}
+      '';
+    in
+    {
     security.sudo = {
       extraConfig = ''
         clamav ALL = (ALL) NOPASSWD: SETENV: ${pkgs.libnotify}/bin/notify-send
@@ -128,5 +128,5 @@ in
         '';
       };
     };
-  };
+  });
 }

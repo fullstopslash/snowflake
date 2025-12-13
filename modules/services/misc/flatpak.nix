@@ -1,18 +1,32 @@
-# Flatpak role
-{ pkgs, ... }:
+# Flatpak module
 {
-  services.flatpak.enable = true;
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  cfg = config.myModules.services.flatpak;
+in
+{
+  options.myModules.services.flatpak = {
+    enable = lib.mkEnableOption "Flatpak support";
+  };
 
-  # Flatpak systemd service
-  systemd.services.flatpak-repo = {
-    wantedBy = [ "multi-user.target" ];
-    path = [ pkgs.flatpak ];
-    script = ''
-      flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-    '';
-    serviceConfig = {
-      TimeoutStartSec = "30";
-      Restart = "on-failure";
+  config = lib.mkIf cfg.enable {
+    services.flatpak.enable = true;
+
+    # Flatpak systemd service
+    systemd.services.flatpak-repo = {
+      wantedBy = [ "multi-user.target" ];
+      path = [ pkgs.flatpak ];
+      script = ''
+        flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+      '';
+      serviceConfig = {
+        TimeoutStartSec = "30";
+        Restart = "on-failure";
+      };
     };
   };
 }

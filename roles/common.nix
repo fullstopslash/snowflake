@@ -28,6 +28,8 @@ in
     (lib.custom.relativeToRoot "modules/common") # Includes universal.nix, sops.nix, nix.nix
     (lib.custom.relativeToRoot "modules/disks") # Disk configuration (disko)
     (lib.custom.relativeToRoot "modules/services") # Service modules (ssh, atuin, tailscale, etc.)
+    (lib.custom.relativeToRoot "modules/apps") # Application modules (media, gaming, development, etc.)
+    (lib.custom.relativeToRoot "modules/theming") # Theming modules (stylix, etc.)
     (lib.custom.relativeToRoot "modules/users")
 
     # nix-index for comma
