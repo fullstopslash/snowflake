@@ -222,10 +222,10 @@ Key features:
 - Hosts inherit from roles, can override specific categories
 
 Plans:
-- [ ] 12-01: Selection system foundation (lib/modules.nix, modules/selection.nix)
-- [ ] 12-02: hostSpec simplification (derive behavioral options from selections)
-- [ ] 12-03: Role migration (convert all roles to selection syntax)
-- [ ] 12-04: Host migration & validation (malphas, griefling, documentation)
+- [x] 12-01: Selection system foundation (lib/modules.nix, modules/selection.nix)
+- [x] 12-02: hostSpec simplification (derive behavioral options from selections)
+- [x] 12-03: Role migration (convert all roles to selection syntax)
+- [x] 12-04: Host migration & validation (malphas, griefling, documentation)
 
 ## Progress
 
@@ -242,4 +242,4 @@ Plans:
 | 9. Griefling Minimal Fix | - | Superseded | - |
 | 10. Griefling Speedup | 4/4 | Complete | 2025-12-12 |
 | 11. Architecture Reorganization | 1/1 | Complete | 2025-12-12 |
-| 12. Unified Module Selection | 0/4 | Planning | - |
+| 12. Unified Module Selection | 4/4 | Complete | 2025-12-13 |
