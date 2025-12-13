@@ -9,7 +9,6 @@
 #   2. Role selection: roles = [ "desktop" "development" ]
 #   3. Identity (hostSpec.hostName)
 #   4. Hardware quirks (boot loader, kernel modules, etc.)
-#   5. system.stateVersion
 #
 # WHAT COMES FROM ROLES:
 #   - All imports (modules, services, apps)
@@ -67,5 +66,5 @@
     efi.canTouchEfiVariables = true;
   };
 
-  system.stateVersion = "25.05";
+  # Note: system.stateVersion is set centrally in flake.nix
 }

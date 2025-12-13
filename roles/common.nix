@@ -66,14 +66,6 @@ in
         };
       };
 
-      #
-      # ========== NixOS-specific settings ==========
-      #
-      # Latest stable NixOS version - hosts can override if needed
-      system.stateVersion = lib.mkDefault "25.05";
-
-      # Enable comma for nix-index-database
-      programs.nix-index-database.comma.enable = lib.mkDefault true;
     })
   ];
 }

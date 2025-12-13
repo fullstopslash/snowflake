@@ -12,7 +12,7 @@
     modules = {
       apps = {
         media = [ "media" ];
-        cli = [ "shell" ];
+        cli = [ "comma" "shell" ];
       };
       services = {
         desktop = [ "wayland" ];

@@ -70,5 +70,5 @@
   #   withSwap = false;
   # };
 
-  system.stateVersion = "25.05";
+  # Note: system.stateVersion is set centrally in flake.nix
 }

@@ -13,6 +13,7 @@
     modules = {
       apps = {
         cli = [
+          "comma"
           "shell"
           "tools"
         ];

@@ -17,6 +17,7 @@
         comms = [ "comms" ];
         productivity = [ "productivity" ];
         cli = [
+          "comma"
           "shell"
           "tools"
         ];
