@@ -1,37 +1,39 @@
 # Tablet role - touch-friendly portable device
 #
-# Enables: Desktop, audio, CLI, fonts, media
-# Enables: Touch input, power management
-# Sets: isMobile, wifi hostSpec values
+# Uses unified module selection - touch-optimized setup
+# Secret categories: base, desktop, network
 { config, lib, ... }:
 let
   cfg = config.roles;
 in
 {
-  # Tablet-specific config
   config = lib.mkIf cfg.tablet {
-    # Enable desktop modules
-    myModules.desktop.wayland.enable = lib.mkDefault true;
-    myModules.apps.media.enable = lib.mkDefault true;
-    myModules.apps.cli.shell.enable = lib.mkDefault true;
+    # ========================================
+    # MODULE SELECTIONS (touch-optimized)
+    # ========================================
+    modules = {
+      desktop = lib.mkDefault [ "wayland" ];
+      displayManager = lib.mkDefault [ "ly" ];
+      apps = lib.mkDefault [ "media" ];
+      cli = lib.mkDefault [ "shell" ];
+      development = lib.mkDefault [ ];
+      services = lib.mkDefault [ ];
+      audio = lib.mkDefault [ "pipewire" ];
+    };
 
-    # Touch input
+    # ========================================
+    # TABLET HARDWARE
+    # ========================================
     services.libinput.enable = lib.mkDefault true;
-
-    # Power management
     powerManagement.enable = lib.mkDefault true;
 
-    # Tablet hostSpec defaults - hosts can override with lib.mkForce
+    # ========================================
+    # HOSTSPEC (non-derived options only)
+    # ========================================
     hostSpec = {
-      # Behavioral defaults specific to tablet
-      isMobile = lib.mkDefault true; # Tablets are mobile devices
-      wifi = lib.mkDefault true; # Tablets always have wifi
-      useWayland = lib.mkDefault true; # Modern tablets use Wayland
-      useWindowManager = lib.mkDefault true; # Tablets have GUI
-      isDevelopment = lib.mkDefault false; # Tablets are not dev workstations
-      isMinimal = lib.mkDefault false; # Full touch-friendly UI
+      isMobile = lib.mkDefault true;
+      wifi = lib.mkDefault true;
 
-      # Tablet secret categories
       secretCategories = {
         base = lib.mkDefault true;
         desktop = lib.mkDefault true;

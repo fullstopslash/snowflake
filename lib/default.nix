@@ -1,6 +1,33 @@
 # Custom lib helpers for nix-config
 { lib, ... }:
 {
+  # ========================================
+  # MODULE SELECTION HELPERS
+  # ========================================
+
+  # Scan a directory and return module names (without .nix extension, excluding default.nix)
+  # Used for generating enum values for the selection system
+  # Example: scanModuleNames ./modules/services/desktop -> [ "common" "hyprland" "niri" "plasma" "waybar" "wayland" ]
+  scanModuleNames =
+    path:
+    builtins.map (f: lib.strings.removeSuffix ".nix" f) (
+      builtins.filter (f: lib.hasSuffix ".nix" f && f != "default.nix") (
+        builtins.attrNames (builtins.readDir path)
+      )
+    );
+
+  # Scan a directory and return subdirectory names (for categories like modules/apps/*)
+  # Example: scanDirNames ./modules/apps -> [ "ai" "browsers" "cli" ... ]
+  scanDirNames =
+    path:
+    builtins.filter (f: (builtins.readDir path).${f} == "directory") (
+      builtins.attrNames (builtins.readDir path)
+    );
+
+  # ========================================
+  # PATH HELPERS
+  # ========================================
+
   # Use path relative to the root of the project
   relativeToRoot = lib.path.append ../.;
 

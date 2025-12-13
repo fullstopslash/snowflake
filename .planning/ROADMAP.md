@@ -195,6 +195,38 @@ Completed work:
 - [x] Fixed SOPS hasSecrets check in modules/users/default.nix
 - [x] Added template host hardware-configuration.nix and disk config
 
+### Phase 12: Unified Module Selection System
+**Goal**: List-based module selection with LSP autocompletion. Roles and hosts use same syntax.
+**Depends on**: Phase 11
+**Plans**: 4 plans
+
+Transform module selection from:
+```nix
+myModules.desktop.plasma.enable = lib.mkDefault true;
+myModules.apps.media.enable = lib.mkDefault true;
+```
+
+To unified list-based selection:
+```nix
+modules = {
+  desktop = lib.mkDefault [ "plasma" "hyprland" "wayland" ];
+  apps = lib.mkDefault [ "media" "gaming" ];
+  development = lib.mkDefault [ "latex" "containers" ];
+};
+```
+
+Key features:
+- LSP autocompletion via `lib.types.enum` derived from filesystem
+- Roles are "selection presets" - same syntax as hosts
+- hostSpec behavioral options derived from selections (useWayland, isDevelopment, etc.)
+- Hosts inherit from roles, can override specific categories
+
+Plans:
+- [ ] 12-01: Selection system foundation (lib/modules.nix, modules/selection.nix)
+- [ ] 12-02: hostSpec simplification (derive behavioral options from selections)
+- [ ] 12-03: Role migration (convert all roles to selection syntax)
+- [ ] 12-04: Host migration & validation (malphas, griefling, documentation)
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -210,3 +242,4 @@ Completed work:
 | 9. Griefling Minimal Fix | - | Superseded | - |
 | 10. Griefling Speedup | 4/4 | Complete | 2025-12-12 |
 | 11. Architecture Reorganization | 1/1 | Complete | 2025-12-12 |
+| 12. Unified Module Selection | 0/4 | Planning | - |

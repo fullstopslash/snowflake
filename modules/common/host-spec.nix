@@ -1,4 +1,14 @@
 # Specifications For Differentiating Hosts
+#
+# Option Categories:
+# - IDENTITY: Host-specific values (hostName, primaryUsername) - set by hosts
+# - HARDWARE: Physical capabilities (wifi, hdr, scaling) - set by hosts based on hardware
+# - BEHAVIORAL: Derived from modules.* selections - rarely need manual override
+# - PREFERENCES: User choices (theme, defaultBrowser) - set by hosts or roles
+# - SECRET CATEGORIES: What secrets needed - set by roles
+#
+# See modules/selection.nix for the modules.* selection system.
+#
 {
   config,
   pkgs,
@@ -6,6 +16,15 @@
   inputs,
   ...
 }:
+let
+  # Helper to check if list contains any wayland-based desktop
+  hasWaylandDesktop = builtins.any (m: builtins.elem m config.modules.desktop) [
+    "hyprland"
+    "niri"
+    "wayland"
+    "plasma" # Plasma 6 is Wayland by default
+  ];
+in
 {
   options.hostSpec = lib.mkOption {
     type = lib.types.submodule {
@@ -105,46 +124,45 @@
         };
 
         # ========================================
-        # BEHAVIORAL OPTIONS - Set by roles
+        # BEHAVIORAL OPTIONS - Derived from modules.* selections
         # ========================================
-        # These describe the host's purpose and are set automatically by roles.
-        # Hosts should NOT set these directly - override role choice instead.
-        # Use lib.mkForce if you must override a role's behavioral default.
+        # These are computed from modules.* selections but can be overridden with lib.mkForce.
+        # Most users should never need to set these directly.
 
         isMinimal = lib.mkOption {
           type = lib.types.bool;
-          default = false;
-          description = "Minimal installation (set by: vm, pi roles)";
+          default = config.modules.desktop == [ ] && config.modules.apps == [ ];
+          description = "Minimal installation (derived: true if no desktop or apps selected)";
         };
         isProduction = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Production vs test environment (common.nix=true, vm=false, server=true)";
+          description = "Production vs test environment (roles override: vm=false)";
         };
         isDevelopment = lib.mkOption {
           type = lib.types.bool;
-          default = false;
-          description = "Development tools enabled (desktop/laptop=true, server/vm/pi=false)";
+          default = config.modules.development != [ ];
+          description = "Development tools enabled (derived: true if any development modules selected)";
         };
         isMobile = lib.mkOption {
           type = lib.types.bool;
           default = false;
-          description = "Mobile device (laptop/tablet=true, desktop/server/vm/pi=false)";
+          description = "Mobile device (set by laptop/tablet roles based on hardware form factor)";
         };
         useWayland = lib.mkOption {
           type = lib.types.bool;
-          default = false;
-          description = "Use Wayland display server (desktop/laptop/tablet=true, server/vm/pi=false)";
+          default = hasWaylandDesktop;
+          description = "Use Wayland display server (derived: true if wayland-based desktop selected)";
         };
         useWindowManager = lib.mkOption {
           type = lib.types.bool;
-          default = true;
-          description = "Use graphical window manager (desktop/laptop/tablet=true, server/vm/pi=false)";
+          default = config.modules.desktop != [ ];
+          description = "Use graphical window manager (derived: true if any desktop modules selected)";
         };
         hasSecrets = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "SOPS secrets configured (common.nix=true, vm=false)";
+          description = "SOPS secrets configured (roles override: vm=false)";
         };
         useAtticCache = lib.mkOption {
           type = lib.types.bool;

@@ -26,6 +26,7 @@ in
     inputs.home-manager-unstable.nixosModules.home-manager
 
     (lib.custom.relativeToRoot "modules/common") # Includes universal.nix, sops.nix, nix.nix
+    (lib.custom.relativeToRoot "modules/selection.nix") # Unified module selection system
     (lib.custom.relativeToRoot "modules/disks") # Disk configuration (disko)
     (lib.custom.relativeToRoot "modules/services") # Service modules (ssh, atuin, tailscale, etc.)
     (lib.custom.relativeToRoot "modules/apps") # Application modules (media, gaming, development, etc.)

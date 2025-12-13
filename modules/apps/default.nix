@@ -4,6 +4,8 @@
     ./ai
     ./browsers
     ./cli
+    ./comms
+    ./desktop
     ./development
     ./editors
     ./gaming

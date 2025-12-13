@@ -1,13 +1,10 @@
 # VM role - virtual machine with full hardware and network support
 #
-# Enables: QEMU guest tools, virtio drivers, VM display, networking
-# Provides: Boot configuration, kernel modules, video drivers
-# Optional: Desktop services (hyprland, wayland), networking (tailscale, openssh)
-# Sets: VM-optimized boot, kernel parameters, display drivers
+# Minimal by default - uses empty module selections for fast builds
+# Hosts can enable specific modules as needed
 # Secret categories: base only
 #
-# NOTE: Disk config (disko) must be defined in host config, not here,
-# because role imports are unconditional and would conflict with other hosts.
+# NOTE: Disk config (disko) must be defined in host config, not here.
 {
   config,
   lib,
@@ -18,20 +15,24 @@ let
   cfg = config.roles;
 in
 {
-  # VM-specific config
   config = lib.mkIf cfg.vm {
-    # Enable Ly display manager for GUI access
-    myModules.displayManager.ly.enable = lib.mkDefault true;
+    # ========================================
+    # MODULE SELECTIONS (minimal by default)
+    # ========================================
+    # VMs start minimal - hosts add what they need
+    modules = {
+      desktop = lib.mkDefault [ "hyprland" "wayland" ];
+      displayManager = lib.mkDefault [ "ly" ];
+      apps = lib.mkDefault [ ];
+      cli = lib.mkDefault [ "shell" "tools" ];
+      development = lib.mkDefault [ ];
+      services = lib.mkDefault [ "atuin" "openssh" "tailscale" ];
+      audio = lib.mkDefault [ ];
+    };
 
-    # Enable desktop and networking modules
-    myModules.desktop.hyprland.enable = lib.mkDefault true;
-    myModules.desktop.wayland.enable = lib.mkDefault true;
-    myModules.services.tailscale.enable = lib.mkDefault true;
-    myModules.services.atuin.enable = lib.mkDefault true;
-    myModules.networking.openssh.enable = lib.mkDefault true;
-    #
-    # ========== Boot Configuration ==========
-    #
+    # ========================================
+    # BOOT CONFIGURATION
+    # ========================================
     boot.loader = {
       systemd-boot.enable = lib.mkDefault true;
       efi.canTouchEfiVariables = lib.mkDefault true;
@@ -40,7 +41,6 @@ in
 
     boot.initrd = {
       systemd.enable = lib.mkDefault true;
-      # VM-specific kernel modules for virtio and USB
       kernelModules = lib.mkDefault [
         "xhci_pci"
         "ohci_pci"
@@ -53,61 +53,31 @@ in
       ];
     };
 
-    # Console output for VM (serial and TTY)
-    boot.kernelParams = lib.mkDefault [
-      "console=tty1"
-      "console=ttyS0,115200"
-    ];
+    boot.kernelParams = lib.mkDefault [ "console=tty1" "console=ttyS0,115200" ];
+    boot.kernelModules = lib.mkDefault [ "virtio-gpu" "bochs_drm" ];
 
-    # VM display drivers (virtio-gpu for SDL, bochs for fallback)
-    boot.kernelModules = lib.mkDefault [
-      "virtio-gpu"
-      "bochs_drm"
-    ];
-
-    #
-    # ========== VM Display & Graphics ==========
-    #
-    # Note: modesetting driver is auto-detected for virtio-gpu
+    # ========================================
+    # VM HARDWARE
+    # ========================================
     hardware.graphics = {
       enable = lib.mkDefault true;
       extraPackages = lib.mkDefault (with pkgs; [ mesa ]);
     };
 
-    #
-    # ========== VM Networking ==========
-    #
     networking.networkmanager.enable = lib.mkDefault true;
-
-    #
-    # ========== VM Guest Services ==========
-    #
     services.qemuGuest.enable = lib.mkDefault true;
-    # SPICE: Configured in task-vm-hardware.nix (disabled by default)
-
-    #
-    # ========== Minimal Configuration ==========
-    #
     documentation.enable = lib.mkDefault false;
 
-    #
-    # ========== VM hostSpec defaults ==========
-    # Hosts can override with lib.mkForce
-    #
+    # ========================================
+    # HOSTSPEC (non-derived options only)
+    # ========================================
     hostSpec = {
-      # Behavioral defaults specific to VM
-      isMinimal = lib.mkDefault true; # VMs are minimal by default
-      isProduction = lib.mkDefault false; # VMs are for testing
-      hasSecrets = lib.mkDefault true; # VMs typically don't have secrets
-      useWayland = lib.mkDefault false; # Minimal VMs don't use Wayland
-      useWindowManager = lib.mkDefault false; # Minimal VMs are headless
-      isDevelopment = lib.mkDefault false; # Not a dev workstation
-      isMobile = lib.mkDefault false; # VMs are not mobile
-      wifi = lib.mkDefault false; # VMs use virtual networking
+      isProduction = lib.mkDefault false;
+      hasSecrets = lib.mkDefault true;
+      wifi = lib.mkDefault false;
 
-      # VM secret categories (minimal - hosts can override if needed)
       secretCategories = {
-        base = lib.mkDefault true; # VMs typically don't have secrets
+        base = lib.mkDefault true;
       };
     };
   };
