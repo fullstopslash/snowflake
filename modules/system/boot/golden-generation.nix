@@ -342,6 +342,13 @@ in
     # only works with systemd-boot (not GRUB or extlinux).
     # However, this module implements bootloader-agnostic automatic rollback.
 
+    # Ensure boot-complete.target is pulled in during boot
+    systemd.targets.boot-complete = {
+      description = "Boot Completion Check";
+      documentation = [ "https://systemd.io/AUTOMATIC_BOOT_ASSESSMENT/" ];
+      wantedBy = [ "multi-user.target" ];
+    };
+
     # ========================================
     # BOOT FAILURE DETECTION & ROLLBACK
     # ========================================
