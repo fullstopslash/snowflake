@@ -1,0 +1,6 @@
+{ ... }:
+{
+  imports = [
+    ./chezmoi-sync.nix
+  ];
+}

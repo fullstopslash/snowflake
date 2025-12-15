@@ -30,6 +30,31 @@
     documentation.enable = lib.mkDefault false;
 
     # ========================================
+    # GOLDEN GENERATION (boot safety)
+    # ========================================
+    # Note: Pi uses extlinux bootloader, not systemd-boot
+    # Boot counting feature won't work, but validation + GC pinning still useful
+    myModules.system.boot.goldenGeneration = {
+      enable = lib.mkDefault true;
+      validateServices = lib.mkDefault [
+        "sshd.service"
+        # Note: Tailscale not in default Pi modules, hosts can add if needed
+      ];
+      autoPinAfterBoot = lib.mkDefault true;
+    };
+
+    # ========================================
+    # CHEZMOI DOTFILE SYNC
+    # ========================================
+    myModules.services.dotfiles.chezmoiSync = {
+      enable = lib.mkDefault false; # Disabled by default, hosts must opt-in with repoUrl
+      # repoUrl must be set by host (e.g., "git@github.com:user/dotfiles.git")
+      syncBeforeUpdate = lib.mkDefault true;
+      autoCommit = lib.mkDefault true;
+      autoPush = lib.mkDefault true;
+    };
+
+    # ========================================
     # HOSTSPEC (non-derived options only)
     # ========================================
     hostSpec = {

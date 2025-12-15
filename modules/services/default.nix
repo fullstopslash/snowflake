@@ -7,6 +7,7 @@
     ./desktop
     ./development
     ./display-manager
+    ./dotfiles
     ./misc
     ./networking
     ./security

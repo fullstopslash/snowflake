@@ -34,6 +34,29 @@
     services.xserver.enable = lib.mkDefault false;
 
     # ========================================
+    # GOLDEN GENERATION (boot safety)
+    # ========================================
+    myModules.system.boot.goldenGeneration = {
+      enable = lib.mkDefault true;
+      validateServices = lib.mkDefault [
+        "sshd.service"
+        "tailscaled.service"
+      ];
+      autoPinAfterBoot = lib.mkDefault true;
+    };
+
+    # ========================================
+    # CHEZMOI DOTFILE SYNC
+    # ========================================
+    myModules.services.dotfiles.chezmoiSync = {
+      enable = lib.mkDefault false; # Disabled by default, hosts must opt-in with repoUrl
+      # repoUrl must be set by host (e.g., "git@github.com:user/dotfiles.git")
+      syncBeforeUpdate = lib.mkDefault true;
+      autoCommit = lib.mkDefault true;
+      autoPush = lib.mkDefault true;
+    };
+
+    # ========================================
     # HOSTSPEC (non-derived options only)
     # ========================================
     hostSpec = {
