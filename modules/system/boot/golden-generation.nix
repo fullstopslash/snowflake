@@ -65,18 +65,18 @@ let
         echo "$FAILURES" > "$FAILURES_FILE"
 
         echo "Boot failure count: $FAILURES"
-        logger -t golden-generation "Boot failure detected (attempt $FAILURES)"
+        ${pkgs.util-linux}/bin/logger -t golden-generation "Boot failure detected (attempt $FAILURES)"
 
         # Check if we should rollback
         if [ "$FAILURES" -ge "$MAX_FAILURES" ]; then
             echo "❌ Maximum boot failures reached ($FAILURES >= $MAX_FAILURES)"
             echo "🔄 Rolling back to golden generation..."
-            logger -t golden-generation "Maximum boot failures, rolling back to golden"
+            ${pkgs.util-linux}/bin/logger -t golden-generation "Maximum boot failures, rolling back to golden"
 
             # Check if golden generation exists
             if [ ! -L /nix/var/nix/gcroots/golden-generation ]; then
                 echo "⚠️  No golden generation pinned, cannot rollback"
-                logger -t golden-generation "ERROR: No golden generation to rollback to"
+                ${pkgs.util-linux}/bin/logger -t golden-generation "ERROR: No golden generation to rollback to"
                 # Reset counter and hope for the best
                 echo "0" > "$FAILURES_FILE"
             else
@@ -94,7 +94,7 @@ let
                 "$GOLDEN_PATH/bin/switch-to-configuration" boot
 
                 echo "✓ Rolled back to golden generation $GOLDEN_GEN, rebooting..."
-                logger -t golden-generation "Rolled back to golden generation $GOLDEN_GEN, rebooting"
+                ${pkgs.util-linux}/bin/logger -t golden-generation "Rolled back to golden generation $GOLDEN_GEN, rebooting"
 
                 # Immediate reboot
                 systemctl reboot
@@ -108,7 +108,7 @@ let
     # Create pending file for this boot
     echo "$(date -Is)" > "$PENDING_FILE"
     echo "⏳ Boot validation pending..."
-    logger -t golden-generation "Boot validation pending"
+    ${pkgs.util-linux}/bin/logger -t golden-generation "Boot validation pending"
   '';
 
   # Boot success script - clears pending flag, resets counter, pins golden
@@ -129,7 +129,7 @@ let
     echo "0" > "$FAILURES_FILE"
 
     echo "✓ Boot validation successful, counter reset"
-    logger -t golden-generation "Boot validation successful, counter reset"
+    ${pkgs.util-linux}/bin/logger -t golden-generation "Boot validation successful, counter reset"
 
     # Pin current generation as golden (if not skipped)
     if [ -f /run/skip-golden-pin ]; then
@@ -156,7 +156,7 @@ let
       --indirect --realise "/nix/var/nix/profiles/system-$CURRENT-link"
 
     echo "✓ Pinned generation $CURRENT as golden"
-    logger -t golden-generation "Pinned generation $CURRENT as golden"
+    ${pkgs.util-linux}/bin/logger -t golden-generation "Pinned generation $CURRENT as golden"
   '';
 
   # Manual command: Pin current generation as golden
