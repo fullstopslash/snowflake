@@ -35,7 +35,16 @@ in
         animate = lib.mkDefault true;
         animation = lib.mkDefault "3";
         tty = lib.mkDefault cfg.tty;
+        # Hide system users (including nixbld users)
+        hide_borders = lib.mkDefault false;
+        min_refresh_delta = lib.mkDefault 0;
       };
     };
+
+    # Hide nixbld users from display managers by setting their shell to nologin
+    # This is a workaround since ly doesn't have built-in user filtering
+    users.users = lib.genAttrs (map (n: "nixbld${toString n}") (lib.range 1 32)) (name: {
+      shell = lib.mkForce "${pkgs.shadow}/bin/nologin";
+    });
   };
 }
