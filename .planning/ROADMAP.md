@@ -20,7 +20,7 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 - [x] **Phase 12: Unified Module Selection** - List-based selection with LSP autocompletion
 - [x] **Phase 13: Filesystem-Driven Selection** - Auto-generate options from /modules filesystem
 - [x] **Phase 14: Role Elegance Audit** - Remove redundant enables, enforce selection-only pattern
-- [ ] **Phase 15: Self-Managing Infrastructure** - Golden boot entries, decentralized GitOps, auto-rollback
+- [x] **Phase 15: Self-Managing Infrastructure** - Golden boot entries, decentralized GitOps, auto-rollback
 
 ## Phase Details
 
@@ -311,9 +311,9 @@ Safety flow:
 ```
 
 Plans:
-- [ ] 15-01: Golden boot entry module (auto-pin after stable uptime, manual pin command, GC protection)
-- [ ] 15-02: Pre-update validation (build-before-switch in auto-upgrade, validation checks, rollback on build failure)
-- [ ] 15-03: Decentralized GitOps safety (git push for hosts, pre-update commit automation, systemd watchdog, boot failure rollback)
+- [x] 15-01: Golden boot entry module (auto-pin after stable uptime, manual pin command, GC protection)
+- [x] 15-02: Pre-update validation (build-before-switch in auto-upgrade, validation checks, rollback on build failure)
+- [x] 15-03: Decentralized GitOps safety (git push for hosts, pre-update commit automation, systemd watchdog, boot failure rollback)
 
 Target for hosts:
 - Server/Pi: Auto-pin golden after 24h uptime
@@ -339,4 +339,4 @@ Target for hosts:
 | 12. Unified Module Selection | 5/5 | Complete | 2025-12-13 |
 | 13. Filesystem-Driven Selection | 1/1 | Complete | 2025-12-13 |
 | 14. Role Elegance Audit | 1/1 | Complete | 2025-12-13 |
-| 15. Self-Managing Infrastructure | 0/3 | Not Started | - |
+| 15. Self-Managing Infrastructure | 3/3 | Complete | 2025-12-15 |
