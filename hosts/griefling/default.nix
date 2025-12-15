@@ -42,7 +42,7 @@
     enable = true;
     validateServices = [
       "sshd.service"
-      "tailscaled.service"
+      # Removed tailscaled - not enabled in VM role
     ];
     autoPinAfterBoot = true;
   };
