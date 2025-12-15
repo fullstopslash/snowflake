@@ -381,15 +381,14 @@ in
 
       # Run after boot validation succeeds
       after = [ "boot-complete.target" ];
-      wants = [ "boot-complete.target" ];
 
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${bootSuccessScript}";
       };
 
-      # Run once per boot
-      wantedBy = [ "multi-user.target" ];
+      # Triggered by boot-complete.target to avoid ordering cycle
+      wantedBy = [ "boot-complete.target" ];
     };
 
     # ========================================
