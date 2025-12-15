@@ -23,6 +23,7 @@ let
   stateDir = "/var/lib/golden-generation";
   pendingFile = "${stateDir}/boot-pending";
   failuresFile = "${stateDir}/boot-failures";
+  goldenGenFile = "${stateDir}/golden-generation-number";
   maxFailures = "2";
 
   # Validation script - checks all required services are active
@@ -82,7 +83,11 @@ let
             else
                 # Rollback to golden
                 GOLDEN_PATH=$(readlink /nix/var/nix/gcroots/golden-generation)
-                GOLDEN_GEN=$(echo "$GOLDEN_PATH" | grep -oP '\d+$' || echo "unknown")
+                if [ -f "${goldenGenFile}" ]; then
+                  GOLDEN_GEN=$(cat "${goldenGenFile}")
+                else
+                  GOLDEN_GEN="unknown"
+                fi
 
                 echo "Rolling back to golden generation $GOLDEN_GEN..."
                 ${pkgs.nix}/bin/nix-env --profile /nix/var/nix/profiles/system --set "$GOLDEN_PATH"
@@ -155,6 +160,9 @@ let
     ${pkgs.nix}/bin/nix-store --add-root "$GOLDEN_ROOT" \
       --indirect --realise "/nix/var/nix/profiles/system-$CURRENT-link"
 
+    # Store generation number for later reference
+    echo "$CURRENT" > "${goldenGenFile}"
+
     echo "✓ Pinned generation $CURRENT as golden"
     ${pkgs.util-linux}/bin/logger -t golden-generation "Pinned generation $CURRENT as golden"
   '';
@@ -165,6 +173,7 @@ let
     CURRENT=$(readlink /nix/var/nix/profiles/system | grep -oP '\d+')
     sudo ${pkgs.nix}/bin/nix-store --add-root /nix/var/nix/gcroots/golden-generation \
       --indirect --realise "/nix/var/nix/profiles/system-$CURRENT-link"
+    echo "$CURRENT" | sudo tee ${goldenGenFile} >/dev/null
     echo "✓ Pinned generation $CURRENT as golden"
   '';
 
@@ -172,7 +181,11 @@ let
   showGoldenCmd = pkgs.writeShellScriptBin "show-golden" ''
     if [ -L /nix/var/nix/gcroots/golden-generation ]; then
       GOLDEN=$(readlink /nix/var/nix/gcroots/golden-generation)
-      GENERATION=$(echo "$GOLDEN" | grep -oP '\d+$' || echo "unknown")
+      if [ -f ${goldenGenFile} ]; then
+        GENERATION=$(cat ${goldenGenFile})
+      else
+        GENERATION="unknown"
+      fi
       echo "Golden generation: $GENERATION"
       echo "Path: $GOLDEN"
     else
@@ -204,7 +217,11 @@ let
     fi
 
     GOLDEN_PATH=$(readlink /nix/var/nix/gcroots/golden-generation)
-    GENERATION=$(echo "$GOLDEN_PATH" | grep -oP '\d+$' || echo "unknown")
+    if [ -f ${goldenGenFile} ]; then
+      GENERATION=$(cat ${goldenGenFile})
+    else
+      GENERATION="unknown"
+    fi
 
     echo "Rolling back to golden generation $GENERATION..."
     echo "Path: $GOLDEN_PATH"
@@ -253,8 +270,11 @@ let
 
     # Show golden generation
     if [ -L /nix/var/nix/gcroots/golden-generation ]; then
-      GOLDEN_PATH=$(readlink /nix/var/nix/gcroots/golden-generation)
-      GOLDEN_GEN=$(echo "$GOLDEN_PATH" | grep -oP '\d+$' || echo "unknown")
+      if [ -f "${goldenGenFile}" ]; then
+        GOLDEN_GEN=$(cat "${goldenGenFile}")
+      else
+        GOLDEN_GEN="unknown"
+      fi
       echo "Golden generation: $GOLDEN_GEN"
     else
       echo "Golden generation: None pinned"
