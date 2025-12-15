@@ -21,7 +21,14 @@
       services = {
         cli = [ "atuin" ];
         networking = [ "syncthing" ];
+        system = [ "golden-generation" ];
       };
+    };
+
+    # Golden generation configuration for test VMs (manual pinning only)
+    myModules.services.system.goldenGeneration = {
+      enable = true;
+      autoPin = false; # Manual pinning only for test VMs
     };
 
     # Test VMs need sops passwords, so override isMinimal from VM role

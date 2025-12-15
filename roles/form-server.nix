@@ -24,7 +24,15 @@
           "ssh"
           "openssh"
         ];
+        system = [ "golden-generation" ];
       };
+    };
+
+    # Golden generation configuration for servers
+    myModules.services.system.goldenGeneration = {
+      enable = true;
+      autoPin = true;
+      autoPinDelay = "24h";
     };
 
     # ========================================
