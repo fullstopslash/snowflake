@@ -20,6 +20,7 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 - [x] **Phase 12: Unified Module Selection** - List-based selection with LSP autocompletion
 - [x] **Phase 13: Filesystem-Driven Selection** - Auto-generate options from /modules filesystem
 - [x] **Phase 14: Role Elegance Audit** - Remove redundant enables, enforce selection-only pattern
+- [ ] **Phase 15: Self-Managing Infrastructure** - Golden boot entries, decentralized GitOps, auto-rollback
 
 ## Phase Details
 
@@ -278,6 +279,48 @@ Key patterns enforced:
 Plans:
 - [x] 14-01: Remove redundant enables from form-pi.nix, form-server.nix; convert task-test.nix to selection
 
+### Phase 15: Self-Managing Infrastructure
+**Goal**: Enable safe decentralized GitOps with golden boot entries, pre-update validation, and automatic rollback.
+**Depends on**: Phase 6 (Auto-Update), Phase 14 (Clean role system)
+**Plans**: 3 plans
+
+Vision: Each host can commit changes to the repo, all hosts pull and validate before rebuilding. If an update fails, automatic rollback to the last known-good "golden" generation. This enables true decentralized self-management where any host can evolve the config safely.
+
+Current state (from Phase 6):
+- ✅ Auto-upgrade module with git pull + rebuild
+- ✅ SSH keys deployed via SOPS for git push
+- ✅ Daily rebuild schedule
+- ⏳ No golden boot entry protection
+- ⏳ No pre-update validation
+- ⏳ No automatic rollback on failure
+
+Key components to add:
+1. **Golden Boot Entry System** - Pin known-good builds that survive GC
+2. **Pre-Update Validation** - Build before switch, verify before deploy
+3. **Decentralized GitOps Safety** - Commit automation, conflict handling, rollback
+4. **Systemd Watchdog** - Detect boot failures, auto-revert to golden
+
+Safety flow:
+```
+1. Pin current working config as "golden" (after 24h stable uptime)
+2. Git pull new changes
+3. Build (don't switch yet)
+4. If build succeeds → switch
+5. If boot succeeds (systemd watchdog) → confirm
+6. If boot fails → automatic rollback to golden
+```
+
+Plans:
+- [ ] 15-01: Golden boot entry module (auto-pin after stable uptime, manual pin command, GC protection)
+- [ ] 15-02: Pre-update validation (build-before-switch in auto-upgrade, validation checks, rollback on build failure)
+- [ ] 15-03: Decentralized GitOps safety (git push for hosts, pre-update commit automation, systemd watchdog, boot failure rollback)
+
+Target for hosts:
+- Server/Pi: Auto-pin golden after 24h uptime
+- All hosts: Build validation before switch
+- All hosts: Automatic rollback on boot failure
+- Optional: Host can commit and push changes (for true decentralized management)
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -296,3 +339,4 @@ Plans:
 | 12. Unified Module Selection | 5/5 | Complete | 2025-12-13 |
 | 13. Filesystem-Driven Selection | 1/1 | Complete | 2025-12-13 |
 | 14. Role Elegance Audit | 1/1 | Complete | 2025-12-13 |
+| 15. Self-Managing Infrastructure | 0/3 | Not Started | - |
