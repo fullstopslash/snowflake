@@ -34,4 +34,16 @@
   # ========================================
   # Paths mirror filesystem: extraModules.<top>.<category> = [ "<module>" ]
   extraModules.services.security = [ "bitwarden" ];
+
+  # ========================================
+  # GOLDEN GENERATION (boot safety testing)
+  # ========================================
+  myModules.system.boot.goldenGeneration = {
+    enable = true;
+    validateServices = [
+      "sshd.service"
+      "tailscaled.service"
+    ];
+    autoPinAfterBoot = true;
+  };
 }
