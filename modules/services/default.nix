@@ -12,6 +12,5 @@
     ./networking
     ./security
     ./storage
-    ./system
   ];
 }
