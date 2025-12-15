@@ -139,14 +139,14 @@ let
     fi
 
     # Get current generation number
-    CURRENT=$(readlink /nix/var/nix/profiles/system | grep -oP '\d+$')
+    CURRENT=$(readlink /nix/var/nix/profiles/system | grep -oP '\d+')
 
     # Golden GC root path
     GOLDEN_ROOT="/nix/var/nix/gcroots/golden-generation"
 
     # Remove old golden root if exists
     if [ -L "$GOLDEN_ROOT" ]; then
-      OLD_GEN=$(readlink "$GOLDEN_ROOT" | grep -oP '\d+$' || echo "unknown")
+      OLD_GEN=$(readlink "$GOLDEN_ROOT" | grep -oP '\d+' || echo "unknown")
       rm "$GOLDEN_ROOT"
       echo "Removed old golden generation $OLD_GEN"
     fi
@@ -162,7 +162,7 @@ let
   # Manual command: Pin current generation as golden
   pinGoldenCmd = pkgs.writeShellScriptBin "pin-golden" ''
     set -euo pipefail
-    CURRENT=$(readlink /nix/var/nix/profiles/system | grep -oP '\d+$')
+    CURRENT=$(readlink /nix/var/nix/profiles/system | grep -oP '\d+')
     sudo ${pkgs.nix}/bin/nix-store --add-root /nix/var/nix/gcroots/golden-generation \
       --indirect --realise "/nix/var/nix/profiles/system-$CURRENT-link"
     echo "✓ Pinned generation $CURRENT as golden"
@@ -184,7 +184,7 @@ let
   # Manual command: Unpin golden generation
   unpinGoldenCmd = pkgs.writeShellScriptBin "unpin-golden" ''
     if [ -L /nix/var/nix/gcroots/golden-generation ]; then
-      GENERATION=$(readlink /nix/var/nix/gcroots/golden-generation | grep -oP '\d+$' || echo "unknown")
+      GENERATION=$(readlink /nix/var/nix/gcroots/golden-generation | grep -oP '\d+' || echo "unknown")
       sudo rm /nix/var/nix/gcroots/golden-generation
       echo "✓ Unpinned golden generation $GENERATION"
     else
@@ -261,7 +261,7 @@ let
     fi
 
     # Show current generation
-    CURRENT=$(readlink /nix/var/nix/profiles/system | grep -oP '\d+$')
+    CURRENT=$(readlink /nix/var/nix/profiles/system | grep -oP '\d+')
     echo "Current generation: $CURRENT"
 
     echo ""
