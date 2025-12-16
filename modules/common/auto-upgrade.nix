@@ -22,6 +22,8 @@
 #   security.sudo.wheelNeedsPassword = false;
 # This is already configured in the "test" role.
 #
+# Test: Auto-upgrade service verification - 2025-12-16
+#
 {
   config,
   lib,
@@ -205,6 +207,7 @@ in
             Type = "oneshot";
             User = config.hostSpec.primaryUsername;
             Environment = "HOME=${home}";
+            WorkingDirectory = home;
           };
           script =
             let
