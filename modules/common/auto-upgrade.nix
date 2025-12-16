@@ -23,6 +23,7 @@
 # This is already configured in the "test" role.
 #
 # Test: Auto-upgrade service verification - 2025-12-16
+# Test 2: Verify auto-upgrade works after out-link fix
 #
 {
   config,
