@@ -233,7 +233,7 @@ success "Using ISO: $(basename "$ISO_PATH")"
 if [[ $USE_ANYWHERE == true ]]; then
 	info "Starting VM for nixos-anywhere deployment..."
 
-	# Start VM with SPICE display - boots from ISO first, then nixos-anywhere takes over
+	# Start VM headless for nixos-anywhere deployment
 	qemu-system-x86_64 \
 		-name "${HOSTNAME}-fresh-test" \
 		-machine q35,smm=off,vmport=off,accel=kvm \
@@ -241,11 +241,7 @@ if [[ $USE_ANYWHERE == true ]]; then
 		-smp cores=2,threads=2,sockets=1 \
 		-m "${MEMORY}G" \
 		-pidfile "$PID_FILE" \
-		-vga qxl \
-		-spice port=5930,disable-ticketing=on \
-		-device virtio-serial-pci \
-		-chardev spicevmc,id=spicechannel0,name=vdagent \
-		-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
+		-display none \
 		-device virtio-rng-pci,rng=rng0 \
 		-object rng-random,id=rng0,filename=/dev/urandom \
 		-device virtio-net,netdev=nic \

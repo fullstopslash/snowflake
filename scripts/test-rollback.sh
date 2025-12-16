@@ -31,71 +31,58 @@ echo "=== Testing Build Failure and Rollback on $VM ==="
 echo
 
 # Save current state
-ORIGINAL_COMMIT=$(git -C "$CONFIG_DIR" rev-parse HEAD)
+ORIGINAL_COMMIT=$(cd "$CONFIG_DIR" && jj log -r @ -T 'commit_id')
 echo "📌 Original commit: $ORIGINAL_COMMIT"
 echo
 
 # Check VM's current commit
 echo "📦 VM's current commit:"
-VM_COMMIT=$($SSH "cd ~/nix-config && git rev-parse HEAD")
+VM_COMMIT=$($SSH "cd ~/nix-config && jj log -r @ -T 'commit_id' || git rev-parse HEAD")
 echo "   $VM_COMMIT"
 echo
 
-# Step 1: Create a new branch for testing
-BRANCH_NAME="test-rollback-$(date +%s)"
-echo "🌿 Creating test branch: $BRANCH_NAME"
-git -C "$CONFIG_DIR" checkout -b "$BRANCH_NAME"
+# Step 1: Create a test commit with syntax error
+echo "💥 Creating test commit with syntax error..."
 echo
 
-# Step 2: Inject a syntax error
-echo "💥 Injecting syntax error into $VM config..."
+# Inject a syntax error
 CONFIG_FILE="$CONFIG_DIR/hosts/$VM/default.nix"
 if [ ! -f "$CONFIG_FILE" ]; then
 	echo "❌ Config file not found: $CONFIG_FILE"
-	git -C "$CONFIG_DIR" checkout -
-	git -C "$CONFIG_DIR" branch -D "$BRANCH_NAME"
 	exit 1
 fi
 
 # Add a syntax error (unclosed brace)
 echo "  {{{ SYNTAX ERROR" >>"$CONFIG_FILE"
-echo
 
-# Step 3: Commit the broken config
+# Commit the broken config with jj
 echo "📝 Committing broken config..."
-git -C "$CONFIG_DIR" add "$CONFIG_FILE"
-git -C "$CONFIG_DIR" commit -m "test: inject syntax error for rollback test"
-BROKEN_COMMIT=$(git -C "$CONFIG_DIR" rev-parse HEAD)
+(cd "$CONFIG_DIR" && jj describe -m "test: inject syntax error for rollback test")
+BROKEN_COMMIT=$(cd "$CONFIG_DIR" && jj log -r @ -T 'commit_id')
 echo "   Broken commit: $BROKEN_COMMIT"
 echo
 
-# Step 4: Push to remote (VM will pull this)
+# Push to remote (VM will pull this)
 echo "📤 Pushing broken config..."
-# Check if we're using jj or git
-if [ -d "$CONFIG_DIR/.jj" ]; then
-	echo "   Using jujutsu..."
-	(cd "$CONFIG_DIR" && jj git import && jj git push)
-else
-	git -C "$CONFIG_DIR" push origin "$BRANCH_NAME"
-fi
+(cd "$CONFIG_DIR" && jj git push)
 echo
 
-# Step 5: Tell VM to pull the broken config
+# Tell VM to pull the broken config
 echo "🔄 Instructing VM to pull updates..."
-$SSH "cd ~/nix-config && git fetch --all && git checkout $BRANCH_NAME && git pull origin $BRANCH_NAME"
+$SSH "cd ~/nix-config && (jj git fetch && jj git export || git pull)"
 echo
 
-# Step 6: Trigger upgrade (should fail and rollback)
+# Trigger upgrade (should fail and rollback)
 echo "🚀 Triggering upgrade (expecting failure and rollback)..."
 $SSH systemctl start nix-local-upgrade.service
 
 # Wait for service to run
 sleep 10
 
-# Step 7: Check if rollback occurred
+# Check if rollback occurred
 echo
 echo "🔍 Checking if rollback occurred..."
-VM_AFTER=$($SSH "cd ~/nix-config && git rev-parse HEAD")
+VM_AFTER=$($SSH "cd ~/nix-config && jj log -r @ -T 'commit_id' || git rev-parse HEAD")
 echo "   VM commit after upgrade attempt: $VM_AFTER"
 echo
 
@@ -108,24 +95,21 @@ else
 fi
 echo
 
-# Step 8: Check logs
+# Check logs
 echo "📋 Upgrade service logs (last 50 lines):"
 $SSH journalctl -u nix-local-upgrade.service -n 50 --no-pager
 echo
 
 # Cleanup
-echo "🧹 Cleaning up test branch..."
-git -C "$CONFIG_DIR" checkout -
-git -C "$CONFIG_DIR" branch -D "$BRANCH_NAME" || true
+echo "🧹 Cleaning up..."
+# Abandon the test commit
+(cd "$CONFIG_DIR" && jj abandon @)
+# Restore the file using jj
+(cd "$CONFIG_DIR" && jj restore "$CONFIG_FILE")
 
-# Try to clean up remote branch if using git
-if [ ! -d "$CONFIG_DIR/.jj" ]; then
-	git -C "$CONFIG_DIR" push origin --delete "$BRANCH_NAME" 2>/dev/null || true
-fi
-
-# Reset VM to main branch
-echo "🔄 Resetting VM to main branch..."
-$SSH "cd ~/nix-config && git checkout dev && git pull origin dev"
+# Reset VM to current state
+echo "🔄 Resetting VM to clean state..."
+$SSH "cd ~/nix-config && (jj git fetch && jj git export || git pull)"
 echo
 
 echo "=== Test Complete ==="
