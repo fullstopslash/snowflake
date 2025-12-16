@@ -14,7 +14,7 @@
         cli = [
           "comma"
           "shell"
-          "tools"
+          "tools-core"
         ];
       };
       services = {

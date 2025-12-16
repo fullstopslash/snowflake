@@ -21,7 +21,7 @@
         cli = [
           "comma"
           "shell"
-          "tools"
+          "tools-core"
         ];
         development = [
           "latex"

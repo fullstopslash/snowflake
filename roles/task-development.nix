@@ -16,7 +16,7 @@
         development = [
           "latex"
           "document-processing"
-          "tools"
+          "tools-core"
         ];
       };
       services = {
