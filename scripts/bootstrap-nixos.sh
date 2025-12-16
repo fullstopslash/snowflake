@@ -4,6 +4,7 @@ set -euo pipefail
 # Helpers library
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/vcs-helpers.sh"
 
 # User variables
 target_hostname=""
@@ -301,10 +302,6 @@ fi
 if yes_or_no "Generate user age key?"; then
 	# This may end up creating the host.yaml file, so add creation rules in advance
 	sops_setup_user_age_key "$target_user" "$target_hostname"
-	# We need to add the new file before we rekey later
-	cd "$nix_secrets_dir"
-	git add sops/"${target_hostname}".yaml
-	cd - >/dev/null
 	updated_age_keys=1
 fi
 
@@ -312,6 +309,11 @@ if [[ $updated_age_keys == 1 ]]; then
 	# If the age generation commands added previously unseen keys (and associated anchors) we want to add those
 	# to some creation rules, namely <host>.yaml and shared.yaml
 	sops_add_creation_rules "${target_user}" "${target_hostname}"
+
+	# Add key metadata for tracking rotation
+	green "Adding key metadata..."
+	sops -e -i --set '["sops"]["key-metadata"]' "{\"generated_at\": \"$(date +%Y-%m-%d)\", \"rotated_at\": null}" "$nix_secrets_dir/sops/$target_hostname.yaml"
+
 	# Since we may update the sops.yaml file twice above, only rekey once at the end
 	just rekey
 	green "Updating flake input to pick up new .sops.yaml"
@@ -354,10 +356,11 @@ fi
 
 if [[ $generated_hardware_config == 1 ]]; then
 	if yes_or_no "Do you want to commit and push the generated hardware-configuration.nix for $target_hostname to nix-config?"; then
-		(pre-commit run --all-files 2>/dev/null || true) &&
-			git add "$git_root/hosts/$target_hostname/hardware-configuration.nix" &&
-			(git commit -m "feat: hardware-configuration.nix for $target_hostname" || true) &&
-			git push
+		(pre-commit run --all-files 2>/dev/null || true)
+		cd "$git_root"
+		vcs_add "hosts/$target_hostname/hardware-configuration.nix"
+		vcs_commit "feat: hardware-configuration.nix for $target_hostname" || true
+		vcs_push
 	fi
 fi
 

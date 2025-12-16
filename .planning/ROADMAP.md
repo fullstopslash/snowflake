@@ -321,6 +321,41 @@ Target for hosts:
 - All hosts: Automatic rollback on boot failure
 - Optional: Host can commit and push changes (for true decentralized management)
 
+### Phase 16: SOPS/Age Key Management
+**Goal**: Enforce SOPS/age key hygiene and enable safe manual key rotation with Jujutsu workflow support
+**Depends on**: Phase 4 (Secrets & Security), Phase 15 (Self-Managing Infrastructure)
+**Plans**: 3 plans
+
+Background: Current SOPS implementation has no enforcement of key permissions, format validation, or rotation capabilities. Keys are generated once at bootstrap and never rotated. VCS operations hardcoded to git, need jujutsu support.
+
+Plans:
+- [ ] 16-01: SOPS key enforcement module (validate permissions, format, secret decryption)
+- [ ] 16-02: Jujutsu VCS integration (vcs-helpers.sh abstraction, update bootstrap/rekey)
+- [ ] 16-03: Key rotation foundation (metadata tracking, rotation helpers, manual workflow)
+
+Key work:
+- **Enforcement Module** at `modules/security/sops-enforcement.nix`:
+  - Assertions for SSH host key existence
+  - Activation script to validate/fix key permissions (600)
+  - Systemd service to verify secret decryption success
+  - Auto-enable when `hostSpec.hasSecrets = true`
+- **VCS Abstraction** at `scripts/vcs-helpers.sh`:
+  - Functions: vcs_add, vcs_commit, vcs_push, vcs_pull
+  - Environment variable `VCS_TYPE` (default: jj, fallback: git)
+  - Update justfile rekey, bootstrap, and helpers.sh
+- **Rotation Infrastructure**:
+  - Key age metadata tracking in host secrets
+  - Zero-downtime rotation process (7 steps)
+  - Helper functions in `scripts/sops-rotate.sh`
+  - Justfile commands: `sops-rotate`, `sops-check-key-age`
+  - Documentation at `docs/sops-rotation.md`
+
+Target outcome:
+- Keys validated at every rebuild (permissions, format, decryption)
+- Jujutsu-first workflow for SOPS operations
+- Manual rotation ready with zero-downtime process
+- Foundation for future automated rotation (Phase 17+)
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -340,3 +375,4 @@ Target for hosts:
 | 13. Filesystem-Driven Selection | 1/1 | Complete | 2025-12-13 |
 | 14. Role Elegance Audit | 1/1 | Complete | 2025-12-13 |
 | 15. Self-Managing Infrastructure | 3/3 | Complete | 2025-12-15 |
+| 16. SOPS/Age Key Management | 0/3 | Planned | - |

@@ -494,9 +494,14 @@ sops-rekey:
 
 # Update all keys in sops/*.yaml files in nix-secrets to match the creation rules keys
 rekey: sops-rekey
-  cd ../nix-secrets && \
-    (pre-commit run --all-files || true) && \
-    git add -u && (git commit -nm "chore: rekey" || true) && git push
+  #!/usr/bin/env bash
+  set -e
+  cd ../nix-secrets
+  pre-commit run --all-files || true
+  source ../nix-config/scripts/vcs-helpers.sh
+  vcs_add -u
+  vcs_commit "chore: rekey" || true
+  vcs_push
 
 # Update an age key anchor or add a new one
 sops-update-age-key FIELD KEYNAME KEY:
@@ -528,3 +533,33 @@ sops-add-shared-creation-rules USER HOST:
 sops-add-creation-rules USER HOST:
     just sops-add-host-creation-rules {{USER}} {{HOST}} && \
     just sops-add-shared-creation-rules {{USER}} {{HOST}}
+
+# Initialize key metadata for existing host
+sops-init-key-metadata HOST:
+  @echo "Initializing key metadata for {{HOST}}..."
+  bash -c "source scripts/helpers.sh && sops_init_key_metadata {{HOST}}"
+
+# Rotate SOPS key for host (interactive, zero-downtime)
+sops-rotate HOST:
+  @echo "Starting key rotation for {{HOST}}..."
+  bash scripts/sops-rotate.sh sops_rotate_host {{HOST}}
+
+# Check age of all host keys
+sops-check-key-age:
+  #!/usr/bin/env bash
+  set -e
+  echo "Host Key Age Report"
+  echo "==================="
+  cd ../nix-secrets/sops
+  for yaml in *.yaml; do
+    hostname="${yaml%.yaml}"
+    if [ "$hostname" != "shared" ]; then
+      if sops -d "$yaml" | grep -q "key-metadata"; then
+        generated=$(sops -d "$yaml" | yq '.sops.key-metadata.generated_at')
+        rotated=$(sops -d "$yaml" | yq '.sops.key-metadata.rotated_at')
+        echo "$hostname: generated=$generated, last_rotated=$rotated"
+      else
+        echo "$hostname: no metadata"
+      fi
+    fi
+  done

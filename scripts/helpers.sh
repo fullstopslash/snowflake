@@ -79,6 +79,15 @@ function sops_update_age_key() {
 		green "Adding new ${keyname} key"
 		yq -i ".keys.$field += [\"$key\"] | .keys.${field}[-1] anchor = \"$keyname\"" "$SOPS_FILE"
 	fi
+
+	# Commit changes
+	source "$(dirname "${BASH_SOURCE[0]}")/vcs-helpers.sh"
+	local current_dir="$PWD"
+	cd "$nix_secrets_dir"
+	vcs_add .sops.yaml
+	vcs_commit "feat: update age key for $keyname" || true
+	vcs_push
+	cd "$current_dir"
 }
 
 # Adds the user and host to the shared.yaml creation rules
@@ -96,6 +105,15 @@ function sops_add_shared_creation_rules() {
 			yq -i "($shared_selector).key_groups[].age += [$u, $h]" "$SOPS_FILE"
 			yq -i "($shared_selector).key_groups[].age[-2] alias = $u" "$SOPS_FILE"
 			yq -i "($shared_selector).key_groups[].age[-1] alias = $h" "$SOPS_FILE"
+
+			# Commit changes
+			source "$(dirname "${BASH_SOURCE[0]}")/vcs-helpers.sh"
+			local current_dir="$PWD"
+			cd "$nix_secrets_dir"
+			vcs_add .sops.yaml
+			vcs_commit "feat: add $1 and $2 to shared.yaml creation rules" || true
+			vcs_push
+			cd "$current_dir"
 		fi
 	else
 		red "shared.yaml rule not found"
@@ -119,6 +137,15 @@ function sops_add_host_creation_rules() {
 		yq -i "($host_selector).key_groups[].age[1] alias = $h" "$SOPS_FILE"
 		yq -i "($host_selector).key_groups[].age[2] alias = $w" "$SOPS_FILE"
 		yq -i "($host_selector).key_groups[].age[3] alias = $n" "$SOPS_FILE"
+
+		# Commit changes
+		source "$(dirname "${BASH_SOURCE[0]}")/vcs-helpers.sh"
+		local current_dir="$PWD"
+		cd "$nix_secrets_dir"
+		vcs_add .sops.yaml
+		vcs_commit "feat: add host creation rules for $2" || true
+		vcs_push
+		cd "$current_dir"
 	fi
 }
 
@@ -166,6 +193,14 @@ function sops_setup_user_age_key() {
 		echo "{}" >"$secret_file"
 		sops --config "$config" -e "$secret_file" >"$secret_file.enc"
 		mv "$secret_file.enc" "$secret_file"
+		# Commit secret file changes
+		source "$(dirname "${BASH_SOURCE[0]}")/vcs-helpers.sh"
+		local current_dir="$PWD"
+		cd "$nix_secrets_dir"
+		vcs_add "sops/${target_hostname}.yaml"
+		vcs_commit "feat: create secret file for ${target_hostname}" || true
+		vcs_push
+		cd "$current_dir"
 	fi
 	if ! sops --config "$config" -d --extract '["keys]["age"]' "$secret_file" >/dev/null 2>&1; then
 		if [ -z "$age_secret_key" ]; then
@@ -173,6 +208,14 @@ function sops_setup_user_age_key() {
 		fi
 		# shellcheck disable=SC2116,SC2086
 		sops --config "$config" --set "$(echo '["keys"]["age"] "'$age_secret_key'"')" "$secret_file"
+		# Commit secret file changes
+		source "$(dirname "${BASH_SOURCE[0]}")/vcs-helpers.sh"
+		local current_dir="$PWD"
+		cd "$nix_secrets_dir"
+		vcs_add "sops/${target_hostname}.yaml"
+		vcs_commit "feat: setup user age key for ${target_user}@${target_hostname}" || true
+		vcs_push
+		cd "$current_dir"
 	else
 		green "Age key already exists for ${target_hostname}"
 	fi
@@ -289,4 +332,31 @@ function sops_verify_host_secrets() {
 	fi
 
 	return $errors
+}
+
+# Initialize key metadata for existing host
+function sops_init_key_metadata() {
+	local hostname="${1:-$(hostname)}"
+	local secrets_dir="${2:-../nix-secrets}"
+	local host_yaml="$secrets_dir/sops/$hostname.yaml"
+
+	if [ ! -f "$host_yaml" ]; then
+		red "Error: Host YAML not found: $host_yaml"
+		return 1
+	fi
+
+	# Get current key file date or use today
+	local key_date
+	if [ -f /var/lib/sops-nix/key.txt ]; then
+		key_date=$(stat -c %Y /var/lib/sops-nix/key.txt)
+		key_date=$(date -d "@$key_date" +%Y-%m-%d)
+	else
+		key_date=$(date +%Y-%m-%d)
+	fi
+
+	# Add metadata secret to host YAML
+	sops -e -i --set '["sops"]["key-metadata"]' "{\"generated_at\": \"$key_date\", \"rotated_at\": null}" "$host_yaml"
+
+	green "Added key metadata to $host_yaml"
+	green "Generated at: $key_date"
 }

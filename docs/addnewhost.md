@@ -95,6 +95,61 @@ Secrets are organized by purpose:
 | network | tailscale OAuth | network.nix |
 | shared | cross-host secrets | shared.nix (via shared.yaml) |
 
+## Version Control System
+
+This configuration supports both Git and Jujutsu (jj) for managing the nix-secrets repository. All SOPS-related scripts use a VCS abstraction layer for compatibility.
+
+### Default: Jujutsu
+
+By default, all scripts use Jujutsu. To use the bootstrap script with jj (default):
+
+```bash
+./scripts/bootstrap-nixos.sh -n newhost -d <ip> -k ~/.ssh/key
+# Or explicitly:
+export VCS_TYPE=jj
+./scripts/bootstrap-nixos.sh -n newhost -d <ip> -k ~/.ssh/key
+```
+
+### Using Git
+
+To use Git instead, set the `VCS_TYPE` environment variable:
+
+```bash
+export VCS_TYPE=git
+./scripts/bootstrap-nixos.sh -n newhost -d <ip> -k ~/.ssh/key
+```
+
+This applies to all commands:
+
+```bash
+# Rekey with git
+export VCS_TYPE=git
+just rekey
+
+# Update age key with git
+export VCS_TYPE=git
+just sops-update-host-age-key myhost age1...
+```
+
+### Collocated Repositories
+
+The nix-secrets repository can be a Jujutsu collocated repository (both `.jj/` and `.git/` directories). This allows:
+- Working with jj locally (`jj commit`, `jj log`)
+- Pushing to GitHub via `jj git push`
+- Compatibility with Git-based tools and workflows
+
+### VCS Abstraction
+
+The VCS abstraction layer (`scripts/vcs-helpers.sh`) provides these functions:
+- `vcs_add` - Stage files (git) or track changes (jj auto-tracks)
+- `vcs_commit` - Commit with message
+- `vcs_push` - Push to remote
+- `vcs_pull` - Pull/fetch from remote
+- `vcs_is_clean` - Check for uncommitted changes
+- `vcs_current_ref` - Get current branch/change ID
+
+All SOPS scripts automatically use these functions based on `VCS_TYPE`.
+
 ## Manual Bootstrap (if not using script)
 
 If you prefer manual setup:
