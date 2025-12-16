@@ -307,9 +307,10 @@ in
         };
 
         # Configure nh cleanup with our retention settings
+        # Use mkDefault so nix-management.nix settings take precedence
         programs.nh.clean = {
           enable = true;
-          extraArgs = "--keep-since ${toString cfg.keepDays}d --keep ${toString cfg.keepGenerations}";
+          extraArgs = lib.mkDefault "--keep-since ${toString cfg.keepDays}d --keep ${toString cfg.keepGenerations}";
         };
       }
 

@@ -40,12 +40,18 @@
           # Future hosts can override this by setting hostSpec.system in their default.nix
           system = "x86_64-linux";
 
-          # Use unstable for griefling test VM, stable for everything else
-          pkgInput = if hostname == "griefling" then inputs.nixpkgs-unstable else nixpkgs;
+          # Use unstable for test VMs (griefling, sorrow, torment), stable for everything else
+          testVMs = [
+            "griefling"
+            "sorrow"
+            "torment"
+          ];
+          isTestVM = builtins.elem hostname testVMs;
+          pkgInput = if isTestVM then inputs.nixpkgs-unstable else nixpkgs;
 
           # When using alternate nixpkgs, create pkgs with config
           customPkgs =
-            if hostname == "griefling" then
+            if isTestVM then
               (import inputs.nixpkgs-unstable {
                 inherit system;
                 config = {
@@ -58,7 +64,7 @@
 
           # Use matching lib for the nixpkgs version (unstable modules need unstable lib)
           hostLib =
-            if hostname == "griefling" then
+            if isTestVM then
               inputs.nixpkgs-unstable.lib.extend (
                 self: super: { custom = import ./lib { lib = inputs.nixpkgs-unstable.lib; }; }
               )
@@ -87,7 +93,7 @@
             hostPath
             # Pass custom pkgs for alternate nixpkgs inputs and disable module config
             (
-              if hostname == "griefling" then
+              if isTestVM then
                 {
                   nixpkgs.pkgs = lib.mkForce customPkgs;
                   nixpkgs.config = lib.mkForce { };
@@ -113,11 +119,18 @@
       #
       # Building configurations is available through `just rebuild` or `nixos-rebuild --flake .#hostname`
       # Auto-discover hosts from hosts/ directory and build with mkHost helper
+      # Filter out TEMPLATE.nix and template directory
       nixosConfigurations = builtins.listToAttrs (
-        map (host: {
-          name = host;
-          value = mkHost host;
-        }) (builtins.attrNames (builtins.readDir ./hosts))
+        map
+          (host: {
+            name = host;
+            value = mkHost host;
+          })
+          (
+            builtins.filter (name: name != "TEMPLATE.nix" && name != "template") (
+              builtins.attrNames (builtins.readDir ./hosts)
+            )
+          )
       );
 
       # darwinConfigurations = builtins.listToAttrs (

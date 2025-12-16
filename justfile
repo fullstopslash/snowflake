@@ -471,6 +471,36 @@ vm-start-headless HOST=DEFAULT_VM_HOST:
 # Quick rebuild: sync and rebuild on running VM (no fresh install)
 vm-quick HOST=DEFAULT_VM_HOST: (vm-sync HOST) (vm-rebuild HOST)
 
+# ========================================
+# Multi-VM Management (sorrow, torment, griefling)
+# ========================================
+# For testing GitOps workflows with concurrent VMs
+# Each VM has unique SSH/SPICE ports to run simultaneously
+
+# Start a test VM (supports concurrent VMs with unique ports)
+test-vm-start VM:
+    ./scripts/multi-vm.sh start {{VM}}
+
+# Stop a test VM
+test-vm-stop VM:
+    ./scripts/multi-vm.sh stop {{VM}}
+
+# SSH into a test VM
+test-vm-ssh VM:
+    ./scripts/multi-vm.sh ssh {{VM}}
+
+# Show status of all test VMs
+test-vm-status:
+    ./scripts/multi-vm.sh status
+
+# Start all test VMs (griefling, sorrow, torment)
+test-vm-start-all:
+    ./scripts/multi-vm.sh start-all
+
+# Stop all test VMs
+test-vm-stop-all:
+    ./scripts/multi-vm.sh stop-all
+
 # Bootstrap a new NixOS host (disko + install via nixos-anywhere)
 # See nixos-installer/README.md for full documentation
 # Usage: just bootstrap <host> <ip> <ssh-key> [port]
