@@ -354,7 +354,44 @@ Target outcome:
 - Keys validated at every rebuild (permissions, format, decryption)
 - Jujutsu-first workflow for SOPS operations
 - Manual rotation ready with zero-downtime process
-- Foundation for future automated rotation (Phase 17+)
+- Foundation for physical security measures
+
+### Phase 17: Physical Security & Disaster Recovery
+**Goal**: Protect against physical device theft and enable total infrastructure recovery from glass-key backups
+**Depends on**: Phase 16 (SOPS key management)
+**Plans**: 3 plans (FUTURE WORK - not currently implemented)
+**Priority**: CRITICAL before production deployment
+
+Plans:
+- [ ] 17-01: LUKS Full Disk Encryption Migration
+  - Migrate hosts from unencrypted to LUKS encryption
+  - Password-based unlock (YubiKey optional future enhancement)
+  - Uses existing `btrfs-luks-impermanence` disko config
+  - Protects age keys at rest from cold boot attacks
+  - Per-host migration plans and testing procedures
+
+- [ ] 17-02: Device Stolen Response Runbook
+  - Incident response procedures for physical device theft
+  - < 1 hour response time target for key rotation
+  - Secret rotation priority matrix (Tailscale, API tokens, passwords)
+  - 7-day monitoring procedures
+  - Post-incident review templates
+  - Quick reference card for emergency use
+
+- [ ] 17-03: Glass-Key Disaster Recovery System (ESSENTIAL)
+  - Master age key for total infrastructure recovery
+  - Physical backups: paper, metal, encrypted USB
+  - Offline git bundles (no GitHub dependency)
+  - Complete recovery from catastrophic loss
+  - Tested recovery procedure
+  - Quarterly maintenance schedule
+
+Target outcome:
+- Cold boot attacks prevented (LUKS encryption)
+- Stolen device response time < 1 hour
+- Total infrastructure recoverable from physical backups only
+- No external dependencies for disaster recovery
+- Homelab sovereignty maintained
 
 ## Progress
 
@@ -375,4 +412,5 @@ Target outcome:
 | 13. Filesystem-Driven Selection | 1/1 | Complete | 2025-12-13 |
 | 14. Role Elegance Audit | 1/1 | Complete | 2025-12-13 |
 | 15. Self-Managing Infrastructure | 3/3 | Complete | 2025-12-15 |
-| 16. SOPS/Age Key Management | 0/3 | Planned | - |
+| 16. SOPS/Age Key Management | 3/3 | Complete | 2025-12-15 |
+| 17. Physical Security & Recovery | 0/3 | Planned | - |
