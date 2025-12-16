@@ -29,82 +29,142 @@
       # ========= Helper Functions =========
       #
       # Architecture-aware mkHost helper for building NixOS configurations
+      # Reads architecture and nixpkgsVariant from host config declaratively
       mkHost =
         hostname:
         let
-          # Try to import host config to read system architecture
-          # Default to x86_64-linux if not specified
           hostPath = ./hosts/${hostname};
 
-          # For now, all current hosts are x86_64-linux
-          # Future hosts can override this by setting hostSpec.system in their default.nix
-          system = "x86_64-linux";
+          # Helper to build the final configuration with proper nixpkgs input
+          # We need to evaluate config once to determine which nixpkgs to use
+          buildConfig =
+            {
+              system,
+              pkgInput,
+              useCustom,
+            }:
+            let
+              # Create custom pkgs if needed
+              customPkgs =
+                if useCustom then
+                  (import pkgInput {
+                    inherit system;
+                    config = {
+                      allowUnfree = true;
+                      allowBroken = true;
+                    };
+                  })
+                else
+                  null;
 
-          # Use unstable for test VMs (griefling, sorrow, torment), stable for everything else
-          testVMs = [
-            "griefling"
-            "sorrow"
-            "torment"
-          ];
-          isTestVM = builtins.elem hostname testVMs;
-          pkgInput = if isTestVM then inputs.nixpkgs-unstable else nixpkgs;
+              # Use matching lib for the nixpkgs version
+              hostLib =
+                if useCustom then
+                  pkgInput.lib.extend (self: super: { custom = import ./lib { lib = pkgInput.lib; }; })
+                else
+                  lib;
 
-          # When using alternate nixpkgs, create pkgs with config
-          customPkgs =
-            if isTestVM then
-              (import inputs.nixpkgs-unstable {
-                inherit system;
-                config = {
-                  allowUnfree = true;
-                  allowBroken = true;
-                };
-              })
+              isDarwin = lib.hasInfix "darwin" system;
+            in
+            pkgInput.lib.nixosSystem {
+              inherit system;
+              specialArgs = {
+                inherit inputs outputs isDarwin;
+                lib = hostLib;
+              };
+              modules = [
+                # Unified stateVersion for all hosts
+                { system.stateVersion = "25.05"; }
+
+                # sops-nix for secrets management
+                inputs.sops-nix.nixosModules.sops
+
+                # Role system - must come before host config (skip for ISO which is special)
+                (if hostname != "iso" then ./roles else { })
+                ./modules/common
+
+                hostPath
+
+                # Pass custom pkgs for alternate nixpkgs inputs
+                (
+                  if useCustom then
+                    {
+                      nixpkgs.pkgs = lib.mkForce customPkgs;
+                      nixpkgs.config = lib.mkForce { };
+                      nix.registry = lib.mkForce { };
+                      nix.nixPath = lib.mkForce [ ];
+                    }
+                  else
+                    { }
+                )
+              ];
+            };
+
+          # Simple evaluation to extract architecture and variant
+          # For ISO, use defaults directly without evaluation
+          finalArchitecture =
+            if hostname == "iso" then
+              "x86_64-linux"
             else
-              null;
+              let
+                # We import the host file directly to read declared values
+                prelimConfig = import hostPath { lib = nixpkgs.lib; };
 
-          # Use matching lib for the nixpkgs version (unstable modules need unstable lib)
-          hostLib =
-            if isTestVM then
-              inputs.nixpkgs-unstable.lib.extend (
-                self: super: { custom = import ./lib { lib = inputs.nixpkgs-unstable.lib; }; }
-              )
+                # Extract values from roles and host config
+                # Roles set defaults via lib.mkDefault, so host can override
+                roleConfig =
+                  if builtins.hasAttr "roles" prelimConfig && builtins.elem "vm" prelimConfig.roles then
+                    {
+                      architecture = "x86_64-linux";
+                      nixpkgsVariant = "unstable";
+                    }
+                  else if builtins.hasAttr "roles" prelimConfig && builtins.elem "pi" prelimConfig.roles then
+                    {
+                      architecture = "aarch64-linux";
+                      nixpkgsVariant = "stable";
+                    }
+                  else
+                    {
+                      architecture = "x86_64-linux";
+                      nixpkgsVariant = "stable";
+                    };
+              in
+              # Host can override in hostSpec
+              prelimConfig.hostSpec.architecture or roleConfig.architecture;
+
+          finalVariant =
+            if hostname == "iso" then
+              "stable"
             else
-              lib;
+              let
+                prelimConfig = import hostPath { lib = nixpkgs.lib; };
+                roleConfig =
+                  if builtins.hasAttr "roles" prelimConfig && builtins.elem "vm" prelimConfig.roles then
+                    {
+                      architecture = "x86_64-linux";
+                      nixpkgsVariant = "unstable";
+                    }
+                  else if builtins.hasAttr "roles" prelimConfig && builtins.elem "pi" prelimConfig.roles then
+                    {
+                      architecture = "aarch64-linux";
+                      nixpkgsVariant = "stable";
+                    }
+                  else
+                    {
+                      architecture = "x86_64-linux";
+                      nixpkgsVariant = "stable";
+                    };
+              in
+              prelimConfig.hostSpec.nixpkgsVariant or roleConfig.nixpkgsVariant;
+
+          # Select inputs
+          finalPkgInput = if finalVariant == "unstable" then inputs.nixpkgs-unstable else nixpkgs;
+          useCustomPkgs = finalVariant != "stable";
         in
-        pkgInput.lib.nixosSystem {
-          inherit system;
-          specialArgs = {
-            inherit inputs outputs;
-            lib = hostLib;
-            isDarwin = false;
-          };
-          modules = [
-            # Unified stateVersion for all hosts
-            { system.stateVersion = "25.05"; }
-
-            # sops-nix for secrets management - imported for all hosts so modules
-            # can reference sops options. Actual secrets config is in hosts/common/core/sops.nix
-            inputs.sops-nix.nixosModules.sops
-
-            # Role system - must come before host config (skip for ISO which is special)
-            (if hostname != "iso" then ./roles else { })
-            ./modules/common
-
-            hostPath
-            # Pass custom pkgs for alternate nixpkgs inputs and disable module config
-            (
-              if isTestVM then
-                {
-                  nixpkgs.pkgs = lib.mkForce customPkgs;
-                  nixpkgs.config = lib.mkForce { };
-                  # Disable nix registry/nixPath for alternate nixpkgs to avoid conflicts
-                  nix.registry = lib.mkForce { };
-                  nix.nixPath = lib.mkForce [ ];
-                }
-              else
-                { }
-            )
-          ];
+        buildConfig {
+          system = finalArchitecture;
+          pkgInput = finalPkgInput;
+          useCustom = useCustomPkgs;
         };
     in
     {

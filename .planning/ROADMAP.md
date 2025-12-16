@@ -393,6 +393,40 @@ Target outcome:
 - No external dependencies for disaster recovery
 - Homelab sovereignty maintained
 
+### Phase 18: GitOps Test Infrastructure
+**Goal**: Test infrastructure for validating decentralized GitOps workflows
+**Depends on**: Phase 15 (Self-Managing Infrastructure)
+**Plans**: 1 plan
+
+Plans:
+- [x] 18-01: GitOps test infrastructure setup and validation
+
+### Phase 19: Host Discovery & Flake Elegance
+**Goal**: Auto-discover hosts, simplify flake configuration, rename hostSpec to host for clearer boundaries
+**Depends on**: Phase 16 (SOPS/Age Key Management)
+**Plans**: 3 plans
+
+Vision: Eliminate manual host declarations in flakes. Make host behavior declarative in host configs. Create elegant, minimal, streamlined `host` module (parallel to `modules` and `roles`) that's obvious and easy to parse at a glance. Single-command installs from ISO with embedded config.
+
+Current pain points:
+- mkHost has hardcoded testVMs list and conditional logic
+- nixos-installer/flake.nix manually declares hosts
+- hostSpec is large (300 lines) with mixed concerns
+- Three-tier system (/roles, /modules, /hosts) boundaries unclear
+
+Plans:
+- [x] 19-01: Declarative host behavior (add architecture/nixpkgs options, simplify mkHost, auto-discover installer)
+- [ ] 19-02: Rename hostSpec → host (create elegant structure, mass migration of 37+ files)
+- [ ] 19-03: Cleanup & verification (remove old module, embed config in ISO, documentation)
+
+Target outcome:
+- Auto-discovery: Just create /hosts/hostname/ directory, no flake declarations needed
+- Declarative: Host behavior explicit in host config, not hardcoded in flakes
+- Elegant host module: Clear categories (identity/hardware/preferences), parallel to modules/roles
+- ISO installer: Embedded nix-config, install-host command, single-step recovery installs
+- Security: No secrets in ISO (bootstrapped post-install)
+- Three-tier clarity: /roles (presets), /modules (units), /hosts (identity)
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -414,3 +448,5 @@ Target outcome:
 | 15. Self-Managing Infrastructure | 3/3 | Complete | 2025-12-15 |
 | 16. SOPS/Age Key Management | 3/3 | Complete | 2025-12-15 |
 | 17. Physical Security & Recovery | 0/3 | Planned | - |
+| 18. GitOps Test Infrastructure | 1/1 | Complete | 2025-12-16 |
+| 19. Host Discovery & Flake Elegance | 1/3 | In Progress | - |

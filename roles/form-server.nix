@@ -60,6 +60,9 @@
     # HOSTSPEC (non-derived options only)
     # ========================================
     hostSpec = {
+      # Architecture (servers are typically x86_64)
+      architecture = lib.mkDefault "x86_64-linux";
+
       isProduction = lib.mkDefault true;
       wifi = lib.mkDefault false;
 

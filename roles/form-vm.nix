@@ -95,6 +95,10 @@
     # HOSTSPEC (non-derived options only)
     # ========================================
     hostSpec = {
+      # Architecture and nixpkgs variant (VMs use unstable for testing)
+      architecture = lib.mkDefault "x86_64-linux";
+      nixpkgsVariant = lib.mkDefault "unstable";
+
       isProduction = lib.mkDefault false;
       hasSecrets = lib.mkDefault true;
       wifi = lib.mkDefault false;

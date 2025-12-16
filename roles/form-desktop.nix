@@ -66,6 +66,10 @@
     # Note: useWayland, isDevelopment, isMinimal, useWindowManager are now
     # derived from modules.* selections in host-spec.nix
     hostSpec = {
+      # Architecture and nixpkgs variant
+      architecture = lib.mkDefault "x86_64-linux";
+      nixpkgsVariant = lib.mkDefault "stable";
+
       # Hardware default (desktops typically use ethernet)
       wifi = lib.mkDefault false;
       # Form factor

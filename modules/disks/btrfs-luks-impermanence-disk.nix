@@ -1,7 +1,6 @@
 # NOTE: ... is needed because dikso passes diskoFile
 {
   lib,
-  pkgs,
   disk ? "/dev/vda",
   withSwap ? false,
   swapSize,
@@ -37,11 +36,8 @@
                 passwordFile = "/tmp/disko-password"; # this is populated by bootstrap-nixos.sh
                 settings = {
                   allowDiscards = true;
-                  # https://github.com/hmajid2301/dotfiles/blob/a0b511c79b11d9b4afe2a5e2b7eedb2af23e288f/systems/x86_64-linux/framework/disks.nix#L36
-                  crypttabExtraOpts = [
-                    "fido2-device=auto"
-                    "token-timeout=10"
-                  ];
+                  # FIDO2/YubiKey support removed - password-only unlock
+                  # YubiKey can be added post-install via: systemd-cryptenroll --fido2-device=auto /dev/device
                 };
                 # Subvolumes must set a mountpoint in order to be mounted,
                 # unless their parent is mounted
@@ -84,7 +80,6 @@
     };
   };
 
-  environment.systemPackages = [
-    pkgs.yubikey-manager # For luks fido2 enrollment before full install
-  ];
+  # yubikey-manager removed - not required for password-only LUKS
+  # Can be added manually if FIDO2 enrollment is desired post-install
 }

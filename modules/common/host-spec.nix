@@ -37,6 +37,24 @@ in
         # These are host-specific identity values that each host must specify.
         # Defaults are provided by roles/common.nix for convenience.
 
+        architecture = lib.mkOption {
+          type = lib.types.str;
+          description = "System architecture (x86_64-linux, aarch64-linux, x86_64-darwin) - set by roles";
+        };
+        nixpkgsVariant = lib.mkOption {
+          type = lib.types.enum [
+            "stable"
+            "unstable"
+          ];
+          default = "stable";
+          description = "Which nixpkgs input to use (stable or unstable)";
+        };
+        useCustomPkgs = lib.mkOption {
+          type = lib.types.bool;
+          default = config.hostSpec.nixpkgsVariant != "stable";
+          description = "Whether to use alternate nixpkgs with custom config (derived from nixpkgsVariant)";
+        };
+
         primaryUsername = lib.mkOption {
           type = lib.types.str;
           description = "The primary username of the host (default: 'rain' from common.nix)";

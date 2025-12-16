@@ -25,51 +25,76 @@
         isDarwin = false;
       };
 
-      # This mkHost is way better: https://github.com/linyinfeng/dotfiles/blob/8785bdb188504cfda3daae9c3f70a6935e35c4df/flake/hosts.nix#L358
-      newConfig =
-        name: disk: swapSize: useLuks: useImpermanence: username:
-        (
-          let
-            diskSpecPath =
-              if useLuks && useImpermanence then
-                ../modules/disks/btrfs-luks-impermanence-disk.nix
-              else if !useLuks && useImpermanence then
-                ../modules/disks/btrfs-impermanence-disk.nix
-              else
-                ../modules/disks/btrfs-disk.nix;
-          in
-          nixpkgs.lib.nixosSystem {
-            system = "x86_64-linux";
-            specialArgs = minimalSpecialArgs;
-            modules = [
-              inputs.disko.nixosModules.disko
-              diskSpecPath
-              {
-                _module.args = {
-                  inherit disk;
-                  withSwap = swapSize > 0;
-                  swapSize = builtins.toString swapSize;
-                };
-              }
-              ./minimal-configuration.nix
-              ../hosts/${name}/hardware-configuration.nix
+      # Auto-discover hosts from ../hosts/ directory
+      hostsList = builtins.filter (name: name != "TEMPLATE.nix" && name != "template" && name != "iso") (
+        builtins.attrNames (builtins.readDir ../hosts)
+      );
 
-              {
-                networking.hostName = name;
-                # Override username for minimal install to ensure correct SSH keys are used
-                hostSpec.primaryUsername = username;
-                hostSpec.username = username;
-              }
-            ];
-          }
-        );
+      # Read host config to extract disk configuration
+      mkInstallerConfig =
+        hostname:
+        let
+          hostPath = ../hosts/${hostname};
+          # Import host config to read disks settings
+          hostConfig = import hostPath { lib = nixpkgs.lib; };
+
+          # Extract disk config
+          disks =
+            hostConfig.disks or {
+              enable = true;
+              layout = "btrfs";
+              device = "/dev/vda";
+              withSwap = false;
+              swapSize = "0";
+            };
+
+          # Extract architecture from hostSpec or default to x86_64-linux
+          architecture = hostConfig.hostSpec.architecture or "x86_64-linux";
+
+          # Map layout to disk spec path
+          diskSpecPath =
+            if disks.layout == "btrfs-luks-impermanence" then
+              ../modules/disks/btrfs-luks-impermanence-disk.nix
+            else if disks.layout == "btrfs-impermanence" then
+              ../modules/disks/btrfs-impermanence-disk.nix
+            else
+              ../modules/disks/btrfs-disk.nix;
+
+          # Convert withSwap to boolean if needed
+          withSwap = if builtins.isBool disks.withSwap then disks.withSwap else (disks.withSwap or false);
+
+          # Extract swap size, default to 0
+          swapSize = builtins.toString (disks.swapSize or "0");
+        in
+        nixpkgs.lib.nixosSystem {
+          system = architecture;
+          specialArgs = minimalSpecialArgs;
+          modules = [
+            inputs.disko.nixosModules.disko
+            diskSpecPath
+            {
+              _module.args = {
+                disk = disks.device;
+                inherit withSwap swapSize;
+              };
+            }
+            ./minimal-configuration.nix
+            ../hosts/${hostname}/hardware-configuration.nix
+            {
+              networking.hostName = hostname;
+              # Override username for minimal install
+              hostSpec.primaryUsername = "${toString inputs.nix-secrets.user}";
+              hostSpec.username = "${toString inputs.nix-secrets.user}";
+            }
+          ];
+        };
     in
     {
-      nixosConfigurations = {
-        # host = newConfig "name" "disk" "swapSize" "useLuks" "useImpermanence" "username"
-        # Swap size is in GiB
-        griefling = newConfig "griefling" "/dev/vda" 8 false false "${toString inputs.nix-secrets.user}";
-        malphas = newConfig "malphas" "/dev/vda" 4 false false "${toString inputs.nix-secrets.user}";
-      };
+      nixosConfigurations = builtins.listToAttrs (
+        map (host: {
+          name = host;
+          value = mkInstallerConfig host;
+        }) hostsList
+      );
     };
 }
