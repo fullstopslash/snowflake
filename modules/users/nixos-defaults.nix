@@ -22,7 +22,7 @@ lib.mkIf pkgs.stdenv.isLinux {
   # 2. ~/.local/state/nix/profiles (user-level, preferred)
   system.activationScripts.nix-profile-dirs =
     let
-      primaryUser = config.hostSpec.primaryUsername;
+      primaryUser = config.host.primaryUsername;
     in
     lib.stringAfter [ "users" ] ''
       # System-level profile directory
@@ -30,7 +30,7 @@ lib.mkIf pkgs.stdenv.isLinux {
       chown ${primaryUser}:users /nix/var/nix/profiles/per-user/${primaryUser}
 
       # User-level profile directory (home-manager prefers this)
-      home="${config.hostSpec.home}"
+      home="${config.host.home}"
       mkdir -p "$home/.local/state/nix/profiles"
       chown -R ${primaryUser}:users "$home/.local"
     '';

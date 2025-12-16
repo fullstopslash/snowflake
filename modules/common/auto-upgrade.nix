@@ -37,7 +37,7 @@
 let
   cfg = config.myModules.services.autoUpgrade;
   repoCfg = config.myModules.services.nixConfigRepo;
-  home = config.hostSpec.home;
+  home = config.host.home;
   isClean = config.system ? configurationRevision;
 in
 {
@@ -224,7 +224,7 @@ in
           }";
           serviceConfig = {
             Type = "oneshot";
-            User = config.hostSpec.primaryUsername;
+            User = config.host.primaryUsername;
             Environment = "HOME=${home}";
             WorkingDirectory = home;
           };
@@ -354,7 +354,7 @@ in
               serviceConfig = {
                 Type = "oneshot";
                 ExecStart = hookCmd;
-                User = config.hostSpec.primaryUsername;
+                User = config.host.primaryUsername;
               };
             }
           ) cfg.preUpdateHooks

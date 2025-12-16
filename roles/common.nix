@@ -4,7 +4,7 @@
 # Hosts get this automatically when ANY role is enabled via roles/default.nix
 # Individual roles (desktop, server, etc.) extend this with role-specific config
 #
-# Note: Universal settings (hostSpec, zsh, overlays) are in modules/common/universal.nix
+# Note: Universal settings (host, zsh, overlays) are in modules/common/universal.nix
 # Note: Home-manager settings are here since this is where the module gets imported
 {
   config,
@@ -45,7 +45,7 @@ in
         backupFileExtension = lib.mkDefault "bk";
         extraSpecialArgs = lib.mkDefault {
           inherit inputs;
-          hostSpec = config.hostSpec;
+          host = config.host;
         };
       };
     }
@@ -53,10 +53,14 @@ in
     # Conditional: Role-specific config that extends universal settings
     (lib.mkIf anyRoleEnabled {
       #
-      # ========== Role-specific hostSpec defaults ==========
+      # ========== Role-specific host defaults ==========
       # These extend the universal defaults in modules/common/universal.nix
       #
-      hostSpec = {
+      host = {
+        # Identity defaults
+        primaryUsername = lib.mkDefault "rain";
+        handle = lib.mkDefault "fullstopslash";
+
         # Universal behavioral defaults
         # Note: isProduction is set per hardware role (server/pi=true, vm=false)
         hasSecrets = lib.mkDefault true;

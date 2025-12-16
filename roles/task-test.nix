@@ -8,7 +8,6 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 {
@@ -37,10 +36,10 @@
     };
 
     # Test VMs need sops passwords, so override isMinimal from VM role
-    hostSpec.isMinimal = lib.mkForce false;
+    host.isMinimal = lib.mkForce false;
 
     # Enable CLI secret category for atuin credentials
-    hostSpec.secretCategories.cli = lib.mkDefault true;
+    host.secretCategories.cli = lib.mkDefault true;
 
     # Test-friendly settings (use plain values to override mkDefault in base modules)
     security.sudo.wheelNeedsPassword = false;

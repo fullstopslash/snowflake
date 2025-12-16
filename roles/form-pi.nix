@@ -57,7 +57,7 @@
     # ========================================
     # HOSTSPEC (non-derived options only)
     # ========================================
-    hostSpec = {
+    host = {
       # Architecture (Raspberry Pi is aarch64)
       architecture = lib.mkDefault "aarch64-linux";
 

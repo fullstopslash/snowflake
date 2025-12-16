@@ -129,8 +129,8 @@
                       nixpkgsVariant = "stable";
                     };
               in
-              # Host can override in hostSpec
-              prelimConfig.hostSpec.architecture or roleConfig.architecture;
+              # Host can override in host config
+              prelimConfig.host.architecture or roleConfig.architecture;
 
           finalVariant =
             if hostname == "iso" then
@@ -155,7 +155,7 @@
                       nixpkgsVariant = "stable";
                     };
               in
-              prelimConfig.hostSpec.nixpkgsVariant or roleConfig.nixpkgsVariant;
+              prelimConfig.host.nixpkgsVariant or roleConfig.nixpkgsVariant;
 
           # Select inputs
           finalPkgInput = if finalVariant == "unstable" then inputs.nixpkgs-unstable else nixpkgs;

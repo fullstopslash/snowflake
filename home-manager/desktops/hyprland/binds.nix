@@ -8,7 +8,7 @@
   wayland.windowManager.hyprland.settings =
     let
       # Use ALT as main modifier on griefling to avoid host SUPER conflicts
-      mod = if config.hostSpec.hostName == "griefling" then "ALT" else "SUPER";
+      mod = if config.host.hostName == "griefling" then "ALT" else "SUPER";
       shiftMod = "SHIFT" + mod; # e.g. SHIFTALT / SHIFTSUPER
       ctrlMod = "CTRL_" + mod; # e.g. CTRL_ALT / CTRL_SUPER
       ctrlShiftAmp = "Control_L&Shift_L&" + mod;

@@ -23,8 +23,8 @@
 }:
 let
   cfg = config.myModules.services.networking.syncthing;
-  username = config.hostSpec.username;
-  homeDir = config.hostSpec.home;
+  username = config.host.username;
+  homeDir = config.host.home;
 in
 {
   options.myModules.services.networking.syncthing = {
@@ -38,7 +38,7 @@ in
       [
         syncthing
       ]
-      ++ lib.optionals (!config.hostSpec.isHeadless or false) [
+      ++ lib.optionals (!config.host.isHeadless or false) [
         syncthingtray
       ];
 

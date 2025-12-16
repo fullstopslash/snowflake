@@ -51,14 +51,14 @@
   # ========================================
   # HOST IDENTITY (required)
   # ========================================
-  hostSpec.hostName = "your-hostname";
+  host.hostName = "your-hostname";
 
   # ========================================
   # HARDWARE SPECIFICS (optional)
   # ========================================
-  # hostSpec.wifi = true;      # Has wifi capability
-  # hostSpec.hdr = true;       # HDR display support
-  # hostSpec.scaling = "1.5";  # Display scaling factor
+  # host.wifi = true;      # Has wifi capability
+  # host.hdr = true;       # HDR display support
+  # host.scaling = "1.5";  # Display scaling factor
 
   # ========================================
   # DISK CONFIGURATION (optional)

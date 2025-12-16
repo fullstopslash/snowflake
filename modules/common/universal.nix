@@ -4,7 +4,7 @@
 # All hosts inherit these settings regardless of platform or role.
 #
 # Contains:
-# - hostSpec identity defaults
+# - host identity defaults
 # - System-wide packages
 # - Shell configuration (zsh)
 # - Nixpkgs overlays
@@ -26,9 +26,8 @@
   # ========== Identity Defaults ==========
   # Hosts can override these with lib.mkForce
   #
-  hostSpec = {
+  host = {
     primaryUsername = lib.mkDefault "rain";
-    username = lib.mkDefault "rain";
     handle = lib.mkDefault "fullstopslash";
 
     # Import secrets from nix-secrets (universal for all hosts)
@@ -43,7 +42,7 @@
   #
   # ========== Networking ==========
   #
-  networking.hostName = config.hostSpec.hostName;
+  networking.hostName = config.host.hostName;
 
   #
   # ========== System-wide Packages ==========

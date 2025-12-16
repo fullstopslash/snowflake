@@ -53,7 +53,7 @@
                       ];
                     };
                     "@persist" = {
-                      mountpoint = "${config.hostSpec.persistFolder}";
+                      mountpoint = "${config.host.persistFolder}";
                       mountOptions = [
                         "compress=zstd"
                         "noatime"
@@ -96,7 +96,7 @@
                 # Whether to add a boot.initrd.luks.devices entry for the this disk.
                 # We only want to unlock cryptroot interactively.
                 # You must have a /etc/crypttab entry set up to auto unlock the drive using a key on cryptroot (see /hosts/nixos/ghost/default.nix)
-                initrdUnlock = if config.hostSpec.isMinimal then true else false;
+                initrdUnlock = if config.host.isMinimal then true else false;
 
                 # subvolumes must set a mountpoint in order to be mounted,
                 # unless their parent is mounted
@@ -133,7 +133,7 @@
                 # Whether to add a boot.initrd.luks.devices entry for the this disk.
                 # We only want to unlock cryptroot interactively.
                 # You must have a /etc/crypttab entry set up to auto unlock the drive using a key on cryptroot (see /hosts/linux/ghost/default.nix)
-                initrdUnlock = if config.hostSpec.isMinimal then true else false;
+                initrdUnlock = if config.host.isMinimal then true else false;
 
                 settings = {
                   allowDiscards = true;

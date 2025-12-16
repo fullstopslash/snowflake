@@ -9,12 +9,12 @@
 
 let
   platform = if isDarwin then "darwin" else "nixos";
-  hostSpec = config.hostSpec;
+  host = config.host;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 
   # List of yubikey public keys for the primary user
   pubKeys = lib.filesystem.listFilesRecursive (
-    lib.custom.relativeToRoot "modules/users/${hostSpec.primaryUsername}/keys/"
+    lib.custom.relativeToRoot "modules/users/${host.primaryUsername}/keys/"
   );
   # IMPORTANT: primary user keys are used for authorized_keys to all users. Change below if
   # you don't want this!
@@ -42,7 +42,7 @@ in
               let
                 # Only reference SOPS secret if hasSecrets is true and not minimal
                 sopsHashedPasswordFile =
-                  if config.hostSpec.hasSecrets && !config.hostSpec.isMinimal then
+                  if config.host.hasSecrets && !config.host.isMinimal then
                     config.sops.secrets."passwords/${user}".path
                   else
                     null;
@@ -63,17 +63,17 @@ in
                   inherit config lib;
                 }
               );
-          }) config.hostSpec.users
+          }) config.host.users
         )
       )
       // {
         root = {
           shell = pkgs.zsh;
-          hashedPasswordFile = config.users.users.${config.hostSpec.primaryUsername}.hashedPasswordFile;
-          hashedPassword = lib.mkForce config.users.users.${config.hostSpec.primaryUsername}.hashedPassword;
+          hashedPasswordFile = config.users.users.${config.host.primaryUsername}.hashedPasswordFile;
+          hashedPassword = lib.mkForce config.users.users.${config.host.primaryUsername}.hashedPassword;
           # root's ssh key are mainly used for remote deployment
           openssh.authorizedKeys.keys =
-            config.users.users.${config.hostSpec.primaryUsername}.openssh.authorizedKeys.keys;
+            config.users.users.${config.host.primaryUsername}.openssh.authorizedKeys.keys;
         };
       };
   }
@@ -84,14 +84,14 @@ in
     };
 
   # SOPS secrets for user passwords (only when hasSecrets && !isMinimal)
-  sops.secrets = lib.mkIf (config.hostSpec.hasSecrets && !config.hostSpec.isMinimal) (
+  sops.secrets = lib.mkIf (config.host.hasSecrets && !config.host.isMinimal) (
     lib.mergeAttrsList (
       map (user: {
         "passwords/${user}" = {
           sopsFile = "${sopsFolder}/shared.yaml";
           neededForUsers = true;
         };
-      }) config.hostSpec.users
+      }) config.host.users
     )
   );
 }
@@ -108,7 +108,7 @@ in
     {
       extraSpecialArgs = {
         inherit pkgs inputs;
-        hostSpec = config.hostSpec;
+        host = config.host;
       };
       # FIXME: Common for all users (will include root too!)
       #sharedModules = map (module: (import module)) (
@@ -123,10 +123,10 @@ in
           map (user: {
             "${user}".imports = lib.flatten [
               # Chezmoi dotfiles management - applies to all non-minimal users
-              (lib.optional (!hostSpec.isMinimal) (lib.custom.relativeToRoot "home-manager/chezmoi.nix"))
-              (lib.optional (!hostSpec.isMinimal) (
+              (lib.optional (!host.isMinimal) (lib.custom.relativeToRoot "home-manager/chezmoi.nix"))
+              (lib.optional (!host.isMinimal) (
                 map (fullPathIfExists) [
-                  "home-manager/users/${user}/${hostSpec.hostName}.nix"
+                  "home-manager/users/${user}/${host.hostName}.nix"
                   "home-manager/users/${user}/common"
                   "home-manager/users/${user}/common/${platform}.nix"
                 ]
@@ -143,7 +143,7 @@ in
                 }
               )
             ];
-          }) config.hostSpec.users
+          }) config.host.users
         ))
         // {
           root = {

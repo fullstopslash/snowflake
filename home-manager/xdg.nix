@@ -5,8 +5,8 @@
   ...
 }:
 let
-  browser = [ "${config.hostSpec.defaultBrowser}.desktop" ];
-  editor = [ "${config.hostSpec.defaultEditor}.desktop" ];
+  browser = [ "${config.host.defaultBrowser}.desktop" ];
+  editor = [ "${config.host.defaultEditor}.desktop" ];
   # FIXME(xdg): Where possible these should use config options like above to reference whatever is configured as the default
   media = [ "vlc.desktop" ];
   writer = [ "libreoffice-writer.desktop" ];

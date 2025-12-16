@@ -184,22 +184,22 @@ in
     sops.secrets = {
       "bitwarden/server" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = config.hostSpec.primaryUsername;
+        owner = config.host.primaryUsername;
         mode = "0400";
       };
       "bitwarden/user_email" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = config.hostSpec.primaryUsername;
+        owner = config.host.primaryUsername;
         mode = "0400";
       };
       "bitwarden/oauth_client_id" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = config.hostSpec.primaryUsername;
+        owner = config.host.primaryUsername;
         mode = "0400";
       };
       "bitwarden/oauth_client_secret" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = config.hostSpec.primaryUsername;
+        owner = config.host.primaryUsername;
         mode = "0400";
       };
     };

@@ -23,7 +23,7 @@
 }:
 let
   cfg = config.myModules.services.cli.atuin;
-  primaryUser = config.hostSpec.primaryUsername;
+  primaryUser = config.host.primaryUsername;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 in
 {

@@ -13,7 +13,7 @@
 }:
 let
   cfg = config.myModules.services.security.yubikey;
-  homeDirectory = "${config.hostSpec.home}";
+  homeDirectory = "${config.host.home}";
   yubikey-up =
     let
       yubikeyIds = lib.concatStringsSep " " (

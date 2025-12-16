@@ -18,7 +18,6 @@
   inputs,
   config,
   lib,
-  pkgs,
   ...
 }:
 let
@@ -102,7 +101,7 @@ let
                   mountOptions = btrfsMountOpts;
                 };
                 "@persist" = {
-                  mountpoint = config.hostSpec.persistFolder;
+                  mountpoint = config.host.persistFolder;
                   mountOptions = btrfsMountOpts;
                 };
                 "@nix" = {
@@ -145,7 +144,7 @@ let
                     mountOptions = btrfsMountOpts;
                   };
                   "@persist" = {
-                    mountpoint = config.hostSpec.persistFolder;
+                    mountpoint = config.host.persistFolder;
                     mountOptions = btrfsMountOpts;
                   };
                   "@nix" = {

@@ -23,8 +23,8 @@
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
   ];
 
-  # Minimal hostSpec - just what's needed for SSH keys
-  hostSpec = {
+  # Minimal host config - just what's needed for SSH keys
+  host = {
     hostName = "mitosis"; # Discoverable via mitosis.local
     primaryUsername = "nixos"; # Standard installer username
     hasSecrets = false;

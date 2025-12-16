@@ -20,8 +20,8 @@
 let
   # Config repo settings
   repoCfg = config.myModules.services.nixConfigRepo;
-  user = config.hostSpec.primaryUsername;
-  home = config.hostSpec.home;
+  user = config.host.primaryUsername;
+  home = config.host.home;
 in
 {
   #

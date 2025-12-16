@@ -69,7 +69,7 @@
     # ========================================
     # HOSTSPEC (non-derived options only)
     # ========================================
-    hostSpec = {
+    host = {
       isProduction = lib.mkDefault false;
       hasSecrets = lib.mkDefault true;
       wifi = lib.mkDefault false;

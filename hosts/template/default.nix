@@ -7,12 +7,12 @@
 # WHAT GOES IN A HOST CONFIG:
 #   1. Hardware configuration (hardware-configuration.nix, disk config)
 #   2. Role selection: roles = [ "desktop" "development" ]
-#   3. Identity (hostSpec.hostName)
+#   3. Identity (host.hostName)
 #   4. Hardware quirks (boot loader, kernel modules, etc.)
 #
 # WHAT COMES FROM ROLES:
 #   - All imports (modules, services, apps)
-#   - All behavioral hostSpec values (useWayland, isDevelopment, etc.)
+#   - All behavioral host values (useWayland, isDevelopment, etc.)
 #   - All service configurations
 #   - All package lists
 #
@@ -43,7 +43,7 @@
   # ========================================
   # HOST IDENTITY
   # ========================================
-  hostSpec = {
+  host = {
     hostName = "myhost";
     hasSecrets = false; # Template doesn't have SOPS secrets
   };

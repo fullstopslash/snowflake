@@ -12,7 +12,10 @@
     modules = {
       apps = {
         media = [ "media" ];
-        cli = [ "comma" "shell" ];
+        cli = [
+          "comma"
+          "shell"
+        ];
       };
       services = {
         desktop = [ "wayland" ];
@@ -30,7 +33,7 @@
     # ========================================
     # HOSTSPEC (non-derived options only)
     # ========================================
-    hostSpec = {
+    host = {
       isMobile = lib.mkDefault true;
       wifi = lib.mkDefault true;
 

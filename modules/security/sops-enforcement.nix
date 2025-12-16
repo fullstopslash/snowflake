@@ -1,7 +1,7 @@
 # SOPS Key Enforcement Module
 #
 # Enforces SOPS/age key hygiene at system activation time, validating key
-# permissions, format, and secret availability. Auto-enables when hostSpec.hasSecrets = true.
+# permissions, format, and secret availability. Auto-enables when host.hasSecrets = true.
 #
 # Features:
 # - Validates and fixes SSH host key and age key permissions
@@ -142,8 +142,8 @@ in
   };
 
   config = lib.mkMerge [
-    # Auto-enable when hostSpec.hasSecrets = true
-    (lib.mkIf config.hostSpec.hasSecrets {
+    # Auto-enable when host.hasSecrets = true
+    (lib.mkIf config.host.hasSecrets {
       myModules.security.sops-enforcement.enable = lib.mkDefault true;
     })
 

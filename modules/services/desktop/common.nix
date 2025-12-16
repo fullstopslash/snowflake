@@ -9,7 +9,7 @@
 let
   cfg = config.myModules.services.desktop.common;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
-  hasDesktopSecrets = config.hostSpec.hasSecrets && config.hostSpec.secretCategories.desktop or false;
+  hasDesktopSecrets = config.host.hasSecrets && config.host.secretCategories.desktop or false;
 in
 {
   options.myModules.services.desktop.common = {
@@ -59,7 +59,7 @@ in
         #     User = "rain";
         #   };
         # };
-        post-sleep-samsung = lib.mkIf config.hostSpec.secretCategories.desktop {
+        post-sleep-samsung = lib.mkIf config.host.secretCategories.desktop {
           description = "Post-sleep script";
           after = [
             "suspend.target"
@@ -130,7 +130,7 @@ in
         HASS_SERVER=${config.sops.placeholder."env_hass_server"}
         HASS_TOKEN=${config.sops.placeholder."env_hass_token"}
       '';
-      owner = config.hostSpec.username;
+      owner = config.host.username;
       mode = "0400";
     };
 

@@ -20,7 +20,7 @@
     };
 
     # Secrets configuration disabled for now - needs defaultSopsFile to be set per-host
-    # secrets = lib.mkIf (config.hostSpec.hasSecrets && config.sops.defaultSopsFile != null) {
+    # secrets = lib.mkIf (config.host.hasSecrets && config.sops.defaultSopsFile != null) {
     #   # Track when host age key was generated (for rotation scheduling)
     #   "sops/key-metadata" = {
     #     sopsFile = "${builtins.dirOf config.sops.defaultSopsFile}/${config.networking.hostName}.yaml";
@@ -31,7 +31,7 @@
   };
 
   # Activation script to create metadata if missing
-  system.activationScripts.sopsKeyMetadata = lib.mkIf config.hostSpec.hasSecrets ''
+  system.activationScripts.sopsKeyMetadata = lib.mkIf config.host.hasSecrets ''
     KEY_METADATA="/run/secrets/sops/key-metadata"
     KEY_FILE="/var/lib/sops-nix/key.txt"
 

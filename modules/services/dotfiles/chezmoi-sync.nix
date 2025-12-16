@@ -283,7 +283,7 @@ in
     ];
 
     # SOPS secrets for dotfiles (if hasSecrets is enabled)
-    sops.secrets = lib.mkIf config.hostSpec.hasSecrets {
+    sops.secrets = lib.mkIf config.host.hasSecrets {
       "dotfiles/acoustid_api" = {
         sopsFile = "${sopsFolder}/shared.yaml";
         path = "/run/secrets/acoustid_api";

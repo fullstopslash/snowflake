@@ -43,90 +43,93 @@ in
             USERID=''${ADDRESS#/run/user/}
             sudo -u "#$USERID" DBUS_SESSION_BUS_ADDRESS="unix:path=$ADDRESS/bus" ${pkgs.libnotify}/bin/notify-send -u critical -i dialog-warning "Suspicious file" "$ALERT"
         done
-        ${lib.optionalString (config.hostSpec ? email && config.hostSpec.email ? notifier && config.hostSpec ? domain) ''
-          TMPDIR=$(mktemp -d)
-          cat >"$TMPDIR"/clamav-mail.txt <<-EOF
-              From:${config.hostSpec.email.notifier}
-              Subject: [$(hostname)] $(date) Suspicious file detected!
+        ${lib.optionalString (config.host ? email && config.host.email ? notifier && config.host ? domain)
+          ''
+            TMPDIR=$(mktemp -d)
+            cat >"$TMPDIR"/clamav-mail.txt <<-EOF
+                From:${config.host.email.notifier}
+                Subject: [$(hostname)] $(date) Suspicious file detected!
 
-              $ALERT
-              EOF
-                msmtp -t $(hostname).alerts.net@${config.hostSpec.domain} <"$TMPDIR"/clamav-mail.txt
-        ''}
+                $ALERT
+                EOF
+                  msmtp -t $(hostname).alerts.net@${config.host.domain} <"$TMPDIR"/clamav-mail.txt
+          ''
+        }
       '';
     in
     {
-    security.sudo = {
-      extraConfig = ''
-        clamav ALL = (ALL) NOPASSWD: SETENV: ${pkgs.libnotify}/bin/notify-send
-      '';
-    };
-
-    services.clamav.daemon = {
-      enable = true;
-
-      settings = {
-        OnAccessIncludePath = all-sus-dirs;
-        OnAccessPrevention = false;
-        OnAccessExtraScanning = true;
-        OnAccessExcludeUname = "clamav";
-        VirusEvent = "${clamav-notify}";
-        User = "clamav";
-      };
-    };
-    services.clamav.updater.enable = true;
-
-    systemd.services.clamav-clamonacc = {
-      description = "ClamAV daemon (clamonacc)";
-      after = [ "clamav-freshclam.service" ];
-      wantedBy = [ "multi-user.target" ];
-      restartTriggers = [ "/etc/clamav/clamd.conf" ];
-
-      serviceConfig = {
-        Type = "simple";
-        ExecStart = "${pkgs.systemd}/bin/systemd-cat --identifier=av-scan ${pkgs.clamav}/bin/clamonacc -F --fdpass";
-        PrivateTmp = "yes";
-        PrivateDevices = "yes";
-        PrivateNetwork = "yes";
-      };
-    };
-
-    systemd.timers.av-user-scan = {
-      description = "scan normal user directories for suspect files";
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnCalendar = "weekly";
-        Unit = "av-user-scan.service";
-      };
-    };
-
-    systemd.services.av-user-scan = {
-      description = "scan normal user directories for suspect files";
-      after = [ "network-online.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.systemd}/bin/systemd-cat --identifier=av-scan ${pkgs.clamav}/bin/clamdscan --quiet --recursive --fdpass ${toString all-user-folders}";
-      };
-    };
-
-    systemd.timers.av-all-scan = {
-      description = "scan all directories for suspect files";
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnCalendar = "monthly";
-        Unit = "av-all-scan.service";
-      };
-    };
-
-    systemd.services.av-all-scan = {
-      description = "scan all directories for suspect files";
-      after = [ "network-online.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = ''
-          ${pkgs.systemd}/bin/systemd-cat --identifier=av-scan ${pkgs.clamav}/bin/clamdscan --quiet --recursive --fdpass ${toString all-system-folders}
+      security.sudo = {
+        extraConfig = ''
+          clamav ALL = (ALL) NOPASSWD: SETENV: ${pkgs.libnotify}/bin/notify-send
         '';
       };
-    };
-  });
+
+      services.clamav.daemon = {
+        enable = true;
+
+        settings = {
+          OnAccessIncludePath = all-sus-dirs;
+          OnAccessPrevention = false;
+          OnAccessExtraScanning = true;
+          OnAccessExcludeUname = "clamav";
+          VirusEvent = "${clamav-notify}";
+          User = "clamav";
+        };
+      };
+      services.clamav.updater.enable = true;
+
+      systemd.services.clamav-clamonacc = {
+        description = "ClamAV daemon (clamonacc)";
+        after = [ "clamav-freshclam.service" ];
+        wantedBy = [ "multi-user.target" ];
+        restartTriggers = [ "/etc/clamav/clamd.conf" ];
+
+        serviceConfig = {
+          Type = "simple";
+          ExecStart = "${pkgs.systemd}/bin/systemd-cat --identifier=av-scan ${pkgs.clamav}/bin/clamonacc -F --fdpass";
+          PrivateTmp = "yes";
+          PrivateDevices = "yes";
+          PrivateNetwork = "yes";
+        };
+      };
+
+      systemd.timers.av-user-scan = {
+        description = "scan normal user directories for suspect files";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "weekly";
+          Unit = "av-user-scan.service";
+        };
+      };
+
+      systemd.services.av-user-scan = {
+        description = "scan normal user directories for suspect files";
+        after = [ "network-online.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.systemd}/bin/systemd-cat --identifier=av-scan ${pkgs.clamav}/bin/clamdscan --quiet --recursive --fdpass ${toString all-user-folders}";
+        };
+      };
+
+      systemd.timers.av-all-scan = {
+        description = "scan all directories for suspect files";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "monthly";
+          Unit = "av-all-scan.service";
+        };
+      };
+
+      systemd.services.av-all-scan = {
+        description = "scan all directories for suspect files";
+        after = [ "network-online.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = ''
+            ${pkgs.systemd}/bin/systemd-cat --identifier=av-scan ${pkgs.clamav}/bin/clamdscan --quiet --recursive --fdpass ${toString all-system-folders}
+          '';
+        };
+      };
+    }
+  );
 }

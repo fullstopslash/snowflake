@@ -59,7 +59,7 @@
     # ========================================
     # HOSTSPEC (non-derived options only)
     # ========================================
-    hostSpec = {
+    host = {
       # Architecture (servers are typically x86_64)
       architecture = lib.mkDefault "x86_64-linux";
 

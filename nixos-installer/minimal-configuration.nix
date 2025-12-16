@@ -21,7 +21,7 @@
     (lib.custom.relativeToRoot "modules/common/host-spec.nix")
   ];
 
-  hostSpec = {
+  host = {
     isMinimal = lib.mkForce true;
     hostName = "installer";
     username = lib.mkDefault "rain";
@@ -31,7 +31,7 @@
   # Minimal user setup - no sops, no home-manager
   users = {
     mutableUsers = false;
-    users.${config.hostSpec.username} = {
+    users.${config.host.username} = {
       isNormalUser = true;
       extraGroups = [
         "wheel"

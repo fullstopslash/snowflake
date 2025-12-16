@@ -17,7 +17,7 @@
 }:
 lib.mkIf pkgs.stdenv.isLinux {
   # Add terminal emulator terminfo (skip on headless systems)
-  environment.systemPackages = lib.optionals (!config.hostSpec.isHeadless or false) [
+  environment.systemPackages = lib.optionals (!config.host.isHeadless or false) [
     pkgs.kitty.terminfo
     pkgs.ghostty.terminfo
   ];

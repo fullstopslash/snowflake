@@ -48,8 +48,8 @@
               swapSize = "0";
             };
 
-          # Extract architecture from hostSpec or default to x86_64-linux
-          architecture = hostConfig.hostSpec.architecture or "x86_64-linux";
+          # Extract architecture from host config or default to x86_64-linux
+          architecture = hostConfig.host.architecture or "x86_64-linux";
 
           # Map layout to disk spec path
           diskSpecPath =
@@ -83,8 +83,8 @@
             {
               networking.hostName = hostname;
               # Override username for minimal install
-              hostSpec.primaryUsername = "${toString inputs.nix-secrets.user}";
-              hostSpec.username = "${toString inputs.nix-secrets.user}";
+              host.primaryUsername = "${toString inputs.nix-secrets.user}";
+              host.username = "${toString inputs.nix-secrets.user}";
             }
           ];
         };

@@ -32,11 +32,12 @@
   # ========================================
   # HOST IDENTITY
   # ========================================
-  hostSpec = {
+  host = {
     hostName = "misery";
     primaryUsername = "rain";
     hasSecrets = true; # Testing secrets with LUKS
     isProduction = false; # Test VM, not production
+    persistFolder = "/persist"; # Required for impermanence layout
   };
 
   # ========================================
