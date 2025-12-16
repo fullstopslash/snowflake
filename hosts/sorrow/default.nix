@@ -56,6 +56,7 @@
   # ========================================
   # AUTO-UPGRADE (for testing GitOps workflow)
   # ========================================
+  # Test change: verifying auto-upgrade works with non-root user
   myModules.services.autoUpgrade = {
     enable = true;
     mode = "local";

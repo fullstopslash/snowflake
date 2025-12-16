@@ -59,7 +59,7 @@ get_vm_pid_file() {
 
 get_vm_disk_path() {
 	local vm="$1"
-	echo "quickemu/${vm}.qcow2"
+	echo "quickemu/${vm}-test.qcow2"
 }
 
 is_vm_running() {

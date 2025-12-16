@@ -17,6 +17,11 @@
 #   remote: Uses system.autoUpgrade to pull from remote flake URL
 #   local:  Git pulls local clone then rebuilds (requires nixConfigRepo)
 #
+# IMPORTANT: Local mode runs as primaryUsername (not root) because `nh os`
+# refuses to run as root. The user must have passwordless sudo configured:
+#   security.sudo.wheelNeedsPassword = false;
+# This is already configured in the "test" role.
+#
 {
   config,
   lib,
@@ -198,8 +203,8 @@ in
           ];
           serviceConfig = {
             Type = "oneshot";
-            User = "root";
-            Environment = "HOME=/root";
+            User = config.hostSpec.primaryUsername;
+            Environment = "HOME=${home}";
           };
           script =
             let
@@ -327,7 +332,7 @@ in
               serviceConfig = {
                 Type = "oneshot";
                 ExecStart = hookCmd;
-                User = "root";
+                User = config.hostSpec.primaryUsername;
               };
             }
           ) cfg.preUpdateHooks
