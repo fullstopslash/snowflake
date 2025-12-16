@@ -301,13 +301,13 @@ in
 
                     # All checks passed, now switch
                     echo "✅ Build and validation passed, switching to new configuration..."
-                    nh os switch "$CONFIG_DIR" --no-nom
+                    nh os switch "$CONFIG_DIR" --no-nom --elevation-program sudo
                   ''
                 else
                   ''
                     # Skip build-before-switch, go straight to switch
                     echo "Rebuilding system (buildBeforeSwitch=false)..."
-                    nh os switch "$CONFIG_DIR" --no-nom
+                    nh os switch "$CONFIG_DIR" --no-nom --elevation-program sudo
                   ''
               }
 
