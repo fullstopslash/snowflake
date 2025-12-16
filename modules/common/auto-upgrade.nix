@@ -206,13 +206,23 @@ in
             nix
             sudo
           ];
+          environment.PATH = lib.mkForce "/run/wrappers/bin:${
+            lib.makeBinPath (
+              with pkgs;
+              [
+                git
+                openssh
+                nh
+                nix
+                sudo
+                coreutils
+              ]
+            )
+          }";
           serviceConfig = {
             Type = "oneshot";
             User = config.hostSpec.primaryUsername;
-            Environment = [
-              "HOME=${home}"
-              "PATH=/run/wrappers/bin:$PATH"
-            ];
+            Environment = "HOME=${home}";
             WorkingDirectory = home;
           };
           script =
