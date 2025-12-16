@@ -8,6 +8,7 @@
 #
 # Compared to griefling: NO desktop, NO display manager, faster builds
 # Paired with sorrow for multi-host testing
+{{{ SYNTAX ERROR
 { lib, ... }:
 {
   imports = [ ./hardware-configuration.nix ];
