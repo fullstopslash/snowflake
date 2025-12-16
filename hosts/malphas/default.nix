@@ -26,6 +26,6 @@
   # Identity
   hostSpec = {
     hostName = "malphas";
-    hasSecrets = false;
+    hasSecrets = true; # Enabled for dotfiles secrets (acoustid_api)
   };
 }

@@ -23,11 +23,13 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }:
 
 let
   cfg = config.myModules.services.dotfiles.chezmoiSync;
+  sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 
   # Get primary user (assumes single-user system for now)
   # TODO: Make this configurable or support multi-user
@@ -279,5 +281,15 @@ in
     systemd.tmpfiles.rules = [
       "d /var/lib/chezmoi-sync 0755 root root -"
     ];
+
+    # SOPS secrets for dotfiles (if hasSecrets is enabled)
+    sops.secrets = lib.mkIf config.hostSpec.hasSecrets {
+      "dotfiles/acoustid_api" = {
+        sopsFile = "${sopsFolder}/shared.yaml";
+        path = "/run/secrets/acoustid_api";
+        owner = primaryUser.name;
+        mode = "0400";
+      };
+    };
   };
 }
