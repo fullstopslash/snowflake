@@ -19,13 +19,16 @@
     withSwap = false;
   };
 
+  # Disable GRUB, use systemd-boot (from vmHeadless role)
+  boot.loader.grub.enable = lib.mkForce false;
+
   # ========================================
   # ROLE SELECTION (LSP autocomplete-enabled)
   # ========================================
-  # Form factor: vm | desktop | laptop | server | pi | tablet | darwin
-  # Task roles: development | mediacenter | test | fastTest
+  # Form factor: vm-headless | vm | desktop | laptop | server | pi | tablet | darwin
+  # Task roles: development | mediacenter | headless | fastTest
   roles = [
-    "vm"
+    "vmHeadless"
     "test"
   ];
 
@@ -38,20 +41,10 @@
   };
 
   # ========================================
-  # HEADLESS CONFIGURATION (override VM defaults)
+  # MINIMAL SERVICES
   # ========================================
-  # Remove desktop modules for faster builds and headless operation
-  modules.services.desktop = lib.mkForce [ ];
-  modules.services.display-manager = lib.mkForce [ ];
-
-  # Keep only essential headless services for GitOps testing
-  modules.services.cli = [ "atuin" ];
-  modules.services.networking = [
-    "openssh"
-    "ssh"
-    "syncthing"
-    "tailscale"
-  ];
+  # All essential services come from vm-headless and headless roles
+  # Only add what's absolutely needed for testing
 
   # ========================================
   # AUTO-UPGRADE (for testing GitOps workflow)

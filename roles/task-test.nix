@@ -1,8 +1,8 @@
-# Test role - settings for test/development VMs (composable task role)
+# Test role - settings for headless test/development VMs (composable task role)
 #
-# Can be combined with any hardware role: roles.vm + roles.test
-# Enables: passwordless sudo, SSH password auth, auto-clone repos, Firefox, Atuin, Syncthing
-# Disables: documentation
+# Can be combined with any hardware role: roles.vmHeadless + roles.test
+# Enables: passwordless sudo, SSH password auth, auto-clone repos, Atuin, essential networking
+# Disables: documentation, desktop environments
 #
 # This is a task-based role, not mutually exclusive with hardware roles.
 {
@@ -20,7 +20,12 @@
     modules = {
       services = {
         cli = [ "atuin" ];
-        networking = [ "syncthing" ];
+        networking = [
+          "openssh"
+          "ssh"
+          "syncthing"
+          "tailscale"
+        ];
       };
     };
 
@@ -46,10 +51,5 @@
     # Auto-clone nix-config and nix-secrets repos on first login
     # (path is in modules/common/ so not part of selection system)
     myModules.services.nixConfigRepo.enable = true;
-
-    # Useful apps for test VMs
-    environment.systemPackages = with pkgs; [
-      firefox
-    ];
   };
 }
