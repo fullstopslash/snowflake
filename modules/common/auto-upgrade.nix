@@ -25,6 +25,7 @@
 # Test: Auto-upgrade service verification - 2025-12-16
 # Test 2: Verify auto-upgrade works after out-link fix
 # Test 3: Verify auto-upgrade works after sudo elevation fix (final test!)
+# Test 4: Verify complete end-to-end auto-upgrade success!
 #
 {
   config,
