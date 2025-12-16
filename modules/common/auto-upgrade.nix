@@ -216,6 +216,7 @@ in
                 nix
                 sudo
                 coreutils
+                systemd
               ]
             )
           }";
