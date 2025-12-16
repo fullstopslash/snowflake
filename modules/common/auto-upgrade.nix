@@ -204,6 +204,7 @@ in
             openssh
             nh
             nix
+            sudo
           ];
           serviceConfig = {
             Type = "oneshot";
