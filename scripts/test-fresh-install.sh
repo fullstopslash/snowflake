@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i bash -p qemu coreutils
+#!nix-shell --arg sandbox false -i bash -p qemu coreutils
 # shellcheck shell=bash
 
 # Test a fresh NixOS installation in a VM

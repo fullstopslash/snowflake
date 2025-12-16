@@ -188,6 +188,15 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     set -euo pipefail
     echo "🚀 Starting fresh VM install for {{HOST}}..."
 
+    # Determine SSH port based on hostname
+    declare -A VM_SSH_PORTS=(
+        ["griefling"]="22222"
+        ["sorrow"]="22223"
+        ["torment"]="22224"
+    )
+
+    SSH_PORT="${VM_SSH_PORTS[{{HOST}}]:-22222}"
+
     # Create temp directory for extra-files
     EXTRA_FILES=$(mktemp -d)
     trap "rm -rf $EXTRA_FILES" EXIT
@@ -236,11 +245,11 @@ vm-fresh HOST=DEFAULT_VM_HOST:
 
     # Step 5: Start VM and run nixos-anywhere with FULL config
     echo "🚀 Starting VM and deploying FULL configuration..."
-    ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force --extra-files "$EXTRA_FILES"
+    ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force --ssh-port "$SSH_PORT" --extra-files "$EXTRA_FILES"
 
     echo ""
     echo "✅ Fresh install complete!"
-    echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
+    echo "   SSH: ssh -p $SSH_PORT root@127.0.0.1"
     echo "   Display: just vm-start (SDL with GPU acceleration)"
     echo ""
     echo "   The system is fully configured - no second rebuild needed!"
@@ -482,26 +491,38 @@ vm-quick HOST=DEFAULT_VM_HOST: (vm-sync HOST) (vm-rebuild HOST)
 
 # Start a test VM (supports concurrent VMs with unique ports)
 test-vm-start VM:
+    #!/usr/bin/env nix-shell
+    #!nix-shell -i bash -p qemu coreutils
     ./scripts/multi-vm.sh start {{VM}}
 
 # Stop a test VM
 test-vm-stop VM:
+    #!/usr/bin/env nix-shell
+    #!nix-shell -i bash -p qemu coreutils
     ./scripts/multi-vm.sh stop {{VM}}
 
 # SSH into a test VM
 test-vm-ssh VM:
+    #!/usr/bin/env nix-shell
+    #!nix-shell -i bash -p qemu coreutils openssh
     ./scripts/multi-vm.sh ssh {{VM}}
 
 # Show status of all test VMs
 test-vm-status:
+    #!/usr/bin/env nix-shell
+    #!nix-shell -i bash -p qemu coreutils
     ./scripts/multi-vm.sh status
 
 # Start all test VMs (griefling, sorrow, torment)
 test-vm-start-all:
+    #!/usr/bin/env nix-shell
+    #!nix-shell -i bash -p qemu coreutils
     ./scripts/multi-vm.sh start-all
 
 # Stop all test VMs
 test-vm-stop-all:
+    #!/usr/bin/env nix-shell
+    #!nix-shell -i bash -p qemu coreutils
     ./scripts/multi-vm.sh stop-all
 
 # Bootstrap a new NixOS host (disko + install via nixos-anywhere)
