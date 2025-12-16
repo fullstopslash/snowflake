@@ -73,7 +73,7 @@
       isProduction = lib.mkDefault false;
       hasSecrets = lib.mkDefault true;
       wifi = lib.mkDefault false;
-      isHeadless = lib.mkDefault true;
+      isHeadless = true; # Plain assignment for higher priority than mkDefault
 
       secretCategories = {
         base = lib.mkDefault true;

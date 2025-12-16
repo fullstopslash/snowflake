@@ -237,9 +237,13 @@ in
     '';
 
     # Install Tailscale packages
-    environment.systemPackages = with pkgs; [
-      ktailctl
-      tailscale
-    ];
+    environment.systemPackages =
+      with pkgs;
+      [
+        tailscale
+      ]
+      ++ lib.optionals (!config.hostSpec.isHeadless or false) [
+        ktailctl
+      ];
   };
 }

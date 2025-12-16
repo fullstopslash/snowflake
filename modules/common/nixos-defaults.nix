@@ -10,13 +10,14 @@
 # Note: User-related settings (sudo, profile dirs) are in modules/users/nixos-defaults.nix
 # Note: Nix settings are in nix-management.nix
 {
+  config,
   lib,
   pkgs,
   ...
 }:
 lib.mkIf pkgs.stdenv.isLinux {
-  # Add terminal emulator terminfo
-  environment.systemPackages = [
+  # Add terminal emulator terminfo (skip on headless systems)
+  environment.systemPackages = lib.optionals (!config.hostSpec.isHeadless or false) [
     pkgs.kitty.terminfo
     pkgs.ghostty.terminfo
   ];

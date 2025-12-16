@@ -33,10 +33,14 @@ in
 
   config = lib.mkIf cfg.enable {
     # Install syncthing packages
-    environment.systemPackages = with pkgs; [
-      syncthing
-      syncthingtray
-    ];
+    environment.systemPackages =
+      with pkgs;
+      [
+        syncthing
+      ]
+      ++ lib.optionals (!config.hostSpec.isHeadless or false) [
+        syncthingtray
+      ];
 
     # Enable and configure syncthing service
     services.syncthing = {

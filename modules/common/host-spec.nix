@@ -134,6 +134,11 @@ in
           default = config.modules.desktop == [ ] && config.modules.apps == [ ];
           description = "Minimal installation (derived: true if no desktop or apps selected)";
         };
+        isHeadless = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Headless system without GUI packages (roles override: vm-headless=true)";
+        };
         isProduction = lib.mkOption {
           type = lib.types.bool;
           default = true;
