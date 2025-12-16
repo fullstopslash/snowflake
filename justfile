@@ -64,7 +64,7 @@ check-sops:
 
 # Update nix-secrets flake
 update-nix-secrets:
-  @(cd ../nix-secrets && git fetch && git rebase > /dev/null) || true
+  @(cd ../nix-secrets && source {{justfile_directory()}}/scripts/vcs-helpers.sh && vcs_pull > /dev/null) || true
   nix flake update nix-secrets --timeout 5
 
 # Build an iso image for installing new systems and create a symlink for qemu usage
@@ -141,9 +141,10 @@ install HOST:
     # Commit and push
     echo "   Committing and pushing..."
     cd ../nix-secrets && \
-        git add -u .sops.yaml sops/*.yaml && \
-        (git commit -m "chore: register {{HOST}} age key and rekey secrets" || true) && \
-        git push
+        source {{justfile_directory()}}/scripts/vcs-helpers.sh && \
+        vcs_add .sops.yaml sops/*.yaml && \
+        (vcs_commit "chore: register {{HOST}} age key and rekey secrets" || true) && \
+        vcs_push
     cd "{{justfile_directory()}}"
 
     # Step 4: Update local flake.lock to get rekeyed secrets
@@ -223,9 +224,10 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     # Commit and push
     echo "   Committing and pushing..."
     cd ../nix-secrets && \
-        git add -u .sops.yaml sops/*.yaml && \
-        (git commit -m "chore: register {{HOST}} age key and rekey secrets" || true) && \
-        git push
+        source {{justfile_directory()}}/scripts/vcs-helpers.sh && \
+        vcs_add .sops.yaml sops/*.yaml && \
+        (vcs_commit "chore: register {{HOST}} age key and rekey secrets" || true) && \
+        vcs_push
     cd "{{justfile_directory()}}"
 
     # Step 4: Update local flake.lock to get rekeyed secrets
@@ -299,9 +301,10 @@ vm-register-age HOST=DEFAULT_VM_HOST:
     # Commit and push changes
     echo "   Committing changes..."
     cd ../nix-secrets && \
-        git add -u .sops.yaml sops/*.yaml && \
-        (git commit -m "chore: register {{HOST}} age key and rekey secrets" || true) && \
-        git push
+        source {{justfile_directory()}}/scripts/vcs-helpers.sh && \
+        vcs_add .sops.yaml sops/*.yaml && \
+        (vcs_commit "chore: register {{HOST}} age key and rekey secrets" || true) && \
+        vcs_push
 
     echo "✅ Age key registered and secrets rekeyed"
     echo "   Host {{HOST}} can now decrypt secrets on next rebuild"
