@@ -6,11 +6,11 @@
   ...
 }:
 let
-  cfg = config.myModules.apps.cli.tools;
+  cfg = config.myModules.apps.cli.toolsFull;
 in
 {
-  options.myModules.apps.cli.tools = {
-    enable = lib.mkEnableOption "Extended CLI tools";
+  options.myModules.apps.cli.toolsFull = {
+    enable = lib.mkEnableOption "Full set of CLI tools";
   };
 
   config = lib.mkIf cfg.enable {
