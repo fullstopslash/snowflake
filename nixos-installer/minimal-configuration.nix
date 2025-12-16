@@ -18,7 +18,7 @@
 }:
 {
   imports = [
-    (lib.custom.relativeToRoot "modules/common/host-spec.nix")
+    (lib.custom.relativeToRoot "modules/common/host.nix")
   ];
 
   host = {

@@ -53,6 +53,13 @@ in
           description = "The primary username of the host (default: 'rain' from common.nix)";
         };
 
+        # Deprecated: use primaryUsername instead. Kept for backward compatibility.
+        username = lib.mkOption {
+          type = lib.types.str;
+          default = config.host.primaryUsername;
+          description = "Deprecated: alias for primaryUsername";
+        };
+
         email = lib.mkOption {
           type = lib.types.attrsOf lib.types.str;
           description = "The email of the user (imported from nix-secrets)";

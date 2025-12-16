@@ -33,6 +33,7 @@ The way out, is through.
 - [Roadmap of TODOs](docs/TODO.md)
 - [Requirements](#requirements)
 - [Structure](#structure-quick-reference)
+- [Installation Guide](docs/installation.md) - New unified installation guide
 - [Adding a New Host](docs/addnewhost.md)
 - [Secrets Management](#secrets-management)
 - [Initial Install Notes](docs/installnotes.md)
@@ -49,13 +50,16 @@ Chat with me directly on our [Discord server](https://discord.gg/XTFg57xGxC).
 
 - Flake-based multi-host, multi-user configurations for NixOS, Darwin, and Home-Manager
 
-  - Core configs for hosts and users dynamically handle nixos- or darwin-based host specifications
-  - Optional configs for user and host-specific needs
-  - Facilitation for custom modules, overlays, packages, and library
+  - Three-tier architecture: /roles (presets) + /modules (units) + /hosts (identity)
+  - Declarative host behavior - no manual flake declarations required
+  - Auto-discovery of hosts from the hosts/ directory
+  - Role-based defaults with per-host overrides
+  - Modular selection system for services, apps, and development tools
 
 - Secrets management via sops-nix and a _private_ nix-secrets repo that is included as a flake input
 - Declarative, LUKS-encrypted btrfs partitions via disko
 - Automated remote-bootstrapping of NixOS, nix-config, and _private_ nix-secrets
+- Recovery ISO with embedded config and install-host command
 - Handles multiple YubiKey devices and agent forwarding for touch-based/passwordless authentication during:
 
     - login
