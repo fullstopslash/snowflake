@@ -373,14 +373,16 @@ Plans:
   - Tested on misery VM with `btrfs-luks-impermanence` layout
   - Infrastructure ready for physical host migration when needed
 
-- [ ] 17-02: Device Stolen Response Runbook (DEFERRED)
-  - Incident response procedures for physical device theft
+- [x] 17-02: Device Stolen Response Runbook
+  - Comprehensive incident response procedures for physical device theft
   - < 1 hour response time target for key rotation
+  - 5-phase response timeline (immediate, key rotation, secret rotation, monitoring, post-incident)
   - Secret rotation priority matrix (Tailscale, API tokens, passwords)
-  - 7-day monitoring procedures
-  - Post-incident review templates
-  - Quick reference card for emergency use
-  - **Status**: Not required until physical hosts added
+  - 7-day monitoring procedures with anomaly detection
+  - Post-incident review template with formal incident report
+  - Printable quick reference card for emergency offline access
+  - Complete runbook created (`docs/incident-response/device-stolen.md`)
+  - Quick reference created (`docs/incident-response/QUICK-REFERENCE.md`)
 
 - [ ] 17-03: Glass-Key Disaster Recovery System (DEFERRED)
   - Master age key for total infrastructure recovery
@@ -391,13 +393,16 @@ Plans:
   - Quarterly maintenance schedule
   - **Status**: Foundation exists, full system deferred to future work
 
-Target outcome (achieved for Phase 17-01):
+Target outcome (achieved for Phase 17-01 & 17-02):
 - ✅ LUKS infrastructure ready and tested
 - ✅ Password-only unlock (no YubiKey required)
-- ✅ Comprehensive documentation for future migrations
+- ✅ Comprehensive LUKS migration documentation created
 - ✅ Misery VM validates LUKS + impermanence combination
 - ✅ Age keys will be protected when LUKS is deployed
-- ⏳ Plans 17-02/17-03 deferred (not critical for current VM-only infrastructure)
+- ✅ Device stolen incident response runbook complete
+- ✅ < 1 hour response time procedures documented
+- ✅ Quick reference card ready for offline emergency use
+- ⏳ Plan 17-03 (Glass-Key) deferred to future work
 
 ### Phase 18: GitOps Test Infrastructure
 **Goal**: Test infrastructure for validating decentralized GitOps workflows
