@@ -284,7 +284,7 @@ in
                   ''
                     # Build first (don't switch yet)
                     echo "Building new configuration..."
-                    if ! nh os build "$CONFIG_DIR" --no-nom; then
+                    if ! nh os build "$CONFIG_DIR" --no-nom --out-link "$CONFIG_DIR/result"; then
                       echo "❌ Build failed, rolling back"
                       git -C "$CONFIG_DIR" reset --hard "$old_commit"
                       [ -n "''${old_secrets_commit:-}" ] && git -C "$SECRETS_DIR" reset --hard "$old_secrets_commit" || true
