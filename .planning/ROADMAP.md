@@ -430,7 +430,7 @@ Current pain points:
 Plans:
 - [x] 19-01: Declarative host behavior (add architecture/nixpkgs options, simplify mkHost, auto-discover installer)
 - [x] 19-02: Rename hostSpec → host (create elegant structure, mass migration of 37+ files)
-- [ ] 19-03: Cleanup & verification (remove old module, embed config in ISO, documentation)
+- [x] 19-03: Cleanup & verification (remove old module, embed config in ISO, documentation)
 
 Target outcome:
 - Auto-discovery: Just create /hosts/hostname/ directory, no flake declarations needed
