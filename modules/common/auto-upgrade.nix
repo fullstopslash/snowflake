@@ -209,7 +209,10 @@ in
           serviceConfig = {
             Type = "oneshot";
             User = config.hostSpec.primaryUsername;
-            Environment = "HOME=${home}";
+            Environment = [
+              "HOME=${home}"
+              "PATH=/run/wrappers/bin:$PATH"
+            ];
             WorkingDirectory = home;
           };
           script =
