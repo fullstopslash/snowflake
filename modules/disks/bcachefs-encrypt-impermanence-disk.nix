@@ -65,7 +65,7 @@
         # Enable native ChaCha20/Poly1305 encryption
         passwordFile = "/tmp/disko-password";
         extraFormatArgs = [
-          "--encrypted"
+          # --encrypted is automatically added by disko when passwordFile is set
           "--compression=lz4"
           "--background_compression=lz4"
         ];
