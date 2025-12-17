@@ -47,7 +47,7 @@
               };
             };
             persist = {
-              size = "50%"; # Allocate half the disk to persistent data
+              size = "25G"; # Allocate 25GB to persistent data
               content = {
                 type = "bcachefs";
                 # Reference to encrypted filesystem
@@ -55,7 +55,7 @@
               };
             };
             root = {
-              size = "100%"; # Remaining space for ephemeral root
+              size = "100%"; # Remaining space (25GB) for ephemeral root
               content = {
                 type = "bcachefs";
                 # Reference to encrypted filesystem

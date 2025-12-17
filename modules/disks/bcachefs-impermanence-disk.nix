@@ -28,7 +28,7 @@
               };
             };
             persist = {
-              size = "50%"; # Allocate half the disk to persistent data
+              size = "25G"; # Allocate 25GB to persistent data
               content = {
                 type = "filesystem";
                 format = "bcachefs";
