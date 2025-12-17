@@ -243,14 +243,19 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     echo "📥 Updating local nix-secrets flake input..."
     nix flake update nix-secrets
 
-    # Step 4.5: Create disko password on VM installer environment (before disko runs)
-    echo "🔑 Creating disko password on installer environment..."
-    # Wait for VM to boot (this will be started by test-fresh-install.sh)
-    # We'll add the password creation to test-fresh-install.sh instead
+    # Step 4.5: Get disk encryption password from SOPS
+    echo "🔑 Retrieving disk encryption password from SOPS..."
+    source {{HELPERS_PATH}}
+    DISKO_PASSWORD=$(sops_get_disk_password {{HOST}})
+    if [ -z "$DISKO_PASSWORD" ]; then
+        echo "❌ Failed to retrieve disk password from SOPS"
+        exit 1
+    fi
+    echo "   Password retrieved successfully"
 
     # Step 5: Start VM and run nixos-anywhere with FULL config
     echo "🚀 Starting VM and deploying FULL configuration..."
-    DISKO_PASSWORD="nixos-test-password" ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force --ssh-port "$SSH_PORT" --extra-files "$EXTRA_FILES"
+    DISKO_PASSWORD="$DISKO_PASSWORD" ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force --ssh-port "$SSH_PORT" --extra-files "$EXTRA_FILES"
 
     echo ""
     echo "✅ Fresh install complete!"

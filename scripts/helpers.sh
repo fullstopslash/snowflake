@@ -360,3 +360,40 @@ function sops_init_key_metadata() {
 	green "Added key metadata to $host_yaml"
 	green "Generated at: $key_date"
 }
+
+# Get disk encryption password for a host from SOPS
+# Usage: sops_get_disk_password <hostname>
+# Returns: password string (via stdout)
+# Exit codes: 0 on success, 1 on failure
+function sops_get_disk_password() {
+	local hostname="$1"
+	local host_file="${nix_secrets_dir}/sops/${hostname}.yaml"
+	local shared_file="${nix_secrets_dir}/sops/shared.yaml"
+
+	if [ -z "$hostname" ]; then
+		red "ERROR: Hostname required for sops_get_disk_password"
+		return 1
+	fi
+
+	# Try host-specific password first
+	if [ -f "$host_file" ]; then
+		if sops -d --extract '["passwords"]["disk"]' "$host_file" 2>/dev/null; then
+			return 0
+		fi
+	fi
+
+	# Fall back to shared default password
+	if [ -f "$shared_file" ]; then
+		if sops -d --extract '["passwords"]["disk"]["default"]' "$shared_file" 2>/dev/null; then
+			return 0
+		else
+			red "ERROR: No disk password found for $hostname"
+			red "  Checked: $host_file (passwords.disk)"
+			red "  Checked: $shared_file (passwords.disk.default)"
+			return 1
+		fi
+	else
+		red "ERROR: Shared secrets file not found: $shared_file"
+		return 1
+	fi
+}

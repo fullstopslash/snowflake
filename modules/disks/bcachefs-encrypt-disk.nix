@@ -43,6 +43,7 @@
             };
             root = {
               size = "100%";
+              label = "root"; # Non-empty label required by bcachefs
               content = {
                 type = "bcachefs";
                 # Reference to filesystem defined in bcachefs_filesystems
