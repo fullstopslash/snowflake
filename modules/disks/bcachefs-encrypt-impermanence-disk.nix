@@ -1,21 +1,22 @@
 # Bcachefs with native encryption and impermanence pattern
 #
-# Uses bcachefs subvolumes for impermanence (like btrfs @root/@persist pattern).
-# Entire partition is encrypted with ChaCha20/Poly1305.
+# Uses separate encrypted bcachefs partitions for impermanence.
+# Note: Unlike btrfs which uses subvolumes, bcachefs uses separate partitions.
 #
 # Architecture:
 # - ESP partition (512M, vfat, /boot)
-# - Encrypted bcachefs partition with subvolumes:
-#   - @root subvolume (ephemeral, wiped on boot)
-#   - @persist subvolume (persistent data)
+# - persist partition (50%, encrypted bcachefs, /persist)
+# - root partition (remaining, encrypted bcachefs, /) - ephemeral
+#
+# Both partitions use the same passphrase via /tmp/disko-password.
 #
 # Advantages over LUKS approach:
 # - Authenticated encryption with tamper detection
 # - Encryption chain of trust and metadata integrity verification
-# - Single passphrase for all subvolumes
 # - Better performance on ARM/mobile hardware
 #
 # Trade-offs:
+# - Two separate encrypted filesystems (same passphrase)
 # - No systemd-cryptenroll support (use Clevis for TPM automation)
 # - Use bcachefs-luks-impermanence if you need FIDO2/PKCS11 integration
 {
@@ -45,12 +46,20 @@
                 mountOptions = [ "defaults" ];
               };
             };
-            root = {
-              size = "100%";
+            persist = {
+              size = "50%"; # Allocate half the disk to persistent data
               content = {
                 type = "bcachefs";
-                # Reference to filesystem defined in bcachefs_filesystems
-                filesystem = "encrypted_impermanence";
+                # Reference to encrypted filesystem
+                filesystem = "encrypted_persist";
+              };
+            };
+            root = {
+              size = "100%"; # Remaining space for ephemeral root
+              content = {
+                type = "bcachefs";
+                # Reference to encrypted filesystem
+                filesystem = "encrypted_root";
               };
             };
           };
@@ -58,34 +67,35 @@
       };
     };
 
-    # Bcachefs filesystem with encryption and subvolumes
+    # Bcachefs filesystems with native encryption
     bcachefs_filesystems = {
-      encrypted_impermanence = {
+      encrypted_persist = {
         type = "bcachefs_filesystem";
-        # Enable native ChaCha20/Poly1305 encryption
         passwordFile = "/tmp/disko-password";
         extraFormatArgs = [
           # --encrypted is automatically added by disko when passwordFile is set
           "--compression=lz4"
           "--background_compression=lz4"
         ];
-        # Subvolumes for impermanence pattern
-        subvolumes = {
-          "@root" = {
-            mountpoint = "/";
-            mountOptions = [
-              "compression=lz4"
-              "noatime"
-            ];
-          };
-          "@persist" = {
-            mountpoint = persistFolder;
-            mountOptions = [
-              "compression=lz4"
-              "noatime"
-            ];
-          };
-        };
+        mountpoint = persistFolder;
+        mountOptions = [
+          "compression=lz4"
+          "noatime"
+        ];
+      };
+      encrypted_root = {
+        type = "bcachefs_filesystem";
+        passwordFile = "/tmp/disko-password";
+        extraFormatArgs = [
+          # --encrypted is automatically added by disko when passwordFile is set
+          "--compression=lz4"
+          "--background_compression=lz4"
+        ];
+        mountpoint = "/";
+        mountOptions = [
+          "compression=lz4"
+          "noatime"
+        ];
       };
     };
   };
