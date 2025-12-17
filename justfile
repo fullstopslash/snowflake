@@ -155,8 +155,27 @@ install HOST:
     echo "🧹 Clearing stale SSH host keys..."
     sed -i '/mitosis\.local/d; /{{HOST}}/d' ~/.ssh/known_hosts 2>/dev/null || true
 
-    # Step 6: Run nixos-anywhere targeting mitosis.local
+    # Step 6: Get disk encryption password from SOPS
+    echo "🔑 Retrieving disk encryption password from SOPS..."
+    source {{HELPERS_PATH}}
+    DISKO_PASSWORD=$(sops_get_disk_password {{HOST}})
+    if [ -z "$DISKO_PASSWORD" ]; then
+        echo "❌ Failed to retrieve disk password from SOPS"
+        exit 1
+    fi
+    echo "   Password retrieved successfully"
+
+    # Step 7: Run nixos-anywhere targeting mitosis.local
     echo "🚀 Running nixos-anywhere to install {{HOST}}..."
+
+    # Create disko password file on installer if password is set
+    if [[ -n ${DISKO_PASSWORD:-} ]]; then
+        echo "   Creating disko password file on installer..."
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            root@mitosis.local \
+            "echo '$DISKO_PASSWORD' > /tmp/disko-password && chmod 600 /tmp/disko-password"
+    fi
+
     cd nixos-installer
     SHELL=/bin/sh nix run github:nix-community/nixos-anywhere -- \
         --extra-files "$EXTRA_FILES" \
