@@ -54,11 +54,11 @@ in
       # For older kernels, add: "poly1305" "chacha20"
     ];
 
-    # Automatic Clevis TPM configuration when enabled via host.encryption.tpm.enable
-    boot.initrd.clevis = lib.mkIf tpmEnabled {
-      enable = true;
-      devices."root".secretFile = clevisTokenPath;
-    };
+    # TPM unlock for bcachefs requires custom initrd setup
+    # Bcachefs doesn't use boot.initrd.clevis (that's for LUKS only)
+    # Instead, we need to handle unlock in initrd via systemd service
+    # TODO: Implement bcachefs-specific Clevis unlock
+    # For now, TPM is configured but unlock service needs implementation
 
     # Documentation for users
     warnings =
