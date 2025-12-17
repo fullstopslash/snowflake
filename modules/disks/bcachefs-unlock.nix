@@ -22,7 +22,6 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 let
@@ -105,7 +104,7 @@ in
     # - Post-install change: bcachefs set-passphrase /dev/device
     # - Recovery: Boot from live media, unlock manually, then mount
 
-    # Performance optimization: Use latest kernel for bcachefs improvements
-    boot.kernelPackages = lib.mkDefault pkgs.linuxPackages_latest;
+    # Note: NixOS bcachefs module already sets kernelPackages to latest
+    # No need to override here
   };
 }

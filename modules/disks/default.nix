@@ -190,27 +190,29 @@ let
   };
 
   # Select layout based on option
-  selectedLayout =
-    if cfg.layout == "btrfs" then
-      btrfsLayout
+  # For bcachefs-encrypt layouts, return full disko.devices
+  # For others, return just the disk structure
+  selectedLayoutDevices =
+    if cfg.layout == "bcachefs-encrypt" then
+      bcachefsEncryptLayout.disko.devices
+    else if cfg.layout == "bcachefs-encrypt-impermanence" then
+      bcachefsEncryptImpermanenceLayout.disko.devices
+    else if cfg.layout == "btrfs" then
+      { disk = btrfsLayout; }
     else if cfg.layout == "btrfs-impermanence" then
-      btrfsImpermanenceLayout
+      { disk = btrfsImpermanenceLayout; }
     else if cfg.layout == "btrfs-luks-impermanence" then
-      btrfsLuksImpermanenceLayout
+      { disk = btrfsLuksImpermanenceLayout; }
     else if cfg.layout == "bcachefs" then
-      bcachefsLayout.disko.devices.disk
+      { disk = bcachefsLayout.disko.devices.disk; }
     else if cfg.layout == "bcachefs-impermanence" then
-      bcachefsImpermanenceLayout.disko.devices.disk
+      { disk = bcachefsImpermanenceLayout.disko.devices.disk; }
     else if cfg.layout == "bcachefs-luks" then
-      bcachefsLuksLayout.disko.devices.disk
+      { disk = bcachefsLuksLayout.disko.devices.disk; }
     else if cfg.layout == "bcachefs-luks-impermanence" then
       bcachefsLuksImpermanenceLayout.disko.devices
-    else if cfg.layout == "bcachefs-encrypt" then
-      bcachefsEncryptLayout.disko.devices.disk
-    else if cfg.layout == "bcachefs-encrypt-impermanence" then
-      bcachefsEncryptImpermanenceLayout.disko.devices.disk
     else
-      btrfsLuksImpermanenceLayout;
+      { disk = btrfsLuksImpermanenceLayout; };
 in
 {
   options.disks = {
@@ -287,6 +289,8 @@ in
   ];
 
   config = lib.mkIf cfg.enable {
-    disko.devices.disk = selectedLayout;
+    # Set disko.devices to the selected layout structure
+    # This includes disk for all layouts, and bcachefs_filesystems for bcachefs-encrypt layouts
+    disko.devices = selectedLayoutDevices;
   };
 }

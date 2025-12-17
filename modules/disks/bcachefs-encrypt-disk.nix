@@ -44,25 +44,32 @@
             root = {
               size = "100%";
               content = {
-                type = "filesystem";
-                format = "bcachefs";
-                # Enable native ChaCha20/Poly1305 encryption during format
-                extraFormatArgs = [
-                  "--encrypted"
-                  "--compression=lz4"
-                  "--background_compression=lz4"
-                ];
-                # Password from /tmp/disko-password (Phase 17 compatibility)
-                passwordFile = "/tmp/disko-password";
-                mountpoint = "/";
-                mountOptions = [
-                  "compression=lz4"
-                  "noatime"
-                ];
+                type = "bcachefs";
+                # Reference to filesystem defined in bcachefs_filesystems
+                filesystem = "encrypted_root";
               };
             };
           };
         };
+      };
+    };
+
+    # Bcachefs filesystem with encryption
+    bcachefs_filesystems = {
+      encrypted_root = {
+        type = "bcachefs_filesystem";
+        # Enable native ChaCha20/Poly1305 encryption
+        passwordFile = "/tmp/disko-password";
+        extraFormatArgs = [
+          "--encrypted"
+          "--compression=lz4"
+          "--background_compression=lz4"
+        ];
+        mountpoint = "/";
+        mountOptions = [
+          "compression=lz4"
+          "noatime"
+        ];
       };
     };
   };

@@ -12,9 +12,10 @@
   imports = [ ./hardware-configuration.nix ];
 
   # Disk configuration via modules/disks
+  # Testing Phase 20: bcachefs native encryption with impermanence
   disks = {
     enable = true;
-    layout = "btrfs";
+    layout = "bcachefs-encrypt-impermanence";
     device = "/dev/vda";
     withSwap = false;
   };
@@ -38,6 +39,7 @@
   host = {
     hostName = builtins.baseNameOf (toString ./.);
     primaryUsername = "rain";
+    persistFolder = "/persist"; # Required for bcachefs-encrypt-impermanence layout
   };
 
   # ========================================
