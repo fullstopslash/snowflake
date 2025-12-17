@@ -48,7 +48,6 @@
             };
             persist = {
               size = "25G"; # Allocate 25GB to persistent data
-              label = "persist"; # Non-empty label required by bcachefs
               content = {
                 type = "bcachefs";
                 # Reference to encrypted filesystem
@@ -57,7 +56,6 @@
             };
             root = {
               size = "100%"; # Remaining space (25GB) for ephemeral root
-              label = "root"; # Non-empty label required by bcachefs
               content = {
                 type = "bcachefs";
                 # Reference to encrypted filesystem
