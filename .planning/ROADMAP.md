@@ -21,6 +21,11 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 - [x] **Phase 13: Filesystem-Driven Selection** - Auto-generate options from /modules filesystem
 - [x] **Phase 14: Role Elegance Audit** - Remove redundant enables, enforce selection-only pattern
 - [x] **Phase 15: Self-Managing Infrastructure** - Golden boot entries, decentralized GitOps, auto-rollback
+- [x] **Phase 16: SOPS/Age Key Management** - Pre-Phase-17 key setup, distribution, encryption testing
+- [x] **Phase 17: Physical Security & Recovery** - LUKS encryption, device stolen runbook, glass-key disaster recovery
+- [x] **Phase 18: GitOps Test Infrastructure** - Decentralized GitOps testing and validation
+- [x] **Phase 19: Host Discovery & Flake Elegance** - Auto-discover hosts, rename hostSpec → host
+- [ ] **Phase 20: Bcachefs Native Encryption** - ChaCha20/Poly1305 encryption, boot unlock automation
 
 ## Phase Details
 
@@ -440,6 +445,33 @@ Target outcome:
 - Security: No secrets in ISO (bootstrapped post-install)
 - Three-tier clarity: /roles (presets), /modules (units), /hosts (identity)
 
+### Phase 20: Bcachefs Native Encryption
+**Goal**: Implement bcachefs native ChaCha20/Poly1305 encryption with boot unlock automation
+**Depends on**: Phase 17 (Physical Security & Recovery)
+**Plans**: 3 plans (1 research + 2 implementation)
+
+Vision: Provide bcachefs native encryption as a superior alternative to LUKS block-layer encryption. Bcachefs authenticated encryption provides encryption chain of trust and metadata integrity verification. Keep existing LUKS options for compatibility with traditional tooling.
+
+Key challenges:
+- systemd-cryptenroll doesn't support bcachefs (as of 2025-03)
+- Requires custom boot unlock automation
+- Disko bcachefs encryption configuration patterns need investigation
+- Integration with Phase 17 password management infrastructure
+
+Plans:
+- [x] 20-01: Research bcachefs encryption (FINDINGS.md: disko patterns, boot unlock, key management)
+- [x] 20-02: Native encryption layouts (bcachefs-encrypt, bcachefs-encrypt-impermanence)
+- [ ] 20-03: Boot integration & key management (systemd units, ISO installer support)
+
+Target outcome:
+- Native encryption layouts: bcachefs-encrypt and bcachefs-encrypt-impermanence
+- Automatic boot unlock via systemd units (custom, not cryptenroll)
+- Phase 17 password infrastructure integration maintained
+- ISO installer supports bcachefs encryption workflows
+- Clear documentation: when to use native vs LUKS encryption
+- Superior security: authenticated encryption chain vs block-layer encryption
+- Existing LUKS options preserved for traditional tooling compatibility
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -462,4 +494,5 @@ Target outcome:
 | 16. SOPS/Age Key Management | 3/3 | Complete | 2025-12-15 |
 | 17. Physical Security & Recovery | 3/3 | Complete | 2025-12-16 |
 | 18. GitOps Test Infrastructure | 1/1 | Complete | 2025-12-16 |
-| 19. Host Discovery & Flake Elegance | 1/3 | In Progress | - |
+| 19. Host Discovery & Flake Elegance | 3/3 | Complete | 2025-12-16 |
+| 20. Bcachefs Native Encryption | 2/3 | In Progress | - |

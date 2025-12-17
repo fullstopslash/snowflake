@@ -180,6 +180,15 @@ let
     persistFolder = config.host.persistFolder;
   };
 
+  bcachefsEncryptLayout = import ./bcachefs-encrypt-disk.nix {
+    disk = cfg.device;
+  };
+
+  bcachefsEncryptImpermanenceLayout = import ./bcachefs-encrypt-impermanence-disk.nix {
+    disk = cfg.device;
+    persistFolder = config.host.persistFolder;
+  };
+
   # Select layout based on option
   selectedLayout =
     if cfg.layout == "btrfs" then
@@ -196,6 +205,10 @@ let
       bcachefsLuksLayout.disko.devices.disk
     else if cfg.layout == "bcachefs-luks-impermanence" then
       bcachefsLuksImpermanenceLayout.disko.devices
+    else if cfg.layout == "bcachefs-encrypt" then
+      bcachefsEncryptLayout.disko.devices.disk
+    else if cfg.layout == "bcachefs-encrypt-impermanence" then
+      bcachefsEncryptImpermanenceLayout.disko.devices.disk
     else
       btrfsLuksImpermanenceLayout;
 in
@@ -212,6 +225,8 @@ in
         "bcachefs-impermanence"
         "bcachefs-luks"
         "bcachefs-luks-impermanence"
+        "bcachefs-encrypt"
+        "bcachefs-encrypt-impermanence"
       ];
       default = "btrfs";
       description = ''
@@ -228,8 +243,16 @@ in
         - bcachefs-luks: LUKS + bcachefs
         - bcachefs-luks-impermanence: LUKS + LVM + separate partitions
 
-        Note: Bcachefs requires Linux 6.7+. LUKS provides compatibility
-        with Phase 17 password management and key rotation workflows.
+        Bcachefs native encryption (ChaCha20/Poly1305):
+        - bcachefs-encrypt: Native authenticated encryption
+        - bcachefs-encrypt-impermanence: Native encryption + /persist partition
+
+        Native encryption provides authenticated encryption chain with metadata
+        integrity verification. LUKS variants still available for Phase 17 compatibility.
+
+        Note: Bcachefs requires Linux 6.7+. Native encryption uses ChaCha20/Poly1305
+        AEAD which protects against tampering and replay attacks. LUKS provides
+        compatibility with traditional tooling (systemd-cryptenroll, FIDO2/PKCS11).
       '';
     };
 
