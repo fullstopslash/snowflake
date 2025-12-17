@@ -40,6 +40,10 @@
     hostName = builtins.baseNameOf (toString ./.);
     primaryUsername = "rain";
     persistFolder = "/persist"; # Required for bcachefs-encrypt-impermanence layout
+
+    # TPM automatic unlock for bcachefs encryption
+    # Server VM: auto-unlock on boot (no manual password needed)
+    encryption.tpm.enable = true;
   };
 
   # ========================================
