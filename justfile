@@ -218,12 +218,6 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     AGE_PUBKEY=$(nix-shell -p ssh-to-age --run "cat $EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age")
     echo "   Age public key: $AGE_PUBKEY"
 
-    # Step 2.5: Create disko password file for encrypted layouts
-    echo "🔑 Creating disk encryption password..."
-    mkdir -p "$EXTRA_FILES/tmp"
-    echo "nixos-test-password" > "$EXTRA_FILES/tmp/disko-password"
-    chmod 600 "$EXTRA_FILES/tmp/disko-password"
-
     # Step 3: Register age key in nix-secrets and rekey
     echo "📝 Registering {{HOST}} age key in nix-secrets..."
     just sops-update-host-age-key {{HOST}} "$AGE_PUBKEY"
@@ -249,9 +243,14 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     echo "📥 Updating local nix-secrets flake input..."
     nix flake update nix-secrets
 
+    # Step 4.5: Create disko password on VM installer environment (before disko runs)
+    echo "🔑 Creating disko password on installer environment..."
+    # Wait for VM to boot (this will be started by test-fresh-install.sh)
+    # We'll add the password creation to test-fresh-install.sh instead
+
     # Step 5: Start VM and run nixos-anywhere with FULL config
     echo "🚀 Starting VM and deploying FULL configuration..."
-    ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force --ssh-port "$SSH_PORT" --extra-files "$EXTRA_FILES"
+    DISKO_PASSWORD="nixos-test-password" ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force --ssh-port "$SSH_PORT" --extra-files "$EXTRA_FILES"
 
     echo ""
     echo "✅ Fresh install complete!"

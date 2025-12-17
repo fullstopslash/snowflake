@@ -276,6 +276,14 @@ if [[ $USE_ANYWHERE == true ]]; then
 		die "SSH did not become available within 3 minutes. Check VM status."
 	fi
 
+	# Create disko password file if DISKO_PASSWORD env var is set
+	if [[ -n ${DISKO_PASSWORD:-} ]]; then
+		info "Creating disko password file on installer..."
+		ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+			-p "$SSH_PORT" root@127.0.0.1 \
+			"echo '$DISKO_PASSWORD' > /tmp/disko-password && chmod 600 /tmp/disko-password"
+	fi
+
 	# Run nixos-anywhere
 	echo ""
 	printf '%s%s=== Running nixos-anywhere ===%s\n' "${BOLD}" "${GREEN}" "${NC}"
