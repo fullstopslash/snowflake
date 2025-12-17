@@ -50,6 +50,7 @@
               size = "25G"; # Allocate 25GB to persistent data
               content = {
                 type = "bcachefs";
+                label = "persist"; # Filesystem label for disko
                 # Reference to encrypted filesystem
                 filesystem = "encrypted_persist";
               };
@@ -58,6 +59,7 @@
               size = "100%"; # Remaining space (25GB) for ephemeral root
               content = {
                 type = "bcachefs";
+                label = "root"; # Filesystem label for disko
                 # Reference to encrypted filesystem
                 filesystem = "encrypted_root";
               };
@@ -74,7 +76,6 @@
         passwordFile = "/tmp/disko-password";
         extraFormatArgs = [
           # --encrypted is automatically added by disko when passwordFile is set
-          "--label=persist" # Filesystem label (required for bcachefs format)
           "--compression=lz4"
           "--background_compression=lz4"
         ];
@@ -89,7 +90,6 @@
         passwordFile = "/tmp/disko-password";
         extraFormatArgs = [
           # --encrypted is automatically added by disko when passwordFile is set
-          "--label=root" # Filesystem label (required for bcachefs format)
           "--compression=lz4"
           "--background_compression=lz4"
         ];

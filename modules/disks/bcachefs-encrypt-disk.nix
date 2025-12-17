@@ -45,6 +45,7 @@
               size = "100%";
               content = {
                 type = "bcachefs";
+                label = "root"; # Filesystem label for disko
                 # Reference to filesystem defined in bcachefs_filesystems
                 filesystem = "encrypted_root";
               };
@@ -62,7 +63,6 @@
         passwordFile = "/tmp/disko-password";
         extraFormatArgs = [
           # --encrypted is automatically added by disko when passwordFile is set
-          "--label=root" # Filesystem label (required for bcachefs format)
           "--compression=lz4"
           "--background_compression=lz4"
         ];
