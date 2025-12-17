@@ -161,12 +161,41 @@ let
     };
   };
 
+  # Bcachefs layouts (import from separate files for modularity)
+  bcachefsLayout = import ./bcachefs-disk.nix {
+    disk = cfg.device;
+  };
+
+  bcachefsImpermanenceLayout = import ./bcachefs-impermanence-disk.nix {
+    disk = cfg.device;
+    persistFolder = config.host.persistFolder;
+  };
+
+  bcachefsLuksLayout = import ./bcachefs-luks-disk.nix {
+    disk = cfg.device;
+  };
+
+  bcachefsLuksImpermanenceLayout = import ./bcachefs-luks-impermanence-disk.nix {
+    disk = cfg.device;
+    persistFolder = config.host.persistFolder;
+  };
+
   # Select layout based on option
   selectedLayout =
     if cfg.layout == "btrfs" then
       btrfsLayout
     else if cfg.layout == "btrfs-impermanence" then
       btrfsImpermanenceLayout
+    else if cfg.layout == "btrfs-luks-impermanence" then
+      btrfsLuksImpermanenceLayout
+    else if cfg.layout == "bcachefs" then
+      bcachefsLayout.disko.devices.disk
+    else if cfg.layout == "bcachefs-impermanence" then
+      bcachefsImpermanenceLayout.disko.devices.disk
+    else if cfg.layout == "bcachefs-luks" then
+      bcachefsLuksLayout.disko.devices.disk
+    else if cfg.layout == "bcachefs-luks-impermanence" then
+      bcachefsLuksImpermanenceLayout.disko.devices
     else
       btrfsLuksImpermanenceLayout;
 in
@@ -179,13 +208,28 @@ in
         "btrfs"
         "btrfs-impermanence"
         "btrfs-luks-impermanence"
+        "bcachefs"
+        "bcachefs-impermanence"
+        "bcachefs-luks"
+        "bcachefs-luks-impermanence"
       ];
       default = "btrfs";
       description = ''
         Disk layout pattern to use:
+
+        Btrfs layouts (subvolume-based):
         - btrfs: Simple btrfs with @root, @nix subvolumes
         - btrfs-impermanence: Adds @persist subvolume for impermanence
         - btrfs-luks-impermanence: LUKS encryption + impermanence
+
+        Bcachefs layouts (partition-based, newer filesystem):
+        - bcachefs: Simple bcachefs (single root partition)
+        - bcachefs-impermanence: Separate /persist partition
+        - bcachefs-luks: LUKS + bcachefs
+        - bcachefs-luks-impermanence: LUKS + LVM + separate partitions
+
+        Note: Bcachefs requires Linux 6.7+. LUKS provides compatibility
+        with Phase 17 password management and key rotation workflows.
       '';
     };
 
