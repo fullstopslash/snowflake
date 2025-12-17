@@ -646,3 +646,64 @@ sops-check-key-age:
       fi
     fi
   done
+
+# ============================================================================
+# Disk Encryption
+# ============================================================================
+
+# Setup TPM2 automatic unlock for bcachefs encryption
+bcachefs-setup-tpm HOST:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "🔐 Setting up TPM2 automatic unlock for bcachefs on {{HOST}}"
+
+    # Check if TPM is enabled in host config
+    if ! nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.enable 2>/dev/null | grep -q "true"; then
+        echo "❌ TPM unlock not enabled for {{HOST}}"
+        echo "   Add 'host.encryption.tpm.enable = true;' to your host configuration"
+        exit 1
+    fi
+
+    # Get persist folder and PCR IDs from config
+    PERSIST_FOLDER=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.persistFolder 2>/dev/null || echo "")
+    PCR_IDS=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.pcrIds 2>/dev/null || echo "7")
+
+    if [ -z "$PERSIST_FOLDER" ]; then
+        echo "❌ persistFolder not set for {{HOST}}"
+        echo "   Set host.persistFolder in your host configuration"
+        exit 1
+    fi
+
+    TOKEN_FILE="${PERSIST_FOLDER}/etc/clevis/bcachefs-root.jwe"
+
+    # Create directory for token
+    echo "📁 Creating Clevis token directory..."
+    mkdir -p "$(dirname "$TOKEN_FILE")"
+
+    # Get disk password from SOPS
+    echo "🔑 Retrieving disk encryption password from SOPS..."
+    source {{HELPERS_PATH}}
+    DISK_PASSWORD=$(sops_get_disk_password {{HOST}})
+    if [ -z "$DISK_PASSWORD" ]; then
+        echo "❌ Failed to retrieve disk password from SOPS"
+        exit 1
+    fi
+    echo "   Password retrieved successfully"
+
+    # Generate Clevis JWE token with TPM2
+    echo "🔐 Generating TPM2 Clevis token (PCR $PCR_IDS)..."
+    echo "$DISK_PASSWORD" | clevis encrypt tpm2 '{"pcr_ids":"'"$PCR_IDS"'"}' > "$TOKEN_FILE"
+
+    # Set proper permissions
+    chmod 600 "$TOKEN_FILE"
+    chown root:root "$TOKEN_FILE"
+
+    echo "✅ TPM token generated successfully!"
+    echo "   Token location: $TOKEN_FILE"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Rebuild system: sudo nixos-rebuild switch"
+    echo "  2. Reboot to test automatic unlock"
+    echo ""
+    echo "The token is bound to TPM PCR $PCR_IDS (Secure Boot state)"

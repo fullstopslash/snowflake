@@ -160,6 +160,33 @@ in
           default = "";
         };
 
+        encryption = lib.mkOption {
+          type = lib.types.submodule {
+            options = {
+              tpm = lib.mkOption {
+                type = lib.types.submodule {
+                  options = {
+                    enable = lib.mkOption {
+                      type = lib.types.bool;
+                      default = false;
+                      description = "Enable TPM2-based automatic disk unlock with Clevis (requires TPM 2.0 hardware)";
+                    };
+                    pcrIds = lib.mkOption {
+                      type = lib.types.str;
+                      default = "7";
+                      description = "TPM PCR IDs to bind unlock to (default: 7 = Secure Boot state)";
+                    };
+                  };
+                };
+                default = { };
+                description = "TPM-based unlock configuration";
+              };
+            };
+          };
+          default = { };
+          description = "Disk encryption unlock configuration (host decides based on security needs)";
+        };
+
         # ========================================
         # PREFERENCES
         # ========================================

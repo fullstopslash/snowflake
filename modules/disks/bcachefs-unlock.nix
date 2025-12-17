@@ -26,9 +26,17 @@
 }:
 let
   cfg = config.disks;
+  hostCfg = config.host;
 
   # Check if layout uses bcachefs native encryption
   isEncrypted = lib.strings.hasInfix "bcachefs-encrypt" cfg.layout;
+
+  # TPM unlock configuration
+  tpmEnabled = hostCfg.encryption.tpm.enable or false;
+  pcrIds = hostCfg.encryption.tpm.pcrIds or "7";
+
+  # Clevis JWE token path (stored in persist for impermanence)
+  clevisTokenPath = "${hostCfg.persistFolder}/etc/clevis/bcachefs-root.jwe";
 in
 {
   config = lib.mkIf (cfg.enable && isEncrypted) {
@@ -46,51 +54,60 @@ in
       # For older kernels, add: "poly1305" "chacha20"
     ];
 
-    # Optional Clevis configuration (users can override in host config)
-    # When enabled, provides TPM/Tang automated unlock with fallback
-    # Example host config:
-    #   boot.initrd.clevis = {
-    #     enable = true;
-    #     devices."root".secretFile = "/persist/etc/clevis/root.jwe";
-    #   };
-    #
-    # Note: NixOS bcachefs.nix module handles Clevis integration automatically
-    # when boot.initrd.clevis is configured. No additional unlock logic needed here.
+    # Automatic Clevis TPM configuration when enabled via host.encryption.tpm.enable
+    boot.initrd.clevis = lib.mkIf tpmEnabled {
+      enable = true;
+      devices."root".secretFile = clevisTokenPath;
+    };
 
     # Documentation for users
-    warnings = lib.optionals isEncrypted [
-      ''
-        Bcachefs native encryption is enabled for ${cfg.layout}.
+    warnings =
+      lib.optionals isEncrypted [
+        ''
+          Bcachefs native encryption is enabled for ${cfg.layout}.
 
-        Boot unlock behavior:
-        - Interactive passphrase prompt via systemd-ask-password (default)
-        - Optional: Configure Clevis for TPM/Tang automated unlock
+          Boot unlock behavior:
+          ${
+            if tpmEnabled then
+              "- TPM2 automatic unlock via Clevis (enabled)"
+            else
+              "- Interactive passphrase prompt via systemd-ask-password"
+          }
 
-        To enable TPM unlock, add to your host configuration:
-          boot.initrd.clevis = {
-            enable = true;
-            devices."root".secretFile = "/persist/etc/clevis/root.jwe";
-          };
+          ${
+            if !tpmEnabled then
+              ''
+                To enable TPM unlock, add to your host configuration:
+                  host.encryption.tpm.enable = true;
 
-        To generate Clevis JWE token:
-          1. Boot system and enter passphrase interactively
-          2. Generate token: echo "passphrase" | clevis encrypt tpm2 '{"pcr_ids":"7"}' > /persist/etc/clevis/root.jwe
-          3. Rebuild system to include token in initrd
+                After enabling, generate Clevis token:
+                  sudo just bcachefs-setup-tpm
+              ''
+            else
+              ''
+                TPM unlock is enabled. Generate token with:
+                  sudo just bcachefs-setup-tpm
 
-        Security note:
-        - ChaCha20/Poly1305 AEAD provides authenticated encryption
-        - Tamper detection and replay protection included
-        - Each block has unique nonce with chain of trust to superblock
-        - Superior security properties compared to LUKS (unauthenticated encryption)
+                Token will be stored at: ${clevisTokenPath}
+                Rebuild system after token generation to include in initrd.
+              ''
+          }
 
-        Trade-offs vs LUKS:
-        - No systemd-cryptenroll support (use Clevis instead)
-        - Less mature tooling ecosystem
-        - Use LUKS layouts if you need FIDO2/PKCS11 integration
+          Security note:
+          - ChaCha20/Poly1305 AEAD provides authenticated encryption
+          - Tamper detection and replay protection included
+          - Each block has unique nonce with chain of trust to superblock
+          - TPM binding to PCR ${pcrIds} (Secure Boot state)
 
-        See docs/bcachefs.md for detailed encryption workflows.
-      ''
-    ];
+          See docs/bcachefs.md for detailed encryption workflows.
+        ''
+      ]
+      ++ lib.optionals (tpmEnabled && hostCfg.persistFolder == "") [
+        ''
+          WARNING: TPM unlock requires persistFolder to be set for token storage.
+          Set host.persistFolder in your host configuration.
+        ''
+      ];
 
     # Kernel keyring management
     # The bcachefs unlock process adds keys to the kernel keyring
