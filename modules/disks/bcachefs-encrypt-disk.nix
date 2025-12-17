@@ -59,6 +59,7 @@
     bcachefs_filesystems = {
       encrypted_root = {
         type = "bcachefs_filesystem";
+        label = "root"; # Filesystem label (required for bcachefs format)
         # Enable native ChaCha20/Poly1305 encryption
         passwordFile = "/tmp/disko-password";
         extraFormatArgs = [
