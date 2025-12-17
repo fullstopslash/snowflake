@@ -42,9 +42,8 @@ in
     boot.initrd.availableKernelModules = [
       "bcachefs"
       "sha256"
-      # ChaCha20/Poly1305 modules (required for kernels < 6.15)
-      "poly1305"
-      "chacha20"
+      # Note: ChaCha20/Poly1305 are built-in for kernels >= 6.15
+      # For older kernels, add: "poly1305" "chacha20"
     ];
 
     # Optional Clevis configuration (users can override in host config)
