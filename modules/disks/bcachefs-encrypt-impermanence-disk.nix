@@ -73,10 +73,10 @@
     bcachefs_filesystems = {
       encrypted_persist = {
         type = "bcachefs_filesystem";
-        label = "persist"; # Filesystem label (required for bcachefs format)
         passwordFile = "/tmp/disko-password";
         extraFormatArgs = [
           # --encrypted is automatically added by disko when passwordFile is set
+          "--label=persist" # Filesystem label (required for bcachefs format)
           "--compression=lz4"
           "--background_compression=lz4"
         ];
@@ -88,10 +88,10 @@
       };
       encrypted_root = {
         type = "bcachefs_filesystem";
-        label = "root"; # Filesystem label (required for bcachefs format)
         passwordFile = "/tmp/disko-password";
         extraFormatArgs = [
           # --encrypted is automatically added by disko when passwordFile is set
+          "--label=root" # Filesystem label (required for bcachefs format)
           "--compression=lz4"
           "--background_compression=lz4"
         ];
