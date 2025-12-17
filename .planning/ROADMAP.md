@@ -25,7 +25,7 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 - [x] **Phase 17: Physical Security & Recovery** - LUKS encryption, device stolen runbook, glass-key disaster recovery
 - [x] **Phase 18: GitOps Test Infrastructure** - Decentralized GitOps testing and validation
 - [x] **Phase 19: Host Discovery & Flake Elegance** - Auto-discover hosts, rename hostSpec → host
-- [ ] **Phase 20: Bcachefs Native Encryption** - ChaCha20/Poly1305 encryption, boot unlock automation
+- [x] **Phase 20: Bcachefs Native Encryption** - ChaCha20/Poly1305 encryption, boot unlock automation
 
 ## Phase Details
 
@@ -461,7 +461,7 @@ Key challenges:
 Plans:
 - [x] 20-01: Research bcachefs encryption (FINDINGS.md: disko patterns, boot unlock, key management)
 - [x] 20-02: Native encryption layouts (bcachefs-encrypt, bcachefs-encrypt-impermanence)
-- [ ] 20-03: Boot integration & key management (systemd units, ISO installer support)
+- [x] 20-03: Boot integration & key management (systemd units, ISO installer support)
 
 Target outcome:
 - Native encryption layouts: bcachefs-encrypt and bcachefs-encrypt-impermanence
@@ -495,4 +495,4 @@ Target outcome:
 | 17. Physical Security & Recovery | 3/3 | Complete | 2025-12-16 |
 | 18. GitOps Test Infrastructure | 1/1 | Complete | 2025-12-16 |
 | 19. Host Discovery & Flake Elegance | 3/3 | Complete | 2025-12-16 |
-| 20. Bcachefs Native Encryption | 2/3 | In Progress | - |
+| 20. Bcachefs Native Encryption | 3/3 | Complete | 2025-12-17 |

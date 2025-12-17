@@ -250,6 +250,11 @@ in
         Native encryption provides authenticated encryption chain with metadata
         integrity verification. LUKS variants still available for Phase 17 compatibility.
 
+        Boot unlock for native encryption:
+        - Default: Interactive passphrase prompt (systemd-ask-password)
+        - Optional: Clevis for TPM/Tang automated unlock with fallback
+        - See modules/disks/bcachefs-unlock.nix for configuration options
+
         Note: Bcachefs requires Linux 6.7+. Native encryption uses ChaCha20/Poly1305
         AEAD which protects against tampering and replay attacks. LUKS provides
         compatibility with traditional tooling (systemd-cryptenroll, FIDO2/PKCS11).
@@ -276,7 +281,10 @@ in
   };
 
   # Always import disko module so the options are available
-  imports = [ inputs.disko.nixosModules.disko ];
+  imports = [
+    inputs.disko.nixosModules.disko
+    ./bcachefs-unlock.nix
+  ];
 
   config = lib.mkIf cfg.enable {
     disko.devices.disk = selectedLayout;
