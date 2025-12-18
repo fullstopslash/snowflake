@@ -26,7 +26,7 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 - [x] **Phase 18: GitOps Test Infrastructure** - Decentralized GitOps testing and validation
 - [x] **Phase 19: Host Discovery & Flake Elegance** - Auto-discover hosts, rename hostSpec → host
 - [x] **Phase 20: Bcachefs Native Encryption** - ChaCha20/Poly1305 encryption, boot unlock automation
-- [ ] **Phase 21: TPM Unlock** - TPM2 automatic unlock for bcachefs with Clevis, manual fallback
+- [ ] **Phase 21: TPM Unlock** - TPM2 automatic unlock for bcachefs with Clevis, manual fallback **[BLOCKED]**
 - [ ] **Phase 22: Home Manager Cleanup** - Separate installation from configuration, move desktop/browsers to modules/apps
 
 ## Phase Details
@@ -474,17 +474,23 @@ Target outcome:
 - Superior security: authenticated encryption chain vs block-layer encryption
 - Existing LUKS options preserved for traditional tooling compatibility
 
-### Phase 21: TPM Unlock
+### Phase 21: TPM Unlock **[BLOCKED]**
 **Goal**: Implement TPM2 automatic unlock for bcachefs native encryption using Clevis with fallback to interactive password
 **Depends on**: Phase 20 (Bcachefs Native Encryption)
-**Plans**: 1 plan
+**Status**: BLOCKED - boot.initrd.secrets doesn't work with bcachefs native encryption
 
-Vision: Enable unattended server boot while maintaining encryption-at-rest security. TPM unlock allows servers to auto-boot without manual password entry, while laptops can remain interactive-unlock only. Per-host configuration via existing hostSpec (host.encryption.tpm.enable).
+**Blocking issues**:
+- boot.initrd.secrets fails to copy token files into initrd (even with sandbox disabled)
+- boot.initrd.systemd.extraBin doesn't actually include binaries in initrd
+- boot.initrd.systemd.packages works for clevis/jose but token file still not accessible
+- NixOS systemd initrd secret copying mechanism incompatible with runtime-generated tokens
 
-Key challenges:
-- boot.initrd.clevis doesn't work for bcachefs (LUKS-specific configuration)
-- Requires custom initrd systemd service implementation
-- Must handle Clevis TPM unlock + fallback to interactive prompt
+**Workaround**: Use bcachefs-luks-impermanence layout instead
+- LUKS + bcachefs provides mature TPM support via systemd-cryptenroll
+- Works with standard NixOS boot.initrd.luks.devices configuration
+- Command: `systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 /dev/mapper/encrypted-nixos`
+
+**Future path**: Requires upstream NixOS support for runtime secret injection into systemd initrd, or alternative approach to token management for bcachefs native encryption.
 - Integration with existing bcachefs-unlock.nix module
 
 Plans:

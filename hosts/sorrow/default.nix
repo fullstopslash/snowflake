@@ -12,10 +12,11 @@
   imports = [ ./hardware-configuration.nix ];
 
   # Disk configuration via modules/disks
-  # Testing Phase 20: bcachefs native encryption with impermanence
+  # Using LUKS + bcachefs for mature TPM unlock support (systemd-cryptenroll)
+  # Native bcachefs encryption + TPM is blocked pending upstream/tooling maturity
   disks = {
     enable = true;
-    layout = "bcachefs-encrypt-impermanence";
+    layout = "bcachefs-luks-impermanence";
     device = "/dev/vda";
     withSwap = false;
   };
@@ -45,13 +46,13 @@
   host = {
     hostName = builtins.baseNameOf (toString ./.);
     primaryUsername = "rain";
-    persistFolder = "/persist"; # Required for bcachefs-encrypt-impermanence layout
+    persistFolder = "/persist"; # Required for impermanence layout
 
     # Encryption configuration
     encryption = {
-      # TPM automatic unlock for bcachefs encryption
+      # TPM automatic unlock via systemd-cryptenroll (LUKS)
       # Server VM: auto-unlock on boot (no manual password needed)
-      # Remote SSH unlock is automatically enabled on port 2222
+      # Use: systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 /dev/mapper/encrypted-nixos
       tpm.enable = true;
     };
   };

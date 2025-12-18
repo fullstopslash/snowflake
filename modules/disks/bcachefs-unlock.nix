@@ -153,6 +153,8 @@ in
             "${pkgs.clevis}"
             "${pkgs.jose}"
             "${pkgs.keyutils}"
+            # Include token file if it exists
+            (lib.mkIf (builtins.pathExists clevisTokenPersist) clevisTokenPersist)
           ];
 
         # Include clevis/jose packages for TPM unlock
