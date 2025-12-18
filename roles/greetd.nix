@@ -9,9 +9,7 @@
     services.displayManager.ly = {
       enable = true;
       settings = {
-        # Save session selection (default, but explicit)
         save = true;
-        # Focus session selector on startup so user sees options
         default_input = "session";
       };
     };

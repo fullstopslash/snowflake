@@ -80,6 +80,8 @@
     managarr
     websocat
     gum
+    postgresql
+    hexyl
 
     cowsay
     kittysay

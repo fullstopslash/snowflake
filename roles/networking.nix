@@ -7,6 +7,10 @@
     networkd-dispatcher
     wol
     wakeonlan
+    nyx
+    tor
+    torctl
+    torsocks
   ];
 
   # Network management - optimized for faster boot
