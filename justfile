@@ -761,3 +761,112 @@ bcachefs-setup-tpm HOST:
     echo "  2. Reboot to test automatic unlock"
     echo ""
     echo "The token is bound to TPM PCR $PCR_IDS (Secure Boot state)"
+
+# Change LUKS disk password and update SOPS secret
+# Interactive workflow: changes device password then syncs to SOPS
+# Usage: just luks-rekey [device]
+# Example: just luks-rekey /dev/vda2
+luks-rekey DEVICE="/dev/mapper/encrypted-nixos":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "🔐 LUKS Disk Password Re-keying"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "This will:"
+    echo "  1. Change the LUKS password on {{DEVICE}}"
+    echo "  2. Update the SOPS secret (passwords/disk/default)"
+    echo "  3. Commit and push changes to nix-secrets"
+    echo ""
+    echo "⚠️  Make sure you know the current password!"
+    echo ""
+    read -p "Continue? [y/N] " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Aborted."
+        exit 0
+    fi
+
+    # Check if device exists
+    if [ ! -e "{{DEVICE}}" ]; then
+        echo "❌ Device {{DEVICE}} not found"
+        echo ""
+        echo "Available LUKS devices:"
+        lsblk -o NAME,FSTYPE,SIZE,MOUNTPOINT | grep -E "crypto_LUKS|crypt" || echo "  No LUKS devices found"
+        exit 1
+    fi
+
+    echo ""
+    echo "📊 Device information:"
+    cryptsetup luksDump "{{DEVICE}}" | grep -E "Version|UUID|Cipher|Key Slot"
+    echo ""
+
+    # Step 1: Change LUKS password
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "Step 1: Change LUKS device password"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "You will be prompted for:"
+    echo "  - Current password (from LUKS device)"
+    echo "  - New password (enter twice)"
+    echo ""
+
+    if ! cryptsetup luksChangeKey "{{DEVICE}}"; then
+        echo "❌ Failed to change LUKS password"
+        exit 1
+    fi
+
+    echo ""
+    echo "✅ LUKS password changed successfully!"
+    echo ""
+
+    # Step 2: Update SOPS
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "Step 2: Update SOPS secret"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "Opening SOPS editor for shared.yaml..."
+    echo "Update: passwords.disk.default = <your new password>"
+    echo ""
+    read -p "Press Enter to open SOPS editor..."
+
+    cd ../nix-secrets
+    sops sops/shared.yaml
+
+    echo ""
+    echo "✅ SOPS file updated"
+    echo ""
+
+    # Step 3: Commit and push
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "Step 3: Commit and push changes"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+
+    source {{justfile_directory()}}/scripts/vcs-helpers.sh
+    vcs_add sops/shared.yaml
+
+    if vcs_commit "chore: update disk encryption password"; then
+        echo "   Changes committed"
+    else
+        echo "   No changes to commit (already up to date)"
+    fi
+
+    vcs_push
+    cd - > /dev/null
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "✅ Re-keying complete!"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "Summary:"
+    echo "  ✅ LUKS device password changed"
+    echo "  ✅ SOPS secret updated"
+    echo "  ✅ Changes pushed to repository"
+    echo ""
+    echo "Notes:"
+    echo "  - TPM unlock (if enrolled) continues to work"
+    echo "  - New password will be used for fresh installs"
+    echo "  - Update nix-config flake: nix flake update nix-secrets"
+    echo ""
