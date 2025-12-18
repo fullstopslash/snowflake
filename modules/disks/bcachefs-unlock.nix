@@ -110,11 +110,8 @@ in
         # Set root shell to unlock script for interactive/remote unlock
         users.root.shell = "${bcachefsUnlockScript}/bin/bcachefs-unlock-root";
 
-        # Include Clevis and dependencies when TPM unlock is enabled
+        # extraBin for keyctl only (clevis/jose added via contents to avoid conflicts)
         extraBin = {
-          clevis = lib.mkIf tpmEnabled "${pkgs.clevis}/bin/clevis";
-          clevis-decrypt = lib.mkIf tpmEnabled "${pkgs.clevis}/bin/clevis-decrypt";
-          jose = lib.mkIf tpmEnabled "${pkgs.jose}/bin/jose";
           keyctl = "${pkgs.keyutils}/bin/keyctl";
         };
 
