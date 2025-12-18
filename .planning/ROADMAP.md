@@ -474,27 +474,20 @@ Target outcome:
 - Superior security: authenticated encryption chain vs block-layer encryption
 - Existing LUKS options preserved for traditional tooling compatibility
 
-### Phase 21: TPM Unlock **[BLOCKED]**
+### Phase 21: TPM Unlock
 **Goal**: Implement TPM2 automatic unlock for bcachefs native encryption using Clevis with fallback to interactive password
 **Depends on**: Phase 20 (Bcachefs Native Encryption)
-**Status**: BLOCKED - boot.initrd.secrets doesn't work with bcachefs native encryption
+**Status**: Planning (2 plans: 1 blocked, 1 ready to execute)
 
-**Blocking issues**:
-- boot.initrd.secrets fails to copy token files into initrd (even with sandbox disabled)
-- boot.initrd.systemd.extraBin doesn't actually include binaries in initrd
-- boot.initrd.systemd.packages works for clevis/jose but token file still not accessible
-- NixOS systemd initrd secret copying mechanism incompatible with runtime-generated tokens
-
-**Workaround**: Use bcachefs-luks-impermanence layout instead
-- LUKS + bcachefs provides mature TPM support via systemd-cryptenroll
-- Works with standard NixOS boot.initrd.luks.devices configuration
-- Command: `systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 /dev/mapper/encrypted-nixos`
-
-**Future path**: Requires upstream NixOS support for runtime secret injection into systemd initrd, or alternative approach to token management for bcachefs native encryption.
-- Integration with existing bcachefs-unlock.nix module
+**Solution**: Use nixpkgs bcachefs.nix patterns (verified at FOSDEM 2024)
+- Add tpm_crb kernel module to initrd
+- Use boot.initrd.systemd.contents instead of boot.initrd.secrets
+- Generate Clevis token during installation (not post-boot)
+- Tested on anguish VM with TPM emulation
 
 Plans:
-- [ ] 21-01: TPM unlock implementation (custom initrd service, Clevis integration, testing)
+- [ ] 21-01: Initial attempt using custom systemd service (blocked by boot.initrd.secrets limitations)
+- [ ] 21-02: Revised implementation using nixpkgs patterns (ready to execute)
 
 Target outcome:
 - Custom initrd systemd service for bcachefs + Clevis TPM unlock
