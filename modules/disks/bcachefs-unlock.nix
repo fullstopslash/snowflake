@@ -148,6 +148,14 @@ in
 
         # Set root shell to unlock script for interactive/remote unlock
         users.root.shell = "${bcachefsUnlockScript}/bin/bcachefs-unlock-root";
+
+        # Include Clevis and dependencies when TPM unlock is enabled
+        extraBin = lib.mkIf tpmEnabled {
+          clevis = "${pkgs.clevis}/bin/clevis";
+          clevis-decrypt = "${pkgs.clevis}/bin/clevis-decrypt";
+          jose = "${pkgs.jose}/bin/jose";
+          keyctl = "${pkgs.keyutils}/bin/keyctl";
+        };
       };
 
     # Ensure bcachefs-tools is available in initrd
@@ -263,14 +271,6 @@ in
           Set host.persistFolder in your host configuration.
         ''
       ];
-
-    # Include Clevis and dependencies in initrd when TPM unlock is enabled
-    boot.initrd.systemd.extraBin = lib.mkIf tpmEnabled {
-      clevis = "${pkgs.clevis}/bin/clevis";
-      clevis-decrypt = "${pkgs.clevis}/bin/clevis-decrypt";
-      jose = "${pkgs.jose}/bin/jose";
-      keyctl = "${pkgs.keyutils}/bin/keyctl";
-    };
 
     # Copy TPM token from persist into initrd
     # The token is generated on first boot and included in subsequent rebuilds
