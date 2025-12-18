@@ -135,9 +135,9 @@ in
 
     # Copy TPM token from persist into initrd
     # The token is generated on first boot and included in subsequent rebuilds
-    # NOTE: builtins.pathExists is evaluated at build time, so this uses lib.mkIf with a runtime check
-    boot.initrd.secrets = lib.mkIf tpmEnabled {
-      "${clevisTokenInitrd}" = lib.mkDefault clevisTokenPersist;
+    # Only include if the token file exists (to avoid breaking fresh installs)
+    boot.initrd.secrets = lib.mkIf (tpmEnabled && builtins.pathExists clevisTokenPersist) {
+      "${clevisTokenInitrd}" = clevisTokenPersist;
     };
 
     # Make clevis available in running system for token generation
@@ -154,7 +154,10 @@ in
       # Run early, before filesystem mounts
       unitConfig = {
         DefaultDependencies = "no";
-        Before = [ "sysroot.mount" "initrd-fs.target" ];
+        Before = [
+          "sysroot.mount"
+          "initrd-fs.target"
+        ];
         After = [ "systemd-modules-load.service" ];
       };
 
@@ -239,7 +242,10 @@ in
     systemd.services.bcachefs-tpm-auto-enroll = lib.mkIf tpmEnabled {
       description = "Auto-enroll TPM token for bcachefs encryption";
       wantedBy = [ "multi-user.target" ];
-      after = [ "network-online.target" "sops-nix.service" ];
+      after = [
+        "network-online.target"
+        "sops-nix.service"
+      ];
       wants = [ "network-online.target" ];
 
       unitConfig = {
