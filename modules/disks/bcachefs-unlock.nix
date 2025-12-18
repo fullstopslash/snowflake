@@ -174,24 +174,33 @@ in
       ];
 
     # Remote SSH unlock in initrd (optional)
-    boot.initrd.network = lib.mkIf remoteUnlockEnabled {
-      enable = true;
-      udhcpc.enable = true;
-      flushBeforeStage2 = true;
-      ssh = {
+    # Using systemd-based networking for initrd
+    boot.initrd = lib.mkIf remoteUnlockEnabled {
+      network = {
         enable = true;
-        port = remoteUnlockPort;
-        authorizedKeys = authorizedKeys;
-        hostKeys = [
-          # Generate persistent host key in /persist
-          "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key"
-        ];
+        ssh = {
+          enable = true;
+          port = remoteUnlockPort;
+          authorizedKeys = authorizedKeys;
+          hostKeys = [
+            # Generate persistent host key in /persist
+            "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key"
+          ];
+        };
       };
-      postCommands = ''
-        # Root shell is set to bcachefs-unlock-root script
-        # SSH login will automatically run the unlock script
-        echo "Remote unlock configured - SSH will run unlock script automatically"
-      '';
+
+      # Configure DHCP with systemd-networkd
+      systemd.network = {
+        enable = true;
+        networks."10-ethernet" = {
+          matchConfig.Name = "en*";
+          networkConfig = {
+            DHCP = "yes";
+            IPv6AcceptRA = true;
+          };
+          dhcpV4Config.RouteMetric = 1024;
+        };
+      };
     };
 
     # TPM unlock via custom initrd systemd service
