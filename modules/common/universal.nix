@@ -48,7 +48,12 @@
   # ========== System-wide Packages ==========
   # Available even when logged in as root
   #
-  environment.systemPackages = [ pkgs.openssh ];
+  environment.systemPackages = [ pkgs.openssh ]
+    ++ lib.optionals (pkgs.stdenv.isLinux && (!config.host.isHeadless or false)) [
+      # Terminal emulator terminfo (NixOS only, skip on headless)
+      pkgs.kitty.terminfo
+      pkgs.ghostty.terminfo
+    ];
 
   #
   # ========== Shell Configuration ==========
@@ -70,19 +75,12 @@
   #
   i18n.defaultLocale = lib.mkDefault "en_US.UTF-8";
   time.timeZone = lib.mkDefault "America/Chicago";
-}
-// lib.mkIf pkgs.stdenv.isLinux {
+
   #
   # ========== NixOS-Specific Defaults ==========
   # Only applies to Linux/NixOS hosts, not Darwin
   #
 
-  # Add terminal emulator terminfo (skip on headless systems)
-  environment.systemPackages = lib.optionals (!config.host.isHeadless or false) [
-    pkgs.kitty.terminfo
-    pkgs.ghostty.terminfo
-  ];
-
   # Enable firmware with a license allowing redistribution
-  hardware.enableRedistributableFirmware = true;
+  hardware.enableRedistributableFirmware = lib.mkIf pkgs.stdenv.isLinux true;
 }
