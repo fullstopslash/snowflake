@@ -122,6 +122,19 @@ in
           jose = "${pkgs.jose}/bin/jose";
           keyctl = "${pkgs.keyutils}/bin/keyctl";
         };
+
+        # Configure DHCP for remote unlock
+        network = lib.mkIf remoteUnlockEnabled {
+          enable = true;
+          networks."10-ethernet" = {
+            matchConfig.Name = "en*";
+            networkConfig = {
+              DHCP = "yes";
+              IPv6AcceptRA = true;
+            };
+            dhcpV4Config.RouteMetric = 1024;
+          };
+        };
       };
 
     # Ensure bcachefs-tools is available in initrd
@@ -150,19 +163,6 @@ in
           # Generate persistent host key in /persist
           "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key"
         ];
-      };
-    };
-
-    # Configure DHCP with systemd-networkd for remote unlock
-    boot.initrd.systemd.network = lib.mkIf remoteUnlockEnabled {
-      enable = true;
-      networks."10-ethernet" = {
-        matchConfig.Name = "en*";
-        networkConfig = {
-          DHCP = "yes";
-          IPv6AcceptRA = true;
-        };
-        dhcpV4Config.RouteMetric = 1024;
       };
     };
 
