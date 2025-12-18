@@ -22,6 +22,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 let
@@ -54,11 +55,9 @@ in
       # For older kernels, add: "poly1305" "chacha20"
     ];
 
-    # TPM unlock for bcachefs requires custom initrd setup
-    # Bcachefs doesn't use boot.initrd.clevis (that's for LUKS only)
-    # Instead, we need to handle unlock in initrd via systemd service
-    # TODO: Implement bcachefs-specific Clevis unlock
-    # For now, TPM is configured but unlock service needs implementation
+    # TPM unlock via custom initrd systemd service
+    # Note: boot.initrd.clevis is LUKS-only and doesn't work for bcachefs
+    # We implement a custom service that uses Clevis for TPM unlock
 
     # Documentation for users
     warnings =
@@ -108,6 +107,93 @@ in
           Set host.persistFolder in your host configuration.
         ''
       ];
+
+    # Include Clevis and dependencies in initrd when TPM unlock is enabled
+    boot.initrd.systemd.extraBin = lib.mkIf tpmEnabled {
+      clevis = "${pkgs.clevis}/bin/clevis";
+      clevis-decrypt = "${pkgs.clevis}/bin/clevis-decrypt";
+      jose = "${pkgs.jose}/bin/jose";
+      keyctl = "${pkgs.keyutils}/bin/keyctl";
+    };
+
+    # Make clevis available in running system for token generation
+    environment.systemPackages = lib.mkIf tpmEnabled [
+      pkgs.clevis
+      pkgs.jose
+    ];
+
+    # Custom systemd service for TPM unlock (when enabled)
+    boot.initrd.systemd.services.bcachefs-tpm-unlock = lib.mkIf tpmEnabled {
+      description = "Bcachefs TPM Automatic Unlock";
+      documentation = [ "Unlock bcachefs encrypted root using Clevis TPM token with password fallback" ];
+
+      # Run early, before filesystem mounts
+      unitConfig = {
+        DefaultDependencies = "no";
+        Before = [ "sysroot.mount" "initrd-fs.target" ];
+        After = [ "systemd-modules-load.service" ];
+      };
+
+      wantedBy = [ "initrd.target" ];
+
+      # Service runs once and stays loaded
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+
+      script = ''
+        set +e  # Don't exit on error - we want to try fallback
+
+        echo "🔐 Bcachefs TPM Unlock: Starting..."
+
+        # Detect encrypted bcachefs device (assume root device)
+        # Use the "root" label from disko configuration
+        DEVICE="/dev/disk/by-label/root"
+        if [ ! -e "$DEVICE" ]; then
+          # Fallback to scanning for bcachefs encrypted devices
+          DEVICE=$(blkid -t TYPE=bcachefs -o device | head -n1)
+        fi
+
+        if [ -z "$DEVICE" ]; then
+          echo "❌ No bcachefs device found"
+          exit 1
+        fi
+
+        echo "Found encrypted device: $DEVICE"
+
+        # Link kernel keyrings for proper key sharing
+        keyctl link @u @s || true
+
+        # Attempt TPM unlock via Clevis
+        TOKEN_PATH="${clevisTokenPath}"
+
+        if [ -f "$TOKEN_PATH" ]; then
+          echo "🔑 Attempting TPM unlock via Clevis..."
+
+          if clevis decrypt < "$TOKEN_PATH" | bcachefs unlock "$DEVICE"; then
+            echo "✅ TPM unlock successful"
+            exit 0
+          else
+            echo "⚠️  TPM unlock failed (exit code $?)"
+            echo "Falling back to interactive password prompt..."
+          fi
+        else
+          echo "ℹ️  Clevis token not found at $TOKEN_PATH"
+          echo "Falling back to interactive password prompt..."
+        fi
+
+        # Fallback: Interactive password prompt via systemd-ask-password
+        echo "🔐 Manual unlock required"
+        if ! bcachefs unlock "$DEVICE"; then
+          echo "❌ Manual unlock failed"
+          exit 1
+        fi
+
+        echo "✅ Manual unlock successful"
+        exit 0
+      '';
+    };
 
     # Kernel keyring management
     # The bcachefs unlock process adds keys to the kernel keyring

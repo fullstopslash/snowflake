@@ -1,0 +1,31 @@
+#!/usr/bin/env expect
+
+# Auto-unlock bcachefs encrypted boot
+# Usage: auto-unlock-boot.exp <password> <serial-socket>
+
+set timeout 300
+set password [lindex $argv 0]
+set serial_socket [lindex $argv 1]
+
+# Connect to VM serial console
+spawn socat - UNIX-CONNECT:$serial_socket
+
+# Wait for password prompt
+expect {
+    "assword:" {
+        send "$password\r"
+        exp_continue
+    }
+    "Welcome to NixOS" {
+        send_user "\n=== Boot successful ===\n"
+        exit 0
+    }
+    timeout {
+        send_user "\n=== Timeout waiting for boot ===\n"
+        exit 1
+    }
+    eof {
+        send_user "\n=== Connection closed ===\n"
+        exit 1
+    }
+}

@@ -412,7 +412,7 @@ vm-status HOST=DEFAULT_VM_HOST:
 # Start existing VM with GUI (virtio-vga-gl + SDL for hardware acceleration)
 vm-start HOST=DEFAULT_VM_HOST:
     #!/usr/bin/env nix-shell
-    #!nix-shell -i bash -p qemu
+    #!nix-shell -i bash -p qemu swtpm
     set -euo pipefail
 
     QCOW2="quickemu/{{HOST}}-test.qcow2"
@@ -433,6 +433,30 @@ vm-start HOST=DEFAULT_VM_HOST:
     OVMF_PATH=$(nix-build '<nixpkgs>' -A OVMF.fd --no-out-link 2>/dev/null)
     OVMF_CODE="$OVMF_PATH/FV/OVMF_CODE.fd"
     OVMF_VARS="quickemu/{{HOST}}-OVMF_VARS.fd"
+
+    # Setup TPM emulation for testing TPM unlock
+    TPM_STATE_DIR="quickemu/{{HOST}}-tpm"
+    TPM_SOCKET="quickemu/{{HOST}}-tpm.sock"
+    mkdir -p "$TPM_STATE_DIR"
+
+    # Clean up any stale TPM socket
+    rm -f "$TPM_SOCKET"
+
+    # Start software TPM emulator in background
+    swtpm socket \
+        --tpmstate dir="$TPM_STATE_DIR" \
+        --ctrl type=unixio,path="$TPM_SOCKET" \
+        --tpm2 \
+        --log level=20 &
+
+    SWTPM_PID=$!
+    echo "🔐 TPM emulator started (PID: $SWTPM_PID)"
+
+    # Wait for TPM socket to be ready
+    for i in {1..10}; do
+        [ -S "$TPM_SOCKET" ] && break
+        sleep 0.1
+    done
 
     # Use virtio-vga-gl with SDL for best Wayland/Hyprland performance
     qemu-system-x86_64 \
@@ -455,19 +479,22 @@ vm-start HOST=DEFAULT_VM_HOST:
         -device hda-micro,audiodev=audio0 \
         -device virtio-net,netdev=nic \
         -netdev "user,hostname={{HOST}},hostfwd=tcp::{{VM_SSH_PORT}}-:22,id=nic" \
+        -chardev socket,id=chrtpm,path="$TPM_SOCKET" \
+        -tpmdev emulator,id=tpm0,chardev=chrtpm \
+        -device tpm-tis,tpmdev=tpm0 \
         -drive "if=pflash,format=raw,unit=0,file=$OVMF_CODE,readonly=on" \
         -drive "if=pflash,format=raw,unit=1,file=$OVMF_VARS" \
         -device virtio-blk-pci,drive=SystemDisk \
         -drive "id=SystemDisk,if=none,format=qcow2,file=$QCOW2" &
 
     sleep 2
-    echo "✅ VM started with SDL display (hardware accelerated)"
+    echo "✅ VM started with SDL display (hardware accelerated + TPM 2.0)"
     echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
 
 # Start VM headless (no display, SSH only)
 vm-start-headless HOST=DEFAULT_VM_HOST:
     #!/usr/bin/env nix-shell
-    #!nix-shell -i bash -p qemu
+    #!nix-shell -i bash -p qemu swtpm
     set -euo pipefail
 
     QCOW2="quickemu/{{HOST}}-test.qcow2"
@@ -488,6 +515,30 @@ vm-start-headless HOST=DEFAULT_VM_HOST:
     OVMF_CODE="$OVMF_PATH/FV/OVMF_CODE.fd"
     OVMF_VARS="quickemu/{{HOST}}-OVMF_VARS.fd"
 
+    # Setup TPM emulation for testing TPM unlock
+    TPM_STATE_DIR="quickemu/{{HOST}}-tpm"
+    TPM_SOCKET="quickemu/{{HOST}}-tpm.sock"
+    mkdir -p "$TPM_STATE_DIR"
+
+    # Clean up any stale TPM socket
+    rm -f "$TPM_SOCKET"
+
+    # Start software TPM emulator in background
+    swtpm socket \
+        --tpmstate dir="$TPM_STATE_DIR" \
+        --ctrl type=unixio,path="$TPM_SOCKET" \
+        --tpm2 \
+        --log level=20 &
+
+    SWTPM_PID=$!
+    echo "🔐 TPM emulator started (PID: $SWTPM_PID)"
+
+    # Wait for TPM socket to be ready
+    for i in {1..10}; do
+        [ -S "$TPM_SOCKET" ] && break
+        sleep 0.1
+    done
+
     qemu-system-x86_64 \
         -name "{{HOST}}-test" \
         -machine q35,smm=off,vmport=off,accel=kvm \
@@ -500,13 +551,16 @@ vm-start-headless HOST=DEFAULT_VM_HOST:
         -object rng-random,id=rng0,filename=/dev/urandom \
         -device virtio-net,netdev=nic \
         -netdev "user,hostname={{HOST}},hostfwd=tcp::{{VM_SSH_PORT}}-:22,id=nic" \
+        -chardev socket,id=chrtpm,path="$TPM_SOCKET" \
+        -tpmdev emulator,id=tpm0,chardev=chrtpm \
+        -device tpm-tis,tpmdev=tpm0 \
         -drive "if=pflash,format=raw,unit=0,file=$OVMF_CODE,readonly=on" \
         -drive "if=pflash,format=raw,unit=1,file=$OVMF_VARS" \
         -device virtio-blk-pci,drive=SystemDisk \
         -drive "id=SystemDisk,if=none,format=qcow2,file=$QCOW2" \
         -daemonize
 
-    echo "✅ VM started (headless)"
+    echo "✅ VM started (headless + TPM 2.0)"
     echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
 
 # Quick rebuild: sync and rebuild on running VM (no fresh install)
@@ -659,7 +713,7 @@ bcachefs-setup-tpm HOST:
     echo "🔐 Setting up TPM2 automatic unlock for bcachefs on {{HOST}}"
 
     # Check if TPM is enabled in host config
-    if ! nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.enable 2>/dev/null | grep -q "true"; then
+    if ! nix eval .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.enable 2>/dev/null | grep -q "true"; then
         echo "❌ TPM unlock not enabled for {{HOST}}"
         echo "   Add 'host.encryption.tpm.enable = true;' to your host configuration"
         exit 1

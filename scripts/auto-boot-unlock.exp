@@ -1,0 +1,47 @@
+#!/usr/bin/env expect
+
+# Automated bcachefs unlock during VM boot
+# Usage: auto-boot-unlock.exp <hostname>
+
+set timeout 600
+set hostname [lindex $argv 0]
+
+# Get password from SOPS
+set password [exec bash -c "cd /home/rain/nix-config && NIX_SECRETS_DIR=../nix-secrets bash -c 'source ./scripts/helpers.sh && sops_get_disk_password $hostname' 2>/dev/null"]
+
+send_user "Starting VM boot with automated unlock...\n"
+
+# Start the VM boot script
+spawn ./scripts/vm-boot-with-serial.sh $hostname
+
+# Wait for and respond to prompts
+expect {
+    -re "assword\\s*:" {
+        send_user "\n>>> Found password prompt, sending password...\n"
+        send "$password\r"
+        exp_continue
+    }
+    "Welcome to NixOS" {
+        send_user "\n=== ✅ Boot successful! ===\n"
+        send_user "Waiting 10 seconds for SSH to start...\n"
+        sleep 10
+        send_user "\nYou can now SSH with: ssh -p 22222 root@127.0.0.1\n"
+        send_user "Press Ctrl+A then X to exit QEMU\n"
+        interact
+    }
+    "login:" {
+        send_user "\n=== ✅ Reached login prompt! ===\n"
+        send_user "System booted successfully.\n"
+        send_user "Press Ctrl+A then X to exit QEMU, or continue with root login\n"
+        interact
+    }
+    timeout {
+        send_user "\n=== ⏱️  Timeout waiting for boot ===\n"
+        send_user "The system may still be booting. Check with: just vm-status sorrow\n"
+        exit 1
+    }
+    eof {
+        send_user "\n=== Connection closed ===\n"
+        exit 0
+    }
+}
