@@ -1,3 +1,6 @@
+# Firefox configuration via home-manager programs.firefox
+# Package installation via: myModules.apps.browsers.firefox.enable = true
+# Both must be enabled for Firefox to work with these settings
 { config, ... }:
 let
   homeDir = config.home.homeDirectory;

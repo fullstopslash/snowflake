@@ -12,6 +12,11 @@
     # Paths mirror filesystem: modules/<top>/<category> = [ "<module>" ]
     modules = {
       apps = {
+        window-managers = [
+          "plasma"
+          "hyprland"
+        ];
+        desktop = [ "wayland" ];
         media = [ "media" ];
         gaming = [ "gaming" ];
         comms = [ "comms" ];
@@ -27,12 +32,7 @@
         ];
       };
       services = {
-        desktop = [
-          "plasma"
-          "hyprland"
-          "wayland"
-          "common"
-        ];
+        desktop = [ "common" ];
         display-manager = [ "ly" ];
         development = [ "containers" ];
         cli = [ "atuin" ];

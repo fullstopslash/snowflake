@@ -4,21 +4,10 @@
 #
 # Usage:
 #   myModules.apps.development.tools.enable = true;
+{ pkgs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  cfg = config.myModules.apps.development.tools;
-in
-{
-  options.myModules.apps.development.tools = {
-    enable = lib.mkEnableOption "Development tools";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Development tools";
+  config = {
     programs.direnv = {
       enable = true;
       nix-direnv.enable = true; # Caches devShells, dramatically speeds up directory entry

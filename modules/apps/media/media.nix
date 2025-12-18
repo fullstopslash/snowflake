@@ -3,20 +3,10 @@
 # Media servers, players, and utilities.
 #
 # Usage: modules.apps.media = [ "media" ]
+{ pkgs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  cfg = config.myModules.apps.media.media;
-in
-{
-  options.myModules.apps.media.media.enable =
-    lib.mkEnableOption "Media apps (Jellyfin, Spotify, VLC, etc)";
-
-  config = lib.mkIf cfg.enable {
+  description = "Media apps (Jellyfin, Spotify, VLC, etc)";
+  config = {
     # Media packages
     environment.systemPackages = with pkgs; [
       # Media servers

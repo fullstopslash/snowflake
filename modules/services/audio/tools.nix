@@ -1,23 +1,12 @@
-# Audio tools and rtkit
-{ config, pkgs, lib, ... }:
-let
-  cfg = config.myModules.services.audio.tools;
-in
+# Audio tools
+{ pkgs, ... }:
 {
-  options.myModules.services.audio.tools = {
-    enable = lib.mkEnableOption "audio tools and rtkit";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "audio tools and rtkit";
+  config = {
     environment.systemPackages = with pkgs; [
       pwvucontrol
       qpwgraph
       playerctl
-      easyeffects
-      rnnoise
-      rnnoise-plugin
     ];
-
-    security.rtkit.enable = true;
   };
 }

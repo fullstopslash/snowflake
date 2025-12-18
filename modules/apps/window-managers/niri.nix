@@ -1,18 +1,7 @@
+{ pkgs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  cfg = config.myModules.services.desktop.niri;
-in
-{
-  options.myModules.services.desktop.niri = {
-    enable = lib.mkEnableOption "Niri compositor";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Niri compositor";
+  config = {
     # Install niri (no module exists; provide via packages and session entry)
 
     # Provide a minimal system-wide niri config; user config overrides it

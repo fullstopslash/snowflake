@@ -3,21 +3,10 @@
 # Messaging and chat applications.
 #
 # Usage: modules.apps.comms = [ "comms" ]
+{ pkgs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  cfg = config.myModules.apps.comms.comms;
-in
-{
-  options.myModules.apps.comms.comms = {
-    enable = lib.mkEnableOption "Communication apps (Discord, Slack, Signal)";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Communication apps (Discord, Slack, Signal)";
+  config = {
     environment.systemPackages = with pkgs; [
       discord
       slack

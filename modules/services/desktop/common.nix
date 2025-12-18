@@ -7,16 +7,12 @@
   ...
 }:
 let
-  cfg = config.myModules.services.desktop.common;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
   hasDesktopSecrets = config.host.hasSecrets && config.host.secretCategories.desktop or false;
 in
 {
-  options.myModules.services.desktop.common = {
-    enable = lib.mkEnableOption "common desktop environment";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "common desktop environment";
+  config = {
     # Allow insecure packages specifically required for the desktop role
     nixpkgs.config.permittedInsecurePackages = [
       "ventoy-1.1.07"
@@ -38,12 +34,6 @@ in
 
     # Desktop programs
     programs = {
-      firefox = {
-        enable = true;
-        nativeMessagingHosts.packages = [
-          pkgs.tridactyl-native
-        ];
-      };
       kdeconnect.enable = true;
     };
 
@@ -136,12 +126,8 @@ in
 
     # System packages for desktop
     environment.systemPackages = with pkgs; [
-      # Browsers
-      firefox
-      ungoogled-chromium
-      microsoft-edge
-      # floorp-bin
-      ladybird
+      # Browsers - now managed via modules/apps/browsers/ modules
+      # See: modules/apps/browsers/{firefox,chromium,microsoft-edge,ladybird}.nix
 
       # Desktop utilities
       input-leap

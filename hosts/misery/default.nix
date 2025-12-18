@@ -41,15 +41,9 @@
   };
 
   # ========================================
-  # GOLDEN GENERATION (boot safety testing)
+  # AUTO-UPGRADE & GOLDEN GENERATION
   # ========================================
-  myModules.system.boot.goldenGeneration = {
-    enable = true;
-    validateServices = [
-      "sshd.service"
-    ];
-    autoPinAfterBoot = true;
-  };
+  # Configured via task-test.nix role
 
   # ========================================
   # PHASE 17 TESTING NOTES

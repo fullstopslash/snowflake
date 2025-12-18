@@ -1,20 +1,11 @@
 # Voice assistant module (Wyoming integration)
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
+{ config, pkgs, ... }:
 let
-  cfg = config.myModules.apps.ai.voiceAssistant;
   openwakewordCfg = config.services.wyoming.openwakeword;
 in
 {
-  options.myModules.apps.ai.voiceAssistant = {
-    enable = lib.mkEnableOption "Wyoming voice assistant";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Wyoming voice assistant";
+  config = {
     services = {
       wyoming.satellite = {
         enable = true;

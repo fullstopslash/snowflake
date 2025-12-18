@@ -73,14 +73,43 @@
                 lib = hostLib;
               };
               modules = [
-                # Unified stateVersion for all hosts
-                { system.stateVersion = "25.05"; }
+                # StateVersion must load first (needed by modules/users via roles/common)
+                (
+                  { config, lib, ... }:
+                  {
+                    options.stateVersions = {
+                      system = lib.mkOption {
+                        type = lib.types.str;
+                        default = "25.11";
+                        description = "NixOS state version (DO NOT CHANGE on existing systems)";
+                      };
+                      home = lib.mkOption {
+                        type = lib.types.str;
+                        default = "25.11";
+                        description = "Home Manager state version (DO NOT CHANGE on existing environments)";
+                      };
+                    };
+
+                    config = lib.mkIf (hostname != "iso") {
+                      # Use mkDefault for normal hosts (priority 1000), which:
+                      # - Overrides NixOS's default stateVersion (priority 1500)
+                      # - Can be overridden by host-specific settings with mkForce
+                      # ISO is excluded to avoid conflict with installation-cd-base.nix
+                      system.stateVersion = lib.mkDefault config.stateVersions.system;
+                      warnings = lib.optional (
+                        config.stateVersions.system != config.stateVersions.home
+                      ) "StateVersion mismatch: system=${config.stateVersions.system} home=${config.stateVersions.home}";
+                    };
+                  }
+                )
 
                 # sops-nix for secrets management
                 inputs.sops-nix.nixosModules.sops
 
                 # Role system - must come before host config (skip for ISO which is special)
                 (if hostname != "iso" then ./roles else { })
+
+                # Common modules
                 ./modules/common
 
                 hostPath

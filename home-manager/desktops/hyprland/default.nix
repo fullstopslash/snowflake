@@ -1,5 +1,8 @@
 # Hyprland Home Manager Config
 #
+# Package installation via: myModules.apps.window-managers.hyprland.enable = true
+# This module provides Hyprland user-level configuration only.
+#
 # This module just enables hyprland and deploys user scripts.
 # All hyprland settings (keybinds, appearance, etc.) are managed via raw config files
 # in ./host-configs/ which get deployed to ~/.config/hypr/

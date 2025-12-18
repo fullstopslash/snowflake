@@ -3,21 +3,10 @@
 # Document creation, spreadsheets, presentations, diagrams.
 #
 # Usage: modules.apps.productivity = [ "productivity" ]
+{ pkgs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  cfg = config.myModules.apps.productivity.productivity;
-in
-{
-  options.myModules.apps.productivity.productivity = {
-    enable = lib.mkEnableOption "Productivity and office apps";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Productivity and office apps";
+  config = {
     environment.systemPackages = with pkgs; [
       libreoffice
       drawio

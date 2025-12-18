@@ -12,13 +12,13 @@
     modules = {
       apps = {
         media = [ "media" ];
+        desktop = [ "wayland" ];
         cli = [
           "comma"
           "shell"
         ];
       };
       services = {
-        desktop = [ "wayland" ];
         display-manager = [ "ly" ];
         audio = [ "pipewire" ];
       };

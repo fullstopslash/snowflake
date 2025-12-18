@@ -34,12 +34,28 @@ let
   appsPath = modulesPath + "/apps";
   servicesPath = modulesPath + "/services";
 
+  # Inline versions of lib.custom.scanDirNames and scanModuleNames
+  # (avoiding dependency on lib.custom which may not be available during option evaluation)
+  scanDirNames =
+    path:
+    builtins.filter (f: (builtins.readDir path).${f} == "directory") (
+      builtins.attrNames (builtins.readDir path)
+    );
+
+  scanModuleNames =
+    path:
+    builtins.map (f: lib.strings.removeSuffix ".nix" f) (
+      builtins.filter (f: lib.hasSuffix ".nix" f && f != "default.nix") (
+        builtins.attrNames (builtins.readDir path)
+      )
+    );
+
   # Get list of category directories
-  appsCategories = lib.custom.scanDirNames appsPath;
-  servicesCategories = lib.custom.scanDirNames servicesPath;
+  appsCategories = scanDirNames appsPath;
+  servicesCategories = scanDirNames servicesPath;
 
   # Get modules for a category (excludes default.nix, strips .nix suffix)
-  getModulesForCategory = basePath: category: lib.custom.scanModuleNames (basePath + "/${category}");
+  getModulesForCategory = basePath: category: scanModuleNames (basePath + "/${category}");
 
   # ========================================
   # OPTION GENERATION

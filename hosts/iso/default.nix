@@ -174,5 +174,5 @@
     '')
   ];
 
-  system.stateVersion = "25.05";
+  # Note: system.stateVersion inherited from modules/common/state-version.nix (25.11)
 }

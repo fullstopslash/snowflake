@@ -2,22 +2,10 @@
 #
 # System-level hyprland configuration. User config files (keybinds, settings)
 # should be managed via raw config files in ~/.config/hypr/, not in Nix.
+{ lib, pkgs, inputs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  inputs,
-  ...
-}:
-let
-  cfg = config.myModules.services.desktop.hyprland;
-in
-{
-  options.myModules.services.desktop.hyprland = {
-    enable = lib.mkEnableOption "Hyprland desktop";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Hyprland desktop";
+  config = {
     programs.hyprland = {
       enable = true;
     };

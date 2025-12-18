@@ -1,14 +1,8 @@
 # Shell configuration role
-{ config, lib, pkgs, ... }:
-let
-  cfg = config.myModules.apps.cli.shell;
-in
+{ pkgs, ... }:
 {
-  options.myModules.apps.cli.shell = {
-    enable = lib.mkEnableOption "Shell configuration and tools";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Shell configuration and tools";
+  config = {
     # Shell packages
     environment.systemPackages = with pkgs; [
       # Shells

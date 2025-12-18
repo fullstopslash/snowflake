@@ -12,6 +12,9 @@ let
   host = config.host;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 
+  # Capture stateVersion from NixOS config for use in home-manager modules
+  homeStateVersion = config.stateVersions.home;
+
   # List of yubikey public keys for the primary user
   pubKeys = lib.filesystem.listFilesRecursive (
     lib.custom.relativeToRoot "modules/users/${host.primaryUsername}/keys/"
@@ -138,7 +141,7 @@ in
                   home = {
                     homeDirectory = if isDarwin then "/Users/${user}" else "/home/${user}";
                     username = "${user}";
-                    stateVersion = "23.05"; # Required by home-manager
+                    stateVersion = homeStateVersion; # From centralized state-version.nix
                   };
                 }
               )
@@ -147,7 +150,7 @@ in
         ))
         // {
           root = {
-            home.stateVersion = "23.05"; # Avoid error
+            home.stateVersion = homeStateVersion; # From centralized state-version.nix
             programs.zsh = {
               enable = true;
               plugins = [

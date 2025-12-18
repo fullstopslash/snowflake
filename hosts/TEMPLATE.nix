@@ -46,7 +46,7 @@
   # MODULE OVERRIDES (replaces role defaults)
   # ========================================
   # Use lib.mkForce to completely replace a category
-  # modules.services.desktop = lib.mkForce [ "niri" "wayland" ];
+  # modules.apps.window-managers = lib.mkForce [ "niri" ];
 
   # ========================================
   # HOST IDENTITY (required)

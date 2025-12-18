@@ -5,24 +5,15 @@
 #
 # Usage:
 #   myModules.apps.cli.zellij.enable = true;
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
+{ lib, pkgs, ... }:
 let
-  cfg = config.myModules.apps.cli.zellij;
   configDir = ./zellij-configs;
   configFile = "${configDir}/config.kdl";
   hasConfig = builtins.pathExists configFile;
 in
 {
-  options.myModules.apps.cli.zellij = {
-    enable = lib.mkEnableOption "Zellij terminal multiplexer";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Zellij terminal multiplexer";
+  config = {
     environment.systemPackages = [ pkgs.zellij ];
 
     # Shell aliases for zellij

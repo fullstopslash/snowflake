@@ -1,17 +1,8 @@
 # Plasma desktop role
+{ pkgs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  cfg = config.myModules.services.desktop.plasma;
-in
-{
-  options.myModules.services.desktop.plasma.enable = lib.mkEnableOption "KDE Plasma 6 desktop";
-
-  config = lib.mkIf cfg.enable {
+  description = "KDE Plasma 6 desktop";
+  config = {
     environment.systemPackages = with pkgs; [
       # Force stable xwayland to override Plasma's default
       stable.xwayland

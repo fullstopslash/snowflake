@@ -1,6 +1,0 @@
-{ ... }:
-{
-  imports = [
-    ./golden-generation.nix
-  ];
-}

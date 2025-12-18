@@ -34,7 +34,7 @@
     # ========================================
     # Note: Pi uses extlinux bootloader, not systemd-boot
     # Boot counting feature won't work, but validation + GC pinning still useful
-    myModules.system.boot.goldenGeneration = {
+    myModules.system.goldenGeneration = {
       enable = lib.mkDefault true;
       validateServices = lib.mkDefault [
         "sshd.service"

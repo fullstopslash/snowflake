@@ -1,19 +1,8 @@
 # CLI tools rollup role (temporary consolidation)
+{ pkgs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  cfg = config.myModules.apps.cli.toolsFull;
-in
-{
-  options.myModules.apps.cli.toolsFull = {
-    enable = lib.mkEnableOption "Full set of CLI tools";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Full set of CLI tools";
+  config = {
     programs = {
       bat.enable = true;
       mosh.enable = true;

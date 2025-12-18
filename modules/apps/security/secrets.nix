@@ -1,14 +1,8 @@
 # Secrets role
-{ config, pkgs, lib, ... }:
-let
-  cfg = config.myModules.apps.security.secrets;
-in
+{ pkgs, ... }:
 {
-  options.myModules.apps.security.secrets = {
-    enable = lib.mkEnableOption "secrets management tools";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "secrets management tools";
+  config = {
     # Secrets packages
     environment.systemPackages = with pkgs; [
       # Secrets management

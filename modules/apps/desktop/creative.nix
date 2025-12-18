@@ -4,21 +4,10 @@
 #
 # Usage:
 #   myModules.apps.desktop.creative.enable = true;
+{ pkgs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  cfg = config.myModules.apps.desktop.creative;
-in
-{
-  options.myModules.apps.desktop.creative = {
-    enable = lib.mkEnableOption "Creative and media production apps";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Creative and media production apps";
+  config = {
     environment.systemPackages = with pkgs; [
       # Graphics
       gimp

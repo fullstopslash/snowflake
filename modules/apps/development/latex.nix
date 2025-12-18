@@ -1,13 +1,6 @@
 # LaTeX role
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
+{ pkgs, ... }:
 let
-  cfg = config.myModules.apps.development.latex;
-
   latex-fhs = pkgs.buildFHSEnv {
     name = "latex-env";
 
@@ -71,11 +64,8 @@ let
   };
 in
 {
-  options.myModules.apps.development.latex = {
-    enable = lib.mkEnableOption "LaTeX development environment";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "LaTeX development environment";
+  config = {
     # Make the latex-env command available system-wide
     environment = {
       systemPackages = [ latex-fhs ];

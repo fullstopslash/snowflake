@@ -3,21 +3,10 @@
 # Gaming platforms, tools, and utilities.
 #
 # Usage: modules.apps.gaming = [ "gaming" ]
+{ pkgs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  cfg = config.myModules.apps.gaming.gaming;
-in
-{
-  options.myModules.apps.gaming.gaming = {
-    enable = lib.mkEnableOption "Gaming apps and utilities";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Gaming apps and utilities";
+  config = {
     # Steam Controller settings
     hardware.steam-hardware.enable = true;
 

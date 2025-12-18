@@ -9,11 +9,27 @@
     # ========================================
     # MODULE SELECTIONS
     # ========================================
-    # Hosts can override with: modules.services.desktop = lib.mkForce [ "niri" ];
+    # Hosts can override with: modules.apps.window-managers = lib.mkForce [ "niri" ];
     # Paths mirror filesystem: modules/<top>/<category> = [ "<module>" ]
 
     modules = {
       apps = {
+        window-managers = [
+          "hyprland"
+          "plasma"
+        ];
+        desktop = [
+          "desktop"
+          "rofi"
+          "waybar"
+          "dunst"
+          "wayland"
+        ];
+        browsers = [
+          "firefox"
+          # "brave"     # Optional: enable if desired
+          # "chromium"  # Optional: enable if desired
+        ];
         media = [ "media" ];
         gaming = [ "gaming" ];
         comms = [ "comms" ];
@@ -29,12 +45,7 @@
         ];
       };
       services = {
-        desktop = [
-          "plasma"
-          "hyprland"
-          "wayland"
-          "common"
-        ];
+        desktop = [ "common" ];
         display-manager = [ "ly" ];
         development = [ "containers" ];
         cli = [ "atuin" ];

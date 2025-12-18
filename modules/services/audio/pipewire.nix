@@ -1,15 +1,21 @@
 # PipeWire audio server configuration
 # Base configuration with AirPlay support and resume fix
-{ config, pkgs, lib, ... }:
-let
-  cfg = config.myModules.services.audio.pipewire;
-in
 {
-  options.myModules.services.audio.pipewire = {
-    enable = lib.mkEnableOption "PipeWire audio server";
-  };
+  lib,
+  pkgs,
+  ...
+}:
+{
+  description = "PipeWire audio server";
+  config = {
+    # RealtimeKit for low-latency audio scheduling
+    security.rtkit.enable = true;
+    environment.systemPackages = with pkgs; [
+      pwvucontrol
+      qpwgraph
+      playerctl
+    ];
 
-  config = lib.mkIf cfg.enable {
     services.pipewire = {
       raopOpenFirewall = true;
       enable = true;

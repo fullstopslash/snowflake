@@ -1,4 +1,8 @@
-{ pkgs, ... }:
+# Home-manager configuration for desktop environment
+# Package installation managed via modules/apps/
+# Enable via: myModules.apps.window-managers.hyprland.enable = true;
+#             myModules.apps.desktop.{rofi,waybar,dunst}.enable = true;
+{ ... }:
 {
   imports = [
     # Packages with custom configs go here
@@ -12,10 +16,5 @@
     #./playerctl.nix # cli util and lib for controlling media players that implement MPRIS
     #./gtk.nix # mainly in gnome
   ];
-  home.packages = [
-    pkgs.pulseaudio # add pulse audio to the user path
-    pkgs.pavucontrol # gui for pulseaudio server and volume controls
-    pkgs.wl-clipboard # wayland copy and paste
-    pkgs.galculator # gtk based calculator
-  ];
+  # Package installations moved to modules/apps/desktop/desktop.nix
 }

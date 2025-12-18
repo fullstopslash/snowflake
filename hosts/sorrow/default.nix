@@ -47,41 +47,10 @@
   };
 
   # ========================================
-  # MINIMAL SERVICES
+  # AUTO-UPGRADE & GOLDEN GENERATION
   # ========================================
-  # All essential services come from vm-headless and headless roles
-  # Only add what's absolutely needed for testing
-
-  # ========================================
-  # AUTO-UPGRADE (for testing GitOps workflow)
-  # ========================================
-  # Test change: verifying auto-upgrade works with non-root user
-  myModules.services.autoUpgrade = {
-    enable = true;
-    mode = "local";
-    schedule = "hourly"; # Frequent for rapid testing iteration
-
-    # Safety features from Phase 15-03b
-    buildBeforeSwitch = true;
-
-    validationChecks = [
-      # Ensure critical services are enabled
-      "systemctl --quiet is-enabled sshd"
-      "systemctl --quiet is-enabled tailscaled"
-    ];
-
-    onValidationFailure = "rollback"; # Safest option
-  };
-
-  # ========================================
-  # GOLDEN GENERATION (boot safety testing)
-  # ========================================
-  myModules.system.boot.goldenGeneration = {
-    enable = true;
-    validateServices = [
-      "sshd.service"
-      "tailscaled.service"
-    ];
-    autoPinAfterBoot = true;
-  };
+  # Configured via task-test.nix role
+  # - Hourly auto-upgrade for rapid testing iteration
+  # - Build validation and rollback on failure
+  # - Golden generation auto-pinning after successful boot
 }

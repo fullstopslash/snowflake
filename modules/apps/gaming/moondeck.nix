@@ -1,14 +1,8 @@
 # Moondeck Buddy module
 #
 # Usage: modules.apps.gaming = [ "moondeck" ]
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
+{ pkgs, ... }:
 let
-  cfg = config.myModules.apps.gaming.moondeck;
   overlay = final: prev: {
     moondeck-buddy = prev.callPackage ../pkgs/moondeck-buddy {
       inherit (final) lib;
@@ -16,11 +10,8 @@ let
   };
 in
 {
-  options.myModules.apps.gaming.moondeck = {
-    enable = lib.mkEnableOption "Moondeck Buddy for Steam Deck streaming";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Moondeck Buddy for Steam Deck streaming";
+  config = {
     nixpkgs.overlays = [ overlay ];
     environment.systemPackages = [ pkgs.moondeck-buddy ];
   };

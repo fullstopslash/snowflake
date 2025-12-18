@@ -28,11 +28,35 @@
       };
     };
 
-    # Golden generation configuration for test VMs (manual pinning only)
-    myModules.system.boot.goldenGeneration = {
+    # ========================================
+    # AUTO-UPGRADE (for testing GitOps workflow)
+    # ========================================
+    # Frequent auto-upgrade for rapid testing iteration
+    # Validates critical services before accepting the upgrade
+    myModules.services.autoUpgrade = {
       enable = lib.mkDefault true;
-      validateServices = lib.mkDefault [ "sshd.service" ];
-      autoPinAfterBoot = lib.mkDefault false; # Manual pinning only for test VMs
+      mode = lib.mkDefault "local";
+      schedule = lib.mkDefault "hourly"; # Frequent for rapid testing iteration
+      buildBeforeSwitch = lib.mkDefault true;
+      validationChecks = lib.mkDefault [
+        # Ensure critical services are enabled
+        "systemctl --quiet is-enabled sshd"
+        "systemctl --quiet is-enabled tailscaled"
+      ];
+      onValidationFailure = lib.mkDefault "rollback"; # Safest option
+    };
+
+    # ========================================
+    # GOLDEN GENERATION (boot safety testing)
+    # ========================================
+    # Auto-pin after successful boot to test golden generation workflow
+    myModules.system.goldenGeneration = {
+      enable = lib.mkDefault true;
+      validateServices = lib.mkDefault [
+        "sshd.service"
+        "tailscaled.service"
+      ];
+      autoPinAfterBoot = lib.mkDefault true; # Auto-pin for testing golden generation workflow
     };
 
     # Test VMs need sops passwords, so override isMinimal from VM role

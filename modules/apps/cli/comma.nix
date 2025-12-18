@@ -2,16 +2,10 @@
 #
 # Wraps nix-index-database's comma feature.
 # Usage: , <program> - runs program from nixpkgs without installing
-{ config, lib, ... }:
-let
-  cfg = config.myModules.apps.cli.comma;
-in
+{ pkgs, ... }:
 {
-  options.myModules.apps.cli.comma = {
-    enable = lib.mkEnableOption "Comma - run programs without installing";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Comma - run programs without installing";
+  config = {
     programs.nix-index-database.comma.enable = true;
   };
 }

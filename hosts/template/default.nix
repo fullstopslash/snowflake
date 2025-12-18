@@ -66,5 +66,15 @@
     efi.canTouchEfiVariables = true;
   };
 
-  # Note: system.stateVersion is set centrally in flake.nix
+  # ========================================
+  # STATE VERSION (recommended for physical/production hosts)
+  # ========================================
+  # IMPORTANT: Set this explicitly for physical hosts to document installation version
+  # For test VMs, inheriting from flake.nix (25.11) is fine
+  #
+  # Uncomment and set to the NixOS version you're installing with:
+  # stateVersions.system = lib.mkForce "25.11";
+  # stateVersions.home = lib.mkForce "25.11";
+  #
+  # DO NOT CHANGE after deployment! This must match the version at install time.
 }

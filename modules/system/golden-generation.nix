@@ -18,7 +18,7 @@
 }:
 
 let
-  cfg = config.myModules.system.boot.goldenGeneration;
+  cfg = config.myModules.system.goldenGeneration;
 
   stateDir = "/var/lib/golden-generation";
   pendingFile = "${stateDir}/boot-pending";
@@ -305,7 +305,7 @@ let
   '';
 in
 {
-  options.myModules.system.boot.goldenGeneration = {
+  options.myModules.system.goldenGeneration = {
     enable = lib.mkEnableOption "automatic golden generation pinning and boot validation";
 
     validateServices = lib.mkOption {

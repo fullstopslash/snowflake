@@ -20,6 +20,8 @@
     # Paths mirror filesystem: modules/<top>/<category> = [ "<module>" ]
     modules = {
       apps = {
+        window-managers = [ "hyprland" ];
+        desktop = [ "wayland" ];
         cli = [
           "comma"
           "shell"
@@ -27,10 +29,6 @@
         ];
       };
       services = {
-        desktop = [
-          "hyprland"
-          "wayland"
-        ];
         display-manager = [ "ly" ];
         cli = [ "atuin" ];
         networking = [

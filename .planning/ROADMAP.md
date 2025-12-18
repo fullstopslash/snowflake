@@ -26,6 +26,8 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 - [x] **Phase 18: GitOps Test Infrastructure** - Decentralized GitOps testing and validation
 - [x] **Phase 19: Host Discovery & Flake Elegance** - Auto-discover hosts, rename hostSpec → host
 - [x] **Phase 20: Bcachefs Native Encryption** - ChaCha20/Poly1305 encryption, boot unlock automation
+- [ ] **Phase 21: TPM Unlock** - TPM2 automatic unlock for bcachefs with Clevis, manual fallback
+- [ ] **Phase 22: Home Manager Cleanup** - Separate installation from configuration, move desktop/browsers to modules/apps
 
 ## Phase Details
 
@@ -472,6 +474,56 @@ Target outcome:
 - Superior security: authenticated encryption chain vs block-layer encryption
 - Existing LUKS options preserved for traditional tooling compatibility
 
+### Phase 21: TPM Unlock
+**Goal**: Implement TPM2 automatic unlock for bcachefs native encryption using Clevis with fallback to interactive password
+**Depends on**: Phase 20 (Bcachefs Native Encryption)
+**Plans**: 1 plan
+
+Vision: Enable unattended server boot while maintaining encryption-at-rest security. TPM unlock allows servers to auto-boot without manual password entry, while laptops can remain interactive-unlock only. Per-host configuration via existing hostSpec (host.encryption.tpm.enable).
+
+Key challenges:
+- boot.initrd.clevis doesn't work for bcachefs (LUKS-specific configuration)
+- Requires custom initrd systemd service implementation
+- Must handle Clevis TPM unlock + fallback to interactive prompt
+- Integration with existing bcachefs-unlock.nix module
+
+Plans:
+- [ ] 21-01: TPM unlock implementation (custom initrd service, Clevis integration, testing)
+
+Target outcome:
+- Custom initrd systemd service for bcachefs + Clevis TPM unlock
+- Automatic unlock when host.encryption.tpm.enable = true and token exists
+- Robust fallback to systemd-ask-password for manual entry
+- Per-host TPM configuration via hostSpec
+- Servers boot unattended, laptops remain interactive
+- Clevis package included in initrd when TPM enabled
+- Kernel keyring linking handled properly
+
+### Phase 22: Home Manager Cleanup
+**Goal**: Reorganize home-manager to separate package installation from user configuration
+**Depends on**: Nothing (independent cleanup phase)
+**Plans**: 1 plan
+
+Vision: Align desktop environment and browser management with the consistent module selection pattern used throughout the repo. Move package installations to modules/apps/ where they follow the standard myModules.apps.* enable pattern, while keeping only genuine user-level configuration (dotfiles, programs.* settings) in home-manager.
+
+Current issues:
+- Desktop environments (Hyprland) installed via home-manager, not modules/apps/
+- Browsers (Firefox, Brave, Chromium) installed via home-manager, not modules/apps/
+- Desktop utilities (rofi, waybar, dunst) installed via home-manager
+- Inconsistent with repo-wide pattern where apps are enabled via myModules.apps.*
+- Hard to understand what belongs in home-manager vs modules
+
+Plans:
+- [ ] 22-01: Reorganize home-manager (create window-manager/browser/utility modules, update home-manager files, test)
+
+Target outcome:
+- Package installation: modules/apps/window-managers/, modules/apps/desktop/, modules/apps/browsers/
+- User configuration: home-manager/ (programs.firefox policies, Hyprland user scripts, XDG settings)
+- Consistent module selection: myModules.apps.{category}.{app}.enable across all apps
+- Clear documentation: README in home-manager/ explaining the separation
+- Desktop role enables appropriate modules automatically
+- No functionality lost, everything still works the same for users
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -496,3 +548,5 @@ Target outcome:
 | 18. GitOps Test Infrastructure | 1/1 | Complete | 2025-12-16 |
 | 19. Host Discovery & Flake Elegance | 3/3 | Complete | 2025-12-16 |
 | 20. Bcachefs Native Encryption | 3/3 | Complete | 2025-12-17 |
+| 21. TPM Unlock | 0/1 | Planning | - |
+| 22. Home Manager Cleanup | 0/1 | Planning | - |

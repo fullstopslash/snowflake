@@ -36,14 +36,7 @@
   extraModules.services.security = [ "bitwarden" ];
 
   # ========================================
-  # GOLDEN GENERATION (boot safety testing)
+  # AUTO-UPGRADE & GOLDEN GENERATION
   # ========================================
-  myModules.system.boot.goldenGeneration = {
-    enable = true;
-    validateServices = [
-      "sshd.service"
-      # Removed tailscaled - not enabled in VM role
-    ];
-    autoPinAfterBoot = true;
-  };
+  # Configured via task-test.nix role
 }

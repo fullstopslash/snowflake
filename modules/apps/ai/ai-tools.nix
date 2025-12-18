@@ -1,22 +1,13 @@
 # AI tools module: install various AI development tools
 #
 # Usage: modules.apps.ai = [ "ai-tools" ]
-{
-  pkgs,
-  config,
-  lib,
-  ...
-}:
+{ config, pkgs, ... }:
 let
-  cfg = config.myModules.apps.ai.aiTools;
   ollamaCfg = config.services.ollama;
 in
 {
-  options.myModules.apps.ai.aiTools = {
-    enable = lib.mkEnableOption "AI development tools (aider, aichat)";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "AI development tools (aider, aichat)";
+  config = {
     environment.systemPackages = with pkgs; [
       aider-chat
       aichat

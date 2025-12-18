@@ -9,10 +9,10 @@
 # - Shell configuration (zsh)
 # - Nixpkgs overlays
 # - Localization
+# - NixOS-specific defaults (terminfo, firmware) - conditional on Linux
 #
 # Note: Home-manager settings are in roles/common.nix (where the module is imported)
-# Note: Nix settings are in nix.nix, SOPS settings are in sops.nix
-# Note: NixOS-specific settings are in nixos-defaults.nix
+# Note: Nix settings are in nix-management.nix, SOPS settings are in sops.nix
 {
   inputs,
   outputs,
@@ -70,4 +70,19 @@
   #
   i18n.defaultLocale = lib.mkDefault "en_US.UTF-8";
   time.timeZone = lib.mkDefault "America/Chicago";
+}
+// lib.mkIf pkgs.stdenv.isLinux {
+  #
+  # ========== NixOS-Specific Defaults ==========
+  # Only applies to Linux/NixOS hosts, not Darwin
+  #
+
+  # Add terminal emulator terminfo (skip on headless systems)
+  environment.systemPackages = lib.optionals (!config.host.isHeadless or false) [
+    pkgs.kitty.terminfo
+    pkgs.ghostty.terminfo
+  ];
+
+  # Enable firmware with a license allowing redistribution
+  hardware.enableRedistributableFirmware = true;
 }

@@ -1,16 +1,9 @@
-{ ... }:
+# Service modules
+#
+# Auto-discovers and imports all service modules using filesystem-driven
+# module discovery pattern.
+
+{ lib, ... }:
 {
-  imports = [
-    ./ai
-    ./audio
-    ./cli
-    ./desktop
-    ./development
-    ./display-manager
-    ./dotfiles
-    ./misc
-    ./networking
-    ./security
-    ./storage
-  ];
+  imports = lib.custom.scanPaths ./.;
 }

@@ -1,19 +1,8 @@
 # CLI tools rollup role (temporary consolidation)
+{ pkgs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  cfg = config.myModules.apps.cli.toolsCore;
-in
-{
-  options.myModules.apps.cli.toolsCore = {
-    enable = lib.mkEnableOption "Core CLI tools";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Core CLI tools";
+  config = {
     environment.systemPackages = with pkgs; [
       # Core utilities
       coreutils

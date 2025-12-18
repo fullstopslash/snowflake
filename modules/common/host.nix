@@ -24,12 +24,14 @@
 }:
 let
   # Helper to check if list contains any wayland-based desktop
-  hasWaylandDesktop = builtins.any (m: builtins.elem m config.modules.desktop) [
-    "hyprland"
-    "niri"
-    "wayland"
-    "plasma" # Plasma 6 is Wayland by default
-  ];
+  # Check both window-managers and desktop apps
+  hasWaylandDesktop =
+    builtins.any (m: builtins.elem m (config.modules.apps.window-managers or [])) [
+      "hyprland"
+      "niri"
+      "plasma" # Plasma 6 is Wayland by default
+    ]
+    || builtins.elem "wayland" (config.modules.apps.desktop or []);
 in
 {
   options.host = lib.mkOption {
@@ -260,8 +262,8 @@ in
 
         isMinimal = lib.mkOption {
           type = lib.types.bool;
-          default = config.modules.desktop == [ ] && config.modules.apps == [ ];
-          description = "Minimal installation (derived: true if no desktop or apps selected)";
+          default = (config.modules.apps.desktop or [ ]) == [ ] && (config.modules.apps.window-managers or [ ]) == [ ];
+          description = "Minimal installation (derived: true if no desktop or window-managers selected)";
         };
 
         isHeadless = lib.mkOption {
@@ -278,7 +280,7 @@ in
 
         isDevelopment = lib.mkOption {
           type = lib.types.bool;
-          default = config.modules.development != [ ];
+          default = (config.modules.apps.development or [ ]) != [ ] || (config.modules.services.development or [ ]) != [ ];
           description = "Development tools enabled (derived: true if any development modules selected)";
         };
 
@@ -296,8 +298,8 @@ in
 
         useWindowManager = lib.mkOption {
           type = lib.types.bool;
-          default = config.modules.desktop != [ ];
-          description = "Use graphical window manager (derived: true if any desktop modules selected)";
+          default = (config.modules.apps.window-managers or [ ]) != [ ] || (config.modules.apps.desktop or [ ]) != [ ];
+          description = "Use graphical window manager (derived: true if any window-managers or desktop modules selected)";
         };
 
         hasSecrets = lib.mkOption {

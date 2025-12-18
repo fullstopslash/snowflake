@@ -1,19 +1,8 @@
 # Wayland support module
+{ pkgs, ... }:
 {
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-let
-  cfg = config.myModules.services.desktop.wayland;
-in
-{
-  options.myModules.services.desktop.wayland = {
-    enable = lib.mkEnableOption "Wayland support and utilities";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Wayland support and utilities";
+  config = {
     # general packages related to wayland
     environment.systemPackages = [
       pkgs.grim # screen capture component, required by flameshot

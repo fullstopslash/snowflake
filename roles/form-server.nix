@@ -36,7 +36,7 @@
     # ========================================
     # GOLDEN GENERATION (boot safety)
     # ========================================
-    myModules.system.boot.goldenGeneration = {
+    myModules.system.goldenGeneration = {
       enable = lib.mkDefault true;
       validateServices = lib.mkDefault [
         "sshd.service"

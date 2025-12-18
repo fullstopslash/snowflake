@@ -1,14 +1,8 @@
 # OBS Studio module
 #
 # Usage: modules.apps.media = [ "obs" ]
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
+{ config, lib, pkgs, ... }:
 let
-  cfg = config.myModules.apps.media.obs;
   # v4l2loopback 0.15.3 for kernel 6.18 compatibility
   v4l2loopback = config.boot.kernelPackages.v4l2loopback.overrideAttrs (_old: {
     version = "0.15.3";
@@ -21,11 +15,8 @@ let
   });
 in
 {
-  options.myModules.apps.media.obs = {
-    enable = lib.mkEnableOption "OBS Studio with virtual camera";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "OBS Studio with virtual camera";
+  config = {
     programs.obs-studio = {
       enable = true;
       enableVirtualCamera = true;

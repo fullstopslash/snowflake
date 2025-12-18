@@ -1,17 +1,13 @@
 # Crush AI coding agent role
 # FIXME: Requires nix-ai-tools flake input - disabled until added
-{ config, lib, ... }:
+{ config, pkgs, ... }:
 let
-  cfg = config.myModules.apps.ai.crush;
   ollamaCfg = config.services.ollama;
   ollamaUrl = "http://${ollamaCfg.host}:${toString ollamaCfg.port}";
 in
 {
-  options.myModules.apps.ai.crush = {
-    enable = lib.mkEnableOption "Crush AI coding agent";
-  };
-
-  config = lib.mkIf cfg.enable {
+  description = "Crush AI coding agent";
+  config = {
     # Disabled: nix-ai-tools flake input not available
     # environment.systemPackages = with inputs.nix-ai-tools.packages.${pkgs.stdenv.hostPlatform.system}; [
     #   crush
