@@ -226,11 +226,21 @@ in
         fi
 
         # Fallback: Interactive password prompt via systemd-ask-password
+        # Get password once and use it for all devices
+        echo "🔐 Manual unlock required - enter password once for all devices"
+
+        # Use systemd-ask-password to get the password once
+        PASSWORD=$(systemd-ask-password "Enter passphrase for bcachefs devices:")
+
+        if [ -z "$PASSWORD" ]; then
+          echo "❌ No password provided"
+          exit 1
+        fi
+
         # Unlock all devices with the same password
-        echo "🔐 Manual unlock required"
         for DEVICE in $DEVICES; do
           echo "Unlocking $DEVICE..."
-          if ! bcachefs unlock "$DEVICE"; then
+          if ! echo "$PASSWORD" | bcachefs unlock "$DEVICE"; then
             echo "❌ Manual unlock failed for $DEVICE"
             exit 1
           fi
