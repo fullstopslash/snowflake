@@ -183,6 +183,25 @@ in
                 default = { };
                 description = "TPM-based unlock configuration";
               };
+
+              remoteUnlock = lib.mkOption {
+                type = lib.types.submodule {
+                  options = {
+                    enable = lib.mkOption {
+                      type = lib.types.bool;
+                      default = false;
+                      description = "Enable SSH access in initrd for remote disk unlocking";
+                    };
+                    port = lib.mkOption {
+                      type = lib.types.int;
+                      default = 22;
+                      description = "SSH port for initrd remote unlock (default: 22)";
+                    };
+                  };
+                };
+                default = { };
+                description = "Remote SSH unlock configuration for initrd";
+              };
             };
           };
           default = { };
