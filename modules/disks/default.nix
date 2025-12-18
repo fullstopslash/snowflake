@@ -286,6 +286,7 @@ in
   imports = [
     inputs.disko.nixosModules.disko
     ./bcachefs-unlock.nix
+    ./luks-tpm-unlock.nix
   ];
 
   config = lib.mkIf cfg.enable {
