@@ -159,15 +159,22 @@ in
           ];
 
         # SSH configuration files in initrd
-        contents = {
-          "/etc/ssh/sshd_config.d/initrd.conf".text = ''
-            Port ${toString remoteUnlockPort}
-            PermitRootLogin yes
-            AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
-            HostKey ${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key
-          '';
-          "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
-        };
+        contents =
+          {
+            "/etc/ssh/sshd_config.d/initrd.conf".text = ''
+              Port ${toString remoteUnlockPort}
+              PermitRootLogin yes
+              AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
+              HostKey ${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key
+            '';
+            "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
+          }
+          // lib.optionalAttrs tpmEnabled {
+            # Directly include clevis binaries in initrd for TPM unlock
+            "/bin/clevis".source = "${pkgs.clevis}/bin/clevis";
+            "/bin/clevis-decrypt".source = "${pkgs.clevis}/bin/clevis-decrypt";
+            "/bin/jose".source = "${pkgs.jose}/bin/jose";
+          };
       };
 
     # Ensure bcachefs-tools is available in initrd
