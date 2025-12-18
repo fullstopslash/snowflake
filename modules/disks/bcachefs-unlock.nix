@@ -20,6 +20,7 @@
 #   Uses /tmp/disko-password during format (Phase 17 pattern)
 #   Post-install: configure Clevis or rely on interactive unlock
 {
+  inputs,
   config,
   lib,
   pkgs,
@@ -28,6 +29,9 @@
 let
   cfg = config.disks;
   hostCfg = config.host;
+
+  # SOPS folder path
+  sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 
   # Check if layout uses bcachefs native encryption
   isEncrypted = lib.strings.hasInfix "bcachefs-encrypt" cfg.layout;
@@ -45,11 +49,10 @@ in
 {
   config = lib.mkIf (cfg.enable && isEncrypted) {
     # SOPS secret for disk password (needed for auto-enrollment)
+    # Uses shared.yaml default password (same as justfile bcachefs-setup-tpm)
     sops.secrets = lib.mkIf (tpmEnabled && config.host.hasSecrets) {
-      "passwords/disk" = {
-        sopsFile = "${config.host.sopsFolder}/${config.networking.hostName}.yaml";
-        # Fallback to shared.yaml if host-specific doesn't exist
-        # Note: The actual secret path is "passwords.disk.default" in shared.yaml
+      "passwords/disk/default" = {
+        sopsFile = "${sopsFolder}/shared.yaml";
       };
     };
 
@@ -267,7 +270,7 @@ in
         echo "🔐 Auto-enrolling TPM token for bcachefs..."
 
         # Get disk password from SOPS secret
-        SOPS_FILE="${config.sops.secrets."passwords/disk".path}"
+        SOPS_FILE="${config.sops.secrets."passwords/disk/default".path}"
 
         if [ ! -f "$SOPS_FILE" ]; then
           echo "❌ SOPS password file not found at $SOPS_FILE"
