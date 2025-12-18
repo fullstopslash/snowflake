@@ -60,7 +60,7 @@ let
   clevisTokenInitrd = "/etc/clevis/bcachefs-root.jwe";
 in
 {
-  config = lib.mkIf (cfg.enable && isEncrypted) {
+  config = lib.mkIf false { # DISABLED FOR TESTING
     # SOPS secret for disk password (needed for auto-enrollment)
     # Uses shared.yaml default password (same as justfile bcachefs-setup-tpm)
     sops.secrets = lib.mkIf (tpmEnabled && config.host.hasSecrets) {
