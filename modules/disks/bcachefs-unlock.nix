@@ -74,7 +74,81 @@ in
     boot.supportedFilesystems = [ "bcachefs" ];
 
     # Use systemd in initrd for robust unlock workflow
-    boot.initrd.systemd.enable = true;
+    boot.initrd.systemd =
+      let
+        # Bcachefs unlock script based on NixOS wiki pattern
+        # Loops mounting until password is entered and devices are unlocked
+        bcachefsUnlockScript = pkgs.writeShellScriptBin "bcachefs-unlock-root" ''
+          set -e
+
+          # Link user keyring to session keyring for key sharing
+          keyctl link @u @s || true
+
+          # Create sysroot if it doesn't exist
+          mkdir -p /sysroot
+
+          # Find all bcachefs devices
+          echo "🔐 Bcachefs Unlock: Detecting encrypted devices..."
+          DEVICES=$(blkid -t TYPE=bcachefs -o device 2>/dev/null || true)
+
+          if [ -z "$DEVICES" ]; then
+            echo "❌ No bcachefs devices found"
+            exit 1
+          fi
+
+          echo "Found bcachefs devices:"
+          echo "$DEVICES"
+
+          # Try TPM unlock first if token exists
+          ${lib.optionalString tpmEnabled ''
+            TOKEN_PATH="${clevisTokenInitrd}"
+            if [ -f "$TOKEN_PATH" ]; then
+              echo "🔑 Attempting TPM unlock via Clevis..."
+              PASSWORD=$(clevis decrypt < "$TOKEN_PATH" 2>/dev/null || true)
+              if [ -n "$PASSWORD" ]; then
+                for DEVICE in $DEVICES; do
+                  echo "  Unlocking $DEVICE with TPM..."
+                  if echo "$PASSWORD" | bcachefs unlock "$DEVICE" 2>/dev/null; then
+                    echo "  ✅ $DEVICE unlocked via TPM"
+                  fi
+                done
+              fi
+            fi
+          ''}
+
+          # Mount root filesystem (will prompt for password if still locked)
+          ROOT_DEVICE="/dev/disk/by-label/root"
+          echo "🔐 Mounting root filesystem..."
+          until bcachefs mount "$ROOT_DEVICE" /sysroot; do
+            echo "⚠️  Mount failed, retrying in 1 second..."
+            sleep 1
+          done
+
+          echo "✅ Root filesystem mounted successfully"
+
+          # Mount persist filesystem if it exists
+          PERSIST_DEVICE="/dev/disk/by-label/persist"
+          if [ -e "$PERSIST_DEVICE" ]; then
+            echo "🔐 Mounting persist filesystem..."
+            mkdir -p /sysroot/persist
+            until bcachefs mount "$PERSIST_DEVICE" /sysroot/persist; do
+              echo "⚠️  Persist mount failed, retrying in 1 second..."
+              sleep 1
+            done
+            echo "✅ Persist filesystem mounted successfully"
+          fi
+
+          exit 0
+        '';
+      in
+      {
+        enable = true;
+        initrdBin = with pkgs; [ keyutils ];
+        storePaths = [ "${bcachefsUnlockScript}/bin/bcachefs-unlock-root" ];
+
+        # Set root shell to unlock script for interactive/remote unlock
+        users.root.shell = "${bcachefsUnlockScript}/bin/bcachefs-unlock-root";
+      };
 
     # Ensure bcachefs-tools is available in initrd
     boot.initrd.availableKernelModules =
@@ -106,31 +180,9 @@ in
         ];
       };
       postCommands = ''
-        # Automatically prompt for bcachefs unlock on SSH login
-        cat > /root/.profile <<'EOF'
-        if pgrep -x "bcachefs-tpm-unlock" > /dev/null; then
-          echo "=== Bcachefs Remote Unlock ==="
-          echo "The system is waiting for disk unlock."
-          echo ""
-
-          # Check systemd-ask-password status
-          if systemctl is-active systemd-ask-password-wall.path >/dev/null 2>&1; then
-            echo "Password prompt is active. Attempting to connect..."
-            # Try to interact with the password prompt
-            systemd-tty-ask-password-agent
-          else
-            echo "No active password prompt found."
-            echo "Unlock may have already succeeded."
-          fi
-
-          echo ""
-          echo "Unlock complete or failed. Exiting SSH session."
-          exit 1
-        else
-          echo "Bcachefs unlock service not found."
-          exit 1
-        fi
-        EOF
+        # Root shell is set to bcachefs-unlock-root script
+        # SSH login will automatically run the unlock script
+        echo "Remote unlock configured - SSH will run unlock script automatically"
       '';
     };
 
@@ -232,120 +284,6 @@ in
       pkgs.clevis
       pkgs.jose
     ];
-
-    # Custom systemd service for TPM unlock (when enabled)
-    boot.initrd.systemd.services.bcachefs-tpm-unlock = lib.mkIf tpmEnabled {
-      description = "Bcachefs TPM Automatic Unlock";
-      documentation = [ "Unlock bcachefs encrypted root using Clevis TPM token with password fallback" ];
-
-      # Run early, before filesystem mounts
-      unitConfig = {
-        DefaultDependencies = "no";
-        Before = [
-          "sysroot.mount"
-          "initrd-fs.target"
-        ];
-        After = [ "systemd-modules-load.service" ];
-      };
-
-      wantedBy = [ "initrd.target" ];
-
-      # Service runs once and stays loaded
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-      };
-
-      script = ''
-        set +e  # Don't exit on error - we want to try fallback
-
-        echo "🔐 Bcachefs TPM Unlock: Starting..."
-
-        # Find all bcachefs devices
-        ALL_DEVICES=$(blkid -t TYPE=bcachefs -o device 2>/dev/null || true)
-
-        # Filter to only encrypted ones
-        DEVICES=""
-        for dev in $ALL_DEVICES; do
-          if bcachefs unlock -c "$dev" > /dev/null 2>&1; then
-            DEVICES="$DEVICES $dev"
-          fi
-        done
-
-        if [ -z "$DEVICES" ]; then
-          echo "ℹ️  No encrypted bcachefs devices found"
-          exit 0
-        fi
-
-        echo "Found encrypted bcachefs devices:"
-        echo "$DEVICES"
-
-        # Link kernel keyrings for proper key sharing
-        keyctl link @u @s || true
-
-        # Attempt TPM unlock via Clevis for all devices
-        TOKEN_PATH="${clevisTokenInitrd}"
-
-        if [ -f "$TOKEN_PATH" ]; then
-          echo "🔑 Attempting TPM unlock via Clevis..."
-
-          # Decrypt password once and store it
-          PASSWORD=$(clevis decrypt < "$TOKEN_PATH")
-
-          if [ $? -eq 0 ] && [ -n "$PASSWORD" ]; then
-            SUCCESS=true
-            for DEVICE in $DEVICES; do
-              echo "  Unlocking $DEVICE..."
-              if bcachefs unlock "$DEVICE" <<< "$PASSWORD"; then
-                echo "  ✅ $DEVICE unlocked"
-              else
-                echo "  ⚠️  Failed to unlock $DEVICE"
-                SUCCESS=false
-              fi
-            done
-
-            if [ "$SUCCESS" = true ]; then
-              echo "✅ TPM unlock successful for all devices"
-              exit 0
-            else
-              echo "⚠️  TPM unlock failed for some devices"
-              echo "Falling back to interactive password prompt..."
-            fi
-          else
-            echo "⚠️  TPM decrypt failed"
-            echo "Falling back to interactive password prompt..."
-          fi
-        else
-          echo "ℹ️  Clevis token not found at $TOKEN_PATH"
-          echo "Falling back to interactive password prompt..."
-        fi
-
-        # Fallback: Interactive password prompt via systemd-ask-password
-        # Get password once and use it for all devices
-        echo "🔐 Manual unlock required - enter password once for all devices"
-
-        # Use systemd-ask-password to get the password once
-        PASSWORD=$(systemd-ask-password "Enter passphrase for bcachefs devices:")
-
-        if [ -z "$PASSWORD" ]; then
-          echo "❌ No password provided"
-          exit 1
-        fi
-
-        # Unlock all devices with the same password
-        for DEVICE in $DEVICES; do
-          echo "Unlocking $DEVICE..."
-          if ! bcachefs unlock "$DEVICE" <<< "$PASSWORD"; then
-            echo "❌ Manual unlock failed for $DEVICE"
-            exit 1
-          fi
-          echo "✅ $DEVICE unlocked"
-        done
-
-        echo "✅ All devices unlocked successfully"
-        exit 0
-      '';
-    };
 
     # Kernel keyring management
     # The bcachefs unlock process adds keys to the kernel keyring

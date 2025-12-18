@@ -47,9 +47,19 @@
     primaryUsername = "rain";
     persistFolder = "/persist"; # Required for bcachefs-encrypt-impermanence layout
 
-    # TPM automatic unlock for bcachefs encryption
-    # Server VM: auto-unlock on boot (no manual password needed)
-    encryption.tpm.enable = true;
+    # Encryption configuration
+    encryption = {
+      # TPM automatic unlock for bcachefs encryption
+      # Server VM: auto-unlock on boot (no manual password needed)
+      tpm.enable = true;
+
+      # Remote SSH unlock in initrd
+      # Allows unlocking via: ssh -p 2222 root@<vm-ip>
+      remoteUnlock = {
+        enable = true;
+        port = 2222; # Different port to avoid conflict with main SSH
+      };
+    };
   };
 
   # ========================================
