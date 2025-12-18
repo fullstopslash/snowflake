@@ -23,6 +23,12 @@
   # Disable GRUB, use systemd-boot (from vmHeadless role)
   boot.loader.grub.enable = lib.mkForce false;
 
+  # Force disable GUI packages for minimal VM
+  programs.kdeconnect.enable = lib.mkForce false;
+  services.displayManager.sddm.enable = lib.mkForce false;
+  services.hardware.openrgb.enable = lib.mkForce false;
+  services.printing.enable = lib.mkForce false;
+
   # ========================================
   # ROLE SELECTION (LSP autocomplete-enabled)
   # ========================================

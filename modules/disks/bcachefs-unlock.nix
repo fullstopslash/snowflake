@@ -174,12 +174,20 @@ in
 
         echo "🔐 Bcachefs TPM Unlock: Starting..."
 
-        # Find ALL encrypted bcachefs devices
-        DEVICES=$(blkid -t TYPE=bcachefs -o device)
+        # Find all bcachefs devices
+        ALL_DEVICES=$(blkid -t TYPE=bcachefs -o device 2>/dev/null || true)
+
+        # Filter to only encrypted ones
+        DEVICES=""
+        for dev in $ALL_DEVICES; do
+          if bcachefs unlock -c "$dev" > /dev/null 2>&1; then
+            DEVICES="$DEVICES $dev"
+          fi
+        done
 
         if [ -z "$DEVICES" ]; then
-          echo "❌ No bcachefs devices found"
-          exit 1
+          echo "ℹ️  No encrypted bcachefs devices found"
+          exit 0
         fi
 
         echo "Found encrypted bcachefs devices:"
@@ -201,7 +209,7 @@ in
             SUCCESS=true
             for DEVICE in $DEVICES; do
               echo "  Unlocking $DEVICE..."
-              if echo "$PASSWORD" | bcachefs unlock "$DEVICE"; then
+              if bcachefs unlock "$DEVICE" <<< "$PASSWORD"; then
                 echo "  ✅ $DEVICE unlocked"
               else
                 echo "  ⚠️  Failed to unlock $DEVICE"
@@ -240,7 +248,7 @@ in
         # Unlock all devices with the same password
         for DEVICE in $DEVICES; do
           echo "Unlocking $DEVICE..."
-          if ! echo "$PASSWORD" | bcachefs unlock "$DEVICE"; then
+          if ! bcachefs unlock "$DEVICE" <<< "$PASSWORD"; then
             echo "❌ Manual unlock failed for $DEVICE"
             exit 1
           fi
