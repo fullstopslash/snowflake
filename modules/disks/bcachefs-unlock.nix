@@ -111,10 +111,10 @@ in
         users.root.shell = "${bcachefsUnlockScript}/bin/bcachefs-unlock-root";
 
         # Include Clevis and dependencies when TPM unlock is enabled
-        extraBin = lib.mkIf tpmEnabled {
-          clevis = "${pkgs.clevis}/bin/clevis";
-          clevis-decrypt = "${pkgs.clevis}/bin/clevis-decrypt";
-          jose = "${pkgs.jose}/bin/jose";
+        extraBin = {
+          clevis = lib.mkIf tpmEnabled "${pkgs.clevis}/bin/clevis";
+          clevis-decrypt = lib.mkIf tpmEnabled "${pkgs.clevis}/bin/clevis-decrypt";
+          jose = lib.mkIf tpmEnabled "${pkgs.jose}/bin/jose";
           keyctl = "${pkgs.keyutils}/bin/keyctl";
         };
 
@@ -147,10 +147,16 @@ in
           };
         };
 
-        storePaths = [
-          "${bcachefsUnlockScript}/bin/bcachefs-unlock-root"
-          "${pkgs.openssh}/bin/sshd"
-        ];
+        storePaths =
+          [
+            "${bcachefsUnlockScript}/bin/bcachefs-unlock-root"
+            "${pkgs.openssh}/bin/sshd"
+          ]
+          ++ lib.optionals tpmEnabled [
+            "${pkgs.clevis}"
+            "${pkgs.jose}"
+            "${pkgs.keyutils}"
+          ];
 
         # SSH configuration files in initrd
         contents = {
@@ -239,19 +245,16 @@ in
       ];
 
     # Copy secrets from persist into initrd
-    # Only include if files exist (to avoid breaking fresh installs)
-    boot.initrd.secrets =
-      (lib.mkIf (tpmEnabled && builtins.pathExists clevisTokenPersist) {
+    # TPM token: Always copy (required for TPM unlock)
+    # SSH key: Only if it exists (to avoid breaking fresh installs)
+    boot.initrd.secrets = lib.mkMerge [
+      (lib.mkIf tpmEnabled {
         "${clevisTokenInitrd}" = clevisTokenPersist;
       })
-      // (
-        let
-          sshHostKeyPath = "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
-        in
-        lib.mkIf (builtins.pathExists sshHostKeyPath) {
-          "/etc/ssh/initrd_ssh_host_ed25519_key" = sshHostKeyPath;
-        }
-      );
+      (lib.optionalAttrs (builtins.pathExists "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key") {
+        "/etc/ssh/initrd_ssh_host_ed25519_key" = "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
+      })
+    ];
 
     # Make clevis available in running system for token generation
     environment.systemPackages = lib.mkIf tpmEnabled [
