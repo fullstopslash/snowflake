@@ -96,69 +96,15 @@ in
     # Use systemd in initrd for robust unlock workflow
     boot.initrd.systemd =
       let
-        # Bcachefs unlock script based on NixOS wiki pattern
-        # Loops mounting until password is entered and devices are unlocked
+        # Bcachefs unlock script - simplified wiki pattern
+        # Just loops mounting until password is entered
         bcachefsUnlockScript = pkgs.writeShellScriptBin "bcachefs-unlock-root" ''
-          set -e
-
-          # Link user keyring to session keyring for key sharing
-          keyctl link @u @s || true
-
-          # Create sysroot if it doesn't exist
+          keyctl link @u @s
           mkdir -p /sysroot
-
-          # Find all bcachefs devices
-          echo "🔐 Bcachefs Unlock: Detecting encrypted devices..."
-          DEVICES=$(blkid -t TYPE=bcachefs -o device 2>/dev/null || true)
-
-          if [ -z "$DEVICES" ]; then
-            echo "❌ No bcachefs devices found"
-            exit 1
-          fi
-
-          echo "Found bcachefs devices:"
-          echo "$DEVICES"
-
-          # Try TPM unlock first if token exists
-          ${lib.optionalString tpmEnabled ''
-            TOKEN_PATH="${clevisTokenInitrd}"
-            if [ -f "$TOKEN_PATH" ]; then
-              echo "🔑 Attempting TPM unlock via Clevis..."
-              PASSWORD=$(clevis decrypt < "$TOKEN_PATH" 2>/dev/null || true)
-              if [ -n "$PASSWORD" ]; then
-                for DEVICE in $DEVICES; do
-                  echo "  Unlocking $DEVICE with TPM..."
-                  if echo "$PASSWORD" | bcachefs unlock "$DEVICE" 2>/dev/null; then
-                    echo "  ✅ $DEVICE unlocked via TPM"
-                  fi
-                done
-              fi
-            fi
-          ''}
-
-          # Mount root filesystem (will prompt for password if still locked)
-          ROOT_DEVICE="/dev/disk/by-label/root"
-          echo "🔐 Mounting root filesystem..."
-          until bcachefs mount "$ROOT_DEVICE" /sysroot; do
-            echo "⚠️  Mount failed, retrying in 1 second..."
+          until bcachefs mount /dev/disk/by-label/root /sysroot
+          do
             sleep 1
           done
-
-          echo "✅ Root filesystem mounted successfully"
-
-          # Mount persist filesystem if it exists
-          PERSIST_DEVICE="/dev/disk/by-label/persist"
-          if [ -e "$PERSIST_DEVICE" ]; then
-            echo "🔐 Mounting persist filesystem..."
-            mkdir -p /sysroot/persist
-            until bcachefs mount "$PERSIST_DEVICE" /sysroot/persist; do
-              echo "⚠️  Persist mount failed, retrying in 1 second..."
-              sleep 1
-            done
-            echo "✅ Persist filesystem mounted successfully"
-          fi
-
-          exit 0
         '';
       in
       {
