@@ -51,14 +51,8 @@
     encryption = {
       # TPM automatic unlock for bcachefs encryption
       # Server VM: auto-unlock on boot (no manual password needed)
+      # Remote SSH unlock is automatically enabled on port 2222
       tpm.enable = true;
-
-      # Remote SSH unlock in initrd
-      # Allows unlocking via: ssh -p 2222 root@<vm-ip>
-      remoteUnlock = {
-        enable = true;
-        port = 2222; # Different port to avoid conflict with main SSH
-      };
     };
   };
 

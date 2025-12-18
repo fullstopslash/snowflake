@@ -40,9 +40,8 @@ let
   tpmEnabled = hostCfg.encryption.tpm.enable or false;
   pcrIds = hostCfg.encryption.tpm.pcrIds or "7";
 
-  # Remote SSH unlock configuration
-  remoteUnlockEnabled = hostCfg.encryption.remoteUnlock.enable or false;
-  remoteUnlockPort = hostCfg.encryption.remoteUnlock.port or 22;
+  # Remote SSH unlock is always enabled with bcachefs encryption
+  remoteUnlockPort = 2222; # Default port for initrd SSH
 
   # Get authorized keys from primary user's yubikey public keys
   primaryUserKeysPath = lib.custom.relativeToRoot "modules/users/${hostCfg.primaryUsername}/keys/";
@@ -61,26 +60,6 @@ let
   clevisTokenInitrd = "/etc/clevis/bcachefs-root.jwe";
 in
 {
-  # Define remoteUnlock options within this module (bcachefs-specific)
-  options.host.encryption.remoteUnlock = lib.mkOption {
-    type = lib.types.submodule {
-      options = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Enable SSH access in initrd for remote bcachefs unlocking";
-        };
-        port = lib.mkOption {
-          type = lib.types.int;
-          default = 22;
-          description = "SSH port for initrd remote unlock";
-        };
-      };
-    };
-    default = { };
-    description = "Remote SSH unlock for bcachefs (only available with bcachefs encryption)";
-  };
-
   config = lib.mkIf (cfg.enable && isEncrypted) {
     # SOPS secret for disk password (needed for auto-enrollment)
     # Uses shared.yaml default password (same as justfile bcachefs-setup-tpm)
@@ -110,7 +89,6 @@ in
       {
         enable = true;
         initrdBin = with pkgs; [ keyutils ];
-        storePaths = [ "${bcachefsUnlockScript}/bin/bcachefs-unlock-root" ];
 
         # Set root shell to unlock script for interactive/remote unlock
         users.root.shell = "${bcachefsUnlockScript}/bin/bcachefs-unlock-root";
@@ -123,8 +101,8 @@ in
           keyctl = "${pkgs.keyutils}/bin/keyctl";
         };
 
-        # Configure DHCP for remote unlock
-        network = lib.mkIf remoteUnlockEnabled {
+        # Configure DHCP for remote unlock (always enabled with bcachefs encryption)
+        network = {
           enable = true;
           networks."10-ethernet" = {
             matchConfig.Name = "en*";
@@ -135,36 +113,51 @@ in
             dhcpV4Config.RouteMetric = 1024;
           };
         };
+
+        # SSH access in initrd for remote unlock
+        services.sshd = {
+          description = "SSH Daemon for remote unlock";
+          wantedBy = [ "initrd.target" ];
+          after = [ "initrd-nixos-copy-secrets.service" ];
+          before = [ "initrd-switch-root.target" ];
+          conflicts = [ "initrd-switch-root.target" ];
+          unitConfig.DefaultDependencies = false;
+
+          serviceConfig = {
+            ExecStart = "${pkgs.openssh}/bin/sshd -D -e -f /etc/ssh/sshd_config.d/initrd.conf";
+            KillMode = "process";
+            Restart = "always";
+          };
+        };
+
+        storePaths = [
+          "${bcachefsUnlockScript}/bin/bcachefs-unlock-root"
+          "${pkgs.openssh}/bin/sshd"
+        ];
+
+        # SSH configuration files in initrd
+        contents = {
+          "/etc/ssh/sshd_config.d/initrd.conf".text = ''
+            Port ${toString remoteUnlockPort}
+            PermitRootLogin yes
+            AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
+            HostKey ${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key
+          '';
+          "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
+        };
       };
 
     # Ensure bcachefs-tools is available in initrd
-    boot.initrd.availableKernelModules =
-      [
-        "bcachefs"
-        "sha256"
-        # Note: ChaCha20/Poly1305 are built-in for kernels >= 6.15
-        # For older kernels, add: "poly1305" "chacha20"
-      ]
-      ++ lib.optionals remoteUnlockEnabled [
-        # Network drivers for remote unlock
-        "r8169" # Realtek Ethernet
-        "e1000e" # Intel Ethernet
-        "igb" # Intel Gigabit
-      ];
-
-    # Remote SSH unlock in initrd (optional)
-    boot.initrd.network = lib.mkIf remoteUnlockEnabled {
-      enable = true;
-      ssh = {
-        enable = true;
-        port = remoteUnlockPort;
-        authorizedKeys = authorizedKeys;
-        hostKeys = [
-          # Generate persistent host key in /persist
-          "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key"
-        ];
-      };
-    };
+    boot.initrd.availableKernelModules = [
+      "bcachefs"
+      "sha256"
+      # Note: ChaCha20/Poly1305 are built-in for kernels >= 6.15
+      # For older kernels, add: "poly1305" "chacha20"
+      # Network drivers for remote unlock (always enabled with bcachefs encryption)
+      "r8169" # Realtek Ethernet
+      "e1000e" # Intel Ethernet
+      "igb" # Intel Gigabit
+    ];
 
     # TPM unlock via custom initrd systemd service
     # Note: boot.initrd.clevis is LUKS-only and doesn't work for bcachefs
@@ -183,12 +176,7 @@ in
             else
               "- Interactive passphrase prompt via systemd-ask-password"
           }
-          ${
-            if remoteUnlockEnabled then
-              "- Remote SSH unlock in initrd (enabled on port ${toString remoteUnlockPort})"
-            else
-              ""
-          }
+          - Remote SSH unlock in initrd (enabled on port ${toString remoteUnlockPort})
 
           ${
             if !tpmEnabled then
@@ -211,22 +199,11 @@ in
               ''
           }
 
-          ${
-            if remoteUnlockEnabled then
-              ''
-                Remote unlock setup:
-                - SSH into initrd: ssh -p ${toString remoteUnlockPort} root@<host-ip>
-                - Password prompt will appear automatically
-                - Authorized keys: primary user's yubikey keys
-                - Host key: ${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key
-
-                To enable remote unlock:
-                  host.encryption.remoteUnlock.enable = true;
-                  host.encryption.remoteUnlock.port = 22;  # optional, defaults to 22
-              ''
-            else
-              ""
-          }
+          Remote unlock setup:
+          - SSH into initrd: ssh -p ${toString remoteUnlockPort} root@<host-ip>
+          - Password prompt will appear automatically
+          - Authorized keys: primary user's yubikey keys
+          - Host key: ${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key
 
           Security note:
           - ChaCha20/Poly1305 AEAD provides authenticated encryption
@@ -244,12 +221,21 @@ in
         ''
       ];
 
-    # Copy TPM token from persist into initrd
-    # The token is generated on first boot and included in subsequent rebuilds
-    # Only include if the token file exists (to avoid breaking fresh installs)
-    boot.initrd.secrets = lib.mkIf (tpmEnabled && builtins.pathExists clevisTokenPersist) {
-      "${clevisTokenInitrd}" = clevisTokenPersist;
-    };
+    # Copy secrets from persist into initrd
+    # Only include if files exist (to avoid breaking fresh installs)
+    boot.initrd.secrets =
+      (lib.mkIf (tpmEnabled && builtins.pathExists clevisTokenPersist) {
+        "${clevisTokenInitrd}" = clevisTokenPersist;
+      })
+      //
+      (
+        let
+          sshHostKeyPath = "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
+        in
+        lib.mkIf (builtins.pathExists sshHostKeyPath) {
+          "/etc/ssh/initrd_ssh_host_ed25519_key" = sshHostKeyPath;
+        }
+      );
 
     # Make clevis available in running system for token generation
     environment.systemPackages = lib.mkIf tpmEnabled [
