@@ -61,6 +61,26 @@ let
   clevisTokenInitrd = "/etc/clevis/bcachefs-root.jwe";
 in
 {
+  # Define remoteUnlock options within this module (bcachefs-specific)
+  options.host.encryption.remoteUnlock = lib.mkOption {
+    type = lib.types.submodule {
+      options = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Enable SSH access in initrd for remote bcachefs unlocking";
+        };
+        port = lib.mkOption {
+          type = lib.types.int;
+          default = 22;
+          description = "SSH port for initrd remote unlock";
+        };
+      };
+    };
+    default = { };
+    description = "Remote SSH unlock for bcachefs (only available with bcachefs encryption)";
+  };
+
   config = lib.mkIf (cfg.enable && isEncrypted) {
     # SOPS secret for disk password (needed for auto-enrollment)
     # Uses shared.yaml default password (same as justfile bcachefs-setup-tpm)
