@@ -174,32 +174,29 @@ in
       ];
 
     # Remote SSH unlock in initrd (optional)
-    # Using systemd-based networking for initrd
-    boot.initrd = lib.mkIf remoteUnlockEnabled {
-      network = {
+    boot.initrd.network = lib.mkIf remoteUnlockEnabled {
+      enable = true;
+      ssh = {
         enable = true;
-        ssh = {
-          enable = true;
-          port = remoteUnlockPort;
-          authorizedKeys = authorizedKeys;
-          hostKeys = [
-            # Generate persistent host key in /persist
-            "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key"
-          ];
-        };
+        port = remoteUnlockPort;
+        authorizedKeys = authorizedKeys;
+        hostKeys = [
+          # Generate persistent host key in /persist
+          "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key"
+        ];
       };
+    };
 
-      # Configure DHCP with systemd-networkd
-      systemd.network = {
-        enable = true;
-        networks."10-ethernet" = {
-          matchConfig.Name = "en*";
-          networkConfig = {
-            DHCP = "yes";
-            IPv6AcceptRA = true;
-          };
-          dhcpV4Config.RouteMetric = 1024;
+    # Configure DHCP with systemd-networkd for remote unlock
+    boot.initrd.systemd.network = lib.mkIf remoteUnlockEnabled {
+      enable = true;
+      networks."10-ethernet" = {
+        matchConfig.Name = "en*";
+        networkConfig = {
+          DHCP = "yes";
+          IPv6AcceptRA = true;
         };
+        dhcpV4Config.RouteMetric = 1024;
       };
     };
 
