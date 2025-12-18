@@ -174,35 +174,50 @@ in
 
         echo "🔐 Bcachefs TPM Unlock: Starting..."
 
-        # Detect encrypted bcachefs device (assume root device)
-        # Use the "root" label from disko configuration
-        DEVICE="/dev/disk/by-label/root"
-        if [ ! -e "$DEVICE" ]; then
-          # Fallback to scanning for bcachefs encrypted devices
-          DEVICE=$(blkid -t TYPE=bcachefs -o device | head -n1)
-        fi
+        # Find ALL encrypted bcachefs devices
+        DEVICES=$(blkid -t TYPE=bcachefs -o device)
 
-        if [ -z "$DEVICE" ]; then
-          echo "❌ No bcachefs device found"
+        if [ -z "$DEVICES" ]; then
+          echo "❌ No bcachefs devices found"
           exit 1
         fi
 
-        echo "Found encrypted device: $DEVICE"
+        echo "Found encrypted bcachefs devices:"
+        echo "$DEVICES"
 
         # Link kernel keyrings for proper key sharing
         keyctl link @u @s || true
 
-        # Attempt TPM unlock via Clevis
+        # Attempt TPM unlock via Clevis for all devices
         TOKEN_PATH="${clevisTokenInitrd}"
 
         if [ -f "$TOKEN_PATH" ]; then
           echo "🔑 Attempting TPM unlock via Clevis..."
 
-          if clevis decrypt < "$TOKEN_PATH" | bcachefs unlock "$DEVICE"; then
-            echo "✅ TPM unlock successful"
-            exit 0
+          # Decrypt password once and store it
+          PASSWORD=$(clevis decrypt < "$TOKEN_PATH")
+
+          if [ $? -eq 0 ] && [ -n "$PASSWORD" ]; then
+            SUCCESS=true
+            for DEVICE in $DEVICES; do
+              echo "  Unlocking $DEVICE..."
+              if echo "$PASSWORD" | bcachefs unlock "$DEVICE"; then
+                echo "  ✅ $DEVICE unlocked"
+              else
+                echo "  ⚠️  Failed to unlock $DEVICE"
+                SUCCESS=false
+              fi
+            done
+
+            if [ "$SUCCESS" = true ]; then
+              echo "✅ TPM unlock successful for all devices"
+              exit 0
+            else
+              echo "⚠️  TPM unlock failed for some devices"
+              echo "Falling back to interactive password prompt..."
+            fi
           else
-            echo "⚠️  TPM unlock failed (exit code $?)"
+            echo "⚠️  TPM decrypt failed"
             echo "Falling back to interactive password prompt..."
           fi
         else
@@ -211,13 +226,18 @@ in
         fi
 
         # Fallback: Interactive password prompt via systemd-ask-password
+        # Unlock all devices with the same password
         echo "🔐 Manual unlock required"
-        if ! bcachefs unlock "$DEVICE"; then
-          echo "❌ Manual unlock failed"
-          exit 1
-        fi
+        for DEVICE in $DEVICES; do
+          echo "Unlocking $DEVICE..."
+          if ! bcachefs unlock "$DEVICE"; then
+            echo "❌ Manual unlock failed for $DEVICE"
+            exit 1
+          fi
+          echo "✅ $DEVICE unlocked"
+        done
 
-        echo "✅ Manual unlock successful"
+        echo "✅ All devices unlocked successfully"
         exit 0
       '';
     };
