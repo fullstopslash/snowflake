@@ -440,10 +440,10 @@
     },
     "nix-secrets": {
       "locked": {
-        "lastModified": 1766069032,
-        "narHash": "sha256-HbnEiFEPrVzgNtS31K9+jh/15XjfklRnHQ14vzlMrAY=",
+        "lastModified": 1766070058,
+        "narHash": "sha256-U/0ROV2lPww1qoORPCwsKP8WX7gOYkw5G0VSR1Tofmg=",
         "ref": "simple",
-        "rev": "4933ed61a374ea334c4be7e0caa95a5a6e181934",
+        "rev": "badb0546c573c93cb4e79f9ccfd1f2be32244d43",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/fullstopslash/snowflake-secrets.git"

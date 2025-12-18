@@ -40,6 +40,20 @@ let
   tpmEnabled = hostCfg.encryption.tpm.enable or false;
   pcrIds = hostCfg.encryption.tpm.pcrIds or "7";
 
+  # Remote SSH unlock configuration
+  remoteUnlockEnabled = hostCfg.encryption.remoteUnlock.enable or false;
+  remoteUnlockPort = hostCfg.encryption.remoteUnlock.port or 22;
+
+  # Get authorized keys from primary user's yubikey public keys
+  primaryUserKeysPath = lib.custom.relativeToRoot "modules/users/${hostCfg.primaryUsername}/keys/";
+  authorizedKeys =
+    if builtins.pathExists primaryUserKeysPath then
+      lib.lists.forEach (lib.filesystem.listFilesRecursive primaryUserKeysPath) (
+        key: builtins.readFile key
+      )
+    else
+      [ ];
+
   # Clevis JWE token paths
   # Persistent storage (survives reboots, used for auto-enrollment and rebuilds)
   clevisTokenPersist = "${hostCfg.persistFolder}/etc/clevis/bcachefs-root.jwe";
@@ -63,12 +77,62 @@ in
     boot.initrd.systemd.enable = true;
 
     # Ensure bcachefs-tools is available in initrd
-    boot.initrd.availableKernelModules = [
-      "bcachefs"
-      "sha256"
-      # Note: ChaCha20/Poly1305 are built-in for kernels >= 6.15
-      # For older kernels, add: "poly1305" "chacha20"
-    ];
+    boot.initrd.availableKernelModules =
+      [
+        "bcachefs"
+        "sha256"
+        # Note: ChaCha20/Poly1305 are built-in for kernels >= 6.15
+        # For older kernels, add: "poly1305" "chacha20"
+      ]
+      ++ lib.optionals remoteUnlockEnabled [
+        # Network drivers for remote unlock
+        "r8169" # Realtek Ethernet
+        "e1000e" # Intel Ethernet
+        "igb" # Intel Gigabit
+      ];
+
+    # Remote SSH unlock in initrd (optional)
+    boot.initrd.network = lib.mkIf remoteUnlockEnabled {
+      enable = true;
+      udhcpc.enable = true;
+      flushBeforeStage2 = true;
+      ssh = {
+        enable = true;
+        port = remoteUnlockPort;
+        authorizedKeys = authorizedKeys;
+        hostKeys = [
+          # Generate persistent host key in /persist
+          "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key"
+        ];
+      };
+      postCommands = ''
+        # Automatically prompt for bcachefs unlock on SSH login
+        cat > /root/.profile <<'EOF'
+        if pgrep -x "bcachefs-tpm-unlock" > /dev/null; then
+          echo "=== Bcachefs Remote Unlock ==="
+          echo "The system is waiting for disk unlock."
+          echo ""
+
+          # Check systemd-ask-password status
+          if systemctl is-active systemd-ask-password-wall.path >/dev/null 2>&1; then
+            echo "Password prompt is active. Attempting to connect..."
+            # Try to interact with the password prompt
+            systemd-tty-ask-password-agent
+          else
+            echo "No active password prompt found."
+            echo "Unlock may have already succeeded."
+          fi
+
+          echo ""
+          echo "Unlock complete or failed. Exiting SSH session."
+          exit 1
+        else
+          echo "Bcachefs unlock service not found."
+          exit 1
+        fi
+        EOF
+      '';
+    };
 
     # TPM unlock via custom initrd systemd service
     # Note: boot.initrd.clevis is LUKS-only and doesn't work for bcachefs
@@ -86,6 +150,12 @@ in
               "- TPM2 automatic unlock via Clevis (enabled)"
             else
               "- Interactive passphrase prompt via systemd-ask-password"
+          }
+          ${
+            if remoteUnlockEnabled then
+              "- Remote SSH unlock in initrd (enabled on port ${toString remoteUnlockPort})"
+            else
+              ""
           }
 
           ${
@@ -107,6 +177,23 @@ in
                 Token location: ${clevisTokenPersist}
                 Will be copied to initrd at: ${clevisTokenInitrd}
               ''
+          }
+
+          ${
+            if remoteUnlockEnabled then
+              ''
+                Remote unlock setup:
+                - SSH into initrd: ssh -p ${toString remoteUnlockPort} root@<host-ip>
+                - Password prompt will appear automatically
+                - Authorized keys: primary user's yubikey keys
+                - Host key: ${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key
+
+                To enable remote unlock:
+                  host.encryption.remoteUnlock.enable = true;
+                  host.encryption.remoteUnlock.port = 22;  # optional, defaults to 22
+              ''
+            else
+              ""
           }
 
           Security note:
