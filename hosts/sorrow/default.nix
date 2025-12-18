@@ -14,21 +14,10 @@
   # Disk configuration via modules/disks
   # Testing Phase 20: bcachefs native encryption with impermanence
   disks = {
-    enable = false; # TEMPORARILY DISABLED FOR TESTING
+    enable = true;
     layout = "bcachefs-encrypt-impermanence";
     device = "/dev/vda";
     withSwap = false;
-  };
-
-  # Temporary basic filesystem config for testing
-  fileSystems."/" = {
-    device = "/dev/disk/by-label/root";
-    fsType = "bcachefs";
-  };
-
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-label/ESP";
-    fsType = "vfat";
   };
 
   # Disable GRUB, use systemd-boot (from vmHeadless role)
