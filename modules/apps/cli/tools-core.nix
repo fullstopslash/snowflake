@@ -29,6 +29,9 @@
 
       # System monitoring
       btop
+
+      # Terminal compatibility
+      kitty.terminfo # For SSH from kitty terminals (provides xterm-kitty terminfo)
     ];
   };
 }
