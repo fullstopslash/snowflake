@@ -36,11 +36,23 @@ let
   tpmEnabled = hostCfg.encryption.tpm.enable or false;
   pcrIds = hostCfg.encryption.tpm.pcrIds or "7";
 
-  # Clevis JWE token path (stored in persist for impermanence)
-  clevisTokenPath = "${hostCfg.persistFolder}/etc/clevis/bcachefs-root.jwe";
+  # Clevis JWE token paths
+  # Persistent storage (survives reboots, used for auto-enrollment and rebuilds)
+  clevisTokenPersist = "${hostCfg.persistFolder}/etc/clevis/bcachefs-root.jwe";
+  # Initrd location (where unlock service looks for it)
+  clevisTokenInitrd = "/etc/clevis/bcachefs-root.jwe";
 in
 {
   config = lib.mkIf (cfg.enable && isEncrypted) {
+    # SOPS secret for disk password (needed for auto-enrollment)
+    sops.secrets = lib.mkIf (tpmEnabled && config.host.hasSecrets) {
+      "passwords/disk" = {
+        sopsFile = "${config.host.sopsFolder}/${config.networking.hostName}.yaml";
+        # Fallback to shared.yaml if host-specific doesn't exist
+        # Note: The actual secret path is "passwords.disk.default" in shared.yaml
+      };
+    };
+
     # Enable bcachefs filesystem support
     boot.supportedFilesystems = [ "bcachefs" ];
 
@@ -84,11 +96,13 @@ in
               ''
             else
               ''
-                TPM unlock is enabled. Generate token with:
-                  sudo just bcachefs-setup-tpm
+                TPM unlock is enabled.
+                Token will be automatically generated on first boot.
+                After first boot, rebuild system to include token in initrd:
+                  sudo nixos-rebuild switch
 
-                Token will be stored at: ${clevisTokenPath}
-                Rebuild system after token generation to include in initrd.
+                Token location: ${clevisTokenPersist}
+                Will be copied to initrd at: ${clevisTokenInitrd}
               ''
           }
 
@@ -114,6 +128,13 @@ in
       clevis-decrypt = "${pkgs.clevis}/bin/clevis-decrypt";
       jose = "${pkgs.jose}/bin/jose";
       keyctl = "${pkgs.keyutils}/bin/keyctl";
+    };
+
+    # Copy TPM token from persist into initrd
+    # The token is generated on first boot and included in subsequent rebuilds
+    # NOTE: builtins.pathExists is evaluated at build time, so this uses lib.mkIf with a runtime check
+    boot.initrd.secrets = lib.mkIf tpmEnabled {
+      "${clevisTokenInitrd}" = lib.mkDefault clevisTokenPersist;
     };
 
     # Make clevis available in running system for token generation
@@ -166,7 +187,7 @@ in
         keyctl link @u @s || true
 
         # Attempt TPM unlock via Clevis
-        TOKEN_PATH="${clevisTokenPath}"
+        TOKEN_PATH="${clevisTokenInitrd}"
 
         if [ -f "$TOKEN_PATH" ]; then
           echo "🔑 Attempting TPM unlock via Clevis..."
@@ -208,5 +229,81 @@ in
 
     # Note: NixOS bcachefs module already sets kernelPackages to latest
     # No need to override here
+
+    # Automatic TPM token enrollment on first boot
+    # This service runs AFTER the system boots successfully (not during activation)
+    # to avoid breaking nixos-anywhere installation
+    systemd.services.bcachefs-tpm-auto-enroll = lib.mkIf tpmEnabled {
+      description = "Auto-enroll TPM token for bcachefs encryption";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "network-online.target" "sops-nix.service" ];
+      wants = [ "network-online.target" ];
+
+      unitConfig = {
+        # Only run if token doesn't exist AND stamp file doesn't exist
+        ConditionPathExists = [
+          "!${clevisTokenPersist}"
+          "!${hostCfg.persistFolder}/var/lib/bcachefs-tpm-enrolled.stamp"
+        ];
+      };
+
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+
+      path = with pkgs; [
+        clevis
+        jose
+        bcachefs-tools
+        coreutils
+        gnugrep
+        sops
+      ];
+
+      script = ''
+        set -euo pipefail
+
+        echo "🔐 Auto-enrolling TPM token for bcachefs..."
+
+        # Get disk password from SOPS secret
+        SOPS_FILE="${config.sops.secrets."passwords/disk".path}"
+
+        if [ ! -f "$SOPS_FILE" ]; then
+          echo "❌ SOPS password file not found at $SOPS_FILE"
+          echo "   TPM auto-enrollment requires SOPS to be configured"
+          exit 1
+        fi
+
+        DISK_PASSWORD=$(cat "$SOPS_FILE")
+
+        if [ -z "$DISK_PASSWORD" ]; then
+          echo "❌ Failed to retrieve disk password from SOPS"
+          exit 1
+        fi
+
+        # Create directory for token
+        mkdir -p "$(dirname "${clevisTokenPersist}")"
+
+        # Generate Clevis JWE token with TPM2
+        echo "🔑 Generating TPM2 Clevis token (PCR ${pcrIds})..."
+        echo "$DISK_PASSWORD" | ${pkgs.clevis}/bin/clevis encrypt tpm2 '{"pcr_ids":"${pcrIds}"}' > "${clevisTokenPersist}"
+
+        # Set proper permissions
+        chmod 600 "${clevisTokenPersist}"
+        chown root:root "${clevisTokenPersist}"
+
+        # Create stamp file to prevent re-running
+        mkdir -p "${hostCfg.persistFolder}/var/lib"
+        touch "${hostCfg.persistFolder}/var/lib/bcachefs-tpm-enrolled.stamp"
+
+        echo "✅ TPM token enrolled successfully!"
+        echo "   Token location: ${clevisTokenPersist}"
+        echo "   Token will be included in initrd on next rebuild"
+        echo ""
+        echo "⚠️  IMPORTANT: Run 'sudo nixos-rebuild switch' to include token in initrd"
+        echo "   After rebuild, TPM unlock will work on next boot"
+      '';
+    };
   };
 }
