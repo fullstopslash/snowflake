@@ -75,11 +75,28 @@ in
     # Use systemd in initrd for robust unlock workflow
     boot.initrd.systemd =
       let
-        # Bcachefs unlock script - simplified wiki pattern
-        # Just loops mounting until password is entered
+        # Bcachefs unlock script with TPM auto-unlock support
+        # Tries TPM first, falls back to password prompt
         bcachefsUnlockScript = pkgs.writeShellScriptBin "bcachefs-unlock-root" ''
           keyctl link @u @s
           mkdir -p /sysroot
+
+          # Try TPM unlock first if token exists
+          if [ -f "${clevisTokenInitrd}" ]; then
+            echo "🔐 Attempting TPM auto-unlock..."
+            if PASSWORD=$(clevis decrypt < "${clevisTokenInitrd}" 2>/dev/null); then
+              if echo "$PASSWORD" | bcachefs mount /dev/disk/by-label/root /sysroot 2>/dev/null; then
+                echo "✅ TPM unlock successful!"
+                exit 0
+              else
+                echo "⚠️  TPM unlock failed, falling back to password prompt..."
+              fi
+            else
+              echo "⚠️  TPM decryption failed, falling back to password prompt..."
+            fi
+          fi
+
+          # Fall back to interactive password prompt
           until bcachefs mount /dev/disk/by-label/root /sysroot
           do
             sleep 1
@@ -227,8 +244,7 @@ in
       (lib.mkIf (tpmEnabled && builtins.pathExists clevisTokenPersist) {
         "${clevisTokenInitrd}" = clevisTokenPersist;
       })
-      //
-      (
+      // (
         let
           sshHostKeyPath = "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
         in
