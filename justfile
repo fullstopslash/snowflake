@@ -210,7 +210,7 @@ install HOST:
 
 # Helper: Get primary username for a host from flake
 _get-vm-primary-user HOST:
-    @nix eval --raw .#nixosConfigurations.{{HOST}}.config.hostSpec.primaryUsername
+    @nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.primaryUsername
 
 # Complete fresh install: pre-generate keys, deploy FULL config directly via nixos-anywhere
 # Uses --extra-files to include SSH host key + age key, eliminating the need for a second rebuild

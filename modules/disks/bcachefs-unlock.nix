@@ -47,6 +47,8 @@ let
       [ ];
 
   # Clevis JWE token paths
+  # Token stored in nix-secrets for build-time access (pathExists works with Nix store paths)
+  clevisTokenSource = "${sopsFolder}/clevis/bcachefs-root.jwe";
   clevisTokenPersist = "${hostCfg.persistFolder}/etc/clevis/bcachefs-root.jwe";
 
   # Get filesystem device paths for Clevis configuration
@@ -117,13 +119,13 @@ in
       } // lib.optionalAttrs (builtins.pathExists "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key") {
         "/etc/ssh/initrd_ssh_host_ed25519_key".source =
           "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
-      } // lib.optionalAttrs (tpmEnabled && builtins.pathExists clevisTokenPersist && rootDevice != null) {
+      } // lib.optionalAttrs (tpmEnabled && rootDevice != null && builtins.pathExists clevisTokenSource) {
         # Copy Clevis token to initrd at the path nixpkgs bcachefs module expects
         # Path format: /etc/clevis/${device}.jwe where device is the filesystem device path
-        "/etc/clevis/${rootDevice}.jwe".source = clevisTokenPersist;
-      } // lib.optionalAttrs (tpmEnabled && builtins.pathExists clevisTokenPersist && persistDevice != null && persistDevice != rootDevice) {
+        "/etc/clevis/${rootDevice}.jwe".source = clevisTokenSource;
+      } // lib.optionalAttrs (tpmEnabled && persistDevice != null && persistDevice != rootDevice && builtins.pathExists clevisTokenSource) {
         # Persist filesystem token (if different device than root)
-        "/etc/clevis/${persistDevice}.jwe".source = clevisTokenPersist;
+        "/etc/clevis/${persistDevice}.jwe".source = clevisTokenSource;
       };
 
       storePaths = [
@@ -143,16 +145,17 @@ in
     # Enable Clevis for automated TPM unlock
     # Note: boot.initrd.clevis is primarily for LUKS, but nixpkgs bcachefs module
     # checks for clevis.enable and device presence to trigger clevis unlock
-    boot.initrd.clevis = lib.mkIf (tpmEnabled && rootDevice != null && builtins.pathExists clevisTokenPersist) {
+    boot.initrd.clevis = lib.mkIf (tpmEnabled && rootDevice != null) {
       enable = true;
       # Device entries must match filesystem device paths exactly
       # The bcachefs module checks: hasAttr (firstDevice fs) config.boot.initrd.clevis.devices
       # secretFile is required by clevis module (for LUKS), but bcachefs looks for
       # tokens at /etc/clevis/${device}.jwe which we provide via contents above
-      devices = {
-        ${rootDevice}.secretFile = clevisTokenPersist;
-      } // lib.optionalAttrs (persistDevice != null && persistDevice != rootDevice) {
-        ${persistDevice}.secretFile = clevisTokenPersist;
+      # Only set devices if token file exists (build-time check using nix-secrets path)
+      devices = lib.optionalAttrs (builtins.pathExists clevisTokenSource) {
+        ${rootDevice}.secretFile = clevisTokenSource;
+      } // lib.optionalAttrs (persistDevice != null && persistDevice != rootDevice && builtins.pathExists clevisTokenSource) {
+        ${persistDevice}.secretFile = clevisTokenSource;
       };
     };
 

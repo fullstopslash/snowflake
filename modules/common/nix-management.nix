@@ -238,13 +238,13 @@ in
 
           # Fix ownership - repos should be owned by the primary user, not root
           if [[ -d "$CONFIG_DIR" ]]; then
-            chown -R "${hostCfg.primaryUsername}:users" "$CONFIG_DIR"
-            echo "Set ownership of nix-config to ${hostCfg.primaryUsername}"
+            chown -R "${user}:users" "$CONFIG_DIR"
+            echo "Set ownership of nix-config to ${user}"
           fi
 
           if [[ -d "$SECRETS_DIR" ]]; then
-            chown -R "${hostCfg.primaryUsername}:users" "$SECRETS_DIR"
-            echo "Set ownership of nix-secrets to ${hostCfg.primaryUsername}"
+            chown -R "${user}:users" "$SECRETS_DIR"
+            echo "Set ownership of nix-secrets to ${user}"
           fi
 
           echo "Repo setup complete"
