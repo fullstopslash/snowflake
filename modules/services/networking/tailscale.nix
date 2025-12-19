@@ -198,13 +198,17 @@ in
     systemd = {
       services = {
         # Ensure tailscaled starts after OAuth key generation
+        # Use wants (soft dependency) instead of requires so Tailscale can start
+        # even if OAuth key generation fails (e.g., no internet connection)
         tailscaled = {
           after = [
             "tailscale-oauth-key.service"
             "network-online.target"
           ];
-          requires = [ "tailscale-oauth-key.service" ];
-          wants = [ "network-online.target" ];
+          wants = [
+            "tailscale-oauth-key.service"
+            "network-online.target"
+          ];
         };
       };
     };

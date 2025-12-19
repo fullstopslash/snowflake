@@ -55,11 +55,20 @@ in
       # This avoids storing secrets in the nix store
     };
 
+    # Ensure syncthing service is enabled for the user
+    systemd.services."syncthing@${username}" = {
+      wantedBy = [ "multi-user.target" ];
+    };
+
     # Configure syncthing after initialization via REST API
     # This uses device IDs from nix-secrets flake and configures them at runtime
     systemd.services.syncthing-configure = {
       description = "Configure Syncthing devices and default folder path";
-      after = [ "syncthing-init.service" ];
+      after = [
+        "syncthing-init.service"
+        "syncthing@${username}.service"
+      ];
+      wants = [ "syncthing@${username}.service" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
         Type = "oneshot";
@@ -74,10 +83,38 @@ in
           configDir="${homeDir}/.config/syncthing"
 
           # Wait for config.xml to exist
-          while [ ! -f "$configDir/config.xml" ]; do sleep 1; done
+          timeout=30
+          elapsed=0
+          while [ ! -f "$configDir/config.xml" ] && [ $elapsed -lt $timeout ]; do
+            sleep 1
+            elapsed=$((elapsed + 1))
+          done
+
+          if [ ! -f "$configDir/config.xml" ]; then
+            echo "Timeout waiting for Syncthing config.xml" 1>&2
+            exit 1
+          fi
 
           # Get API key from config
           API_KEY=$(${pkgs.gnugrep}/bin/grep -oP '(?<=<apikey>)[^<]+' "$configDir/config.xml")
+
+          # Wait for Syncthing API to be ready with retries
+          max_retries=30
+          retry=0
+          while [ $retry -lt $max_retries ]; do
+            if ${pkgs.curl}/bin/curl -sSf -H "X-API-Key: $API_KEY" \
+              "http://127.0.0.1:8384/rest/system/status" >/dev/null 2>&1; then
+              break
+            fi
+            retry=$((retry + 1))
+            echo "Waiting for Syncthing API (attempt $retry/$max_retries)..." 1>&2
+            sleep 1
+          done
+
+          if [ $retry -eq $max_retries ]; then
+            echo "Timeout waiting for Syncthing API to be ready" 1>&2
+            exit 1
+          fi
 
           # Set default folder path
           ${pkgs.curl}/bin/curl -sSLk -H "X-API-Key: $API_KEY" -X PATCH \
