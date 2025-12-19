@@ -144,18 +144,17 @@ in
           };
         };
 
-        storePaths =
-          [
-            "${bcachefsUnlockScript}/bin/bcachefs-unlock-root"
-            "${pkgs.openssh}/bin/sshd"
-          ]
-          ++ lib.optionals tpmEnabled [
-            "${pkgs.clevis}"
-            "${pkgs.jose}"
-            "${pkgs.keyutils}"
-            # Include token file if it exists
-            (lib.mkIf (builtins.pathExists clevisTokenPersist) clevisTokenPersist)
-          ];
+        storePaths = [
+          "${bcachefsUnlockScript}/bin/bcachefs-unlock-root"
+          "${pkgs.openssh}/bin/sshd"
+        ]
+        ++ lib.optionals tpmEnabled [
+          "${pkgs.clevis}"
+          "${pkgs.jose}"
+          "${pkgs.keyutils}"
+          # Include token file if it exists
+          (lib.mkIf (builtins.pathExists clevisTokenPersist) clevisTokenPersist)
+        ];
 
         # Include clevis/jose packages for TPM unlock
         packages = lib.optionals tpmEnabled [
@@ -163,16 +162,23 @@ in
           pkgs.jose
         ];
 
-        # SSH configuration files in initrd
-        contents = {
-          "/etc/ssh/sshd_config.d/initrd.conf".text = ''
-            Port ${toString remoteUnlockPort}
-            PermitRootLogin yes
-            AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
-            HostKey ${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key
-          '';
-          "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
-        };
+        # SSH configuration files and TPM token in initrd
+        contents = lib.mkMerge [
+          {
+            "/etc/ssh/sshd_config.d/initrd.conf".text = ''
+              Port ${toString remoteUnlockPort}
+              PermitRootLogin yes
+              AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
+              HostKey ${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key
+            '';
+            "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
+          }
+          # Copy TPM token to initrd using systemd.contents (not boot.initrd.secrets)
+          # This avoids the evaluation-time path existence check that breaks boot.initrd.secrets
+          (lib.mkIf (tpmEnabled && builtins.pathExists clevisTokenPersist) {
+            "${clevisTokenInitrd}".source = clevisTokenPersist;
+          })
+        ];
       };
 
     # Ensure bcachefs-tools is available in initrd
@@ -181,6 +187,7 @@ in
       "sha256"
       # Note: ChaCha20/Poly1305 are built-in for kernels >= 6.15
       # For older kernels, add: "poly1305" "chacha20"
+      "tpm_crb" # Critical for TPM support - enables TPM hardware access in initrd
       # Network drivers for remote unlock (always enabled with bcachefs encryption)
       "r8169" # Realtek Ethernet
       "e1000e" # Intel Ethernet
@@ -250,16 +257,15 @@ in
       ];
 
     # Copy secrets from persist into initrd
-    # TPM token: Always copy (required for TPM unlock)
     # SSH key: Only if it exists (to avoid breaking fresh installs)
-    boot.initrd.secrets = lib.mkMerge [
-      (lib.mkIf tpmEnabled {
-        "${clevisTokenInitrd}" = clevisTokenPersist;
-      })
-      (lib.optionalAttrs (builtins.pathExists "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key") {
-        "/etc/ssh/initrd_ssh_host_ed25519_key" = "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
-      })
-    ];
+    # TPM token: Copied via boot.initrd.systemd.contents above (not boot.initrd.secrets)
+    boot.initrd.secrets =
+      lib.optionalAttrs
+        (builtins.pathExists "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key")
+        {
+          "/etc/ssh/initrd_ssh_host_ed25519_key" =
+            "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
+        };
 
     # Make clevis available in running system for token generation
     environment.systemPackages = lib.mkIf tpmEnabled [
@@ -281,10 +287,18 @@ in
     # Note: NixOS bcachefs module already sets kernelPackages to latest
     # No need to override here
 
+    # NOTE: Auto-enrollment disabled - token must be generated during installation
+    # See justfile: bcachefs-setup-tpm command for manual token generation
+    #
+    # Why disabled: Chicken-and-egg problem
+    # - Token must exist BEFORE first boot for initrd to include it
+    # - Service generates token AFTER first boot
+    # - Solution: Generate token during installation (via justfile)
+    #
     # Automatic TPM token enrollment on first boot
     # This service runs AFTER the system boots successfully (not during activation)
     # to avoid breaking nixos-anywhere installation
-    systemd.services.bcachefs-tpm-auto-enroll = lib.mkIf tpmEnabled {
+    systemd.services.bcachefs-tpm-auto-enroll = lib.mkIf false {
       description = "Auto-enroll TPM token for bcachefs encryption";
       wantedBy = [ "multi-user.target" ];
       after = [

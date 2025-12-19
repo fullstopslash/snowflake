@@ -129,6 +129,11 @@ install HOST:
     # Step 3: Register age key in nix-secrets and rekey
     echo "📝 Registering {{HOST}} age key in nix-secrets..."
     just sops-update-host-age-key {{HOST}} "$AGE_PUBKEY"
+
+    # Add user age key (reuse primary rain user key for test VMs/hosts)
+    RAIN_AGE_KEY=$(sed -n '4p' ../nix-secrets/.sops.yaml | awk '{print $3}')
+    just sops-update-user-age-key rain {{HOST}} "$RAIN_AGE_KEY"
+
     just sops-add-creation-rules rain {{HOST}}
 
     # Rekey all secrets
@@ -212,6 +217,7 @@ vm-fresh HOST=DEFAULT_VM_HOST:
         ["griefling"]="22222"
         ["sorrow"]="22223"
         ["torment"]="22224"
+        ["anguish"]="22225"
     )
 
     SSH_PORT="${VM_SSH_PORTS[{{HOST}}]:-22222}"
@@ -240,6 +246,11 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     # Step 3: Register age key in nix-secrets and rekey
     echo "📝 Registering {{HOST}} age key in nix-secrets..."
     just sops-update-host-age-key {{HOST}} "$AGE_PUBKEY"
+
+    # Add user age key (reuse primary rain user key for test VMs/hosts)
+    RAIN_AGE_KEY=$(sed -n '4p' ../nix-secrets/.sops.yaml | awk '{print $3}')
+    just sops-update-user-age-key rain {{HOST}} "$RAIN_AGE_KEY"
+
     just sops-add-creation-rules rain {{HOST}}
 
     # Rekey all secrets
@@ -324,6 +335,10 @@ vm-register-age HOST=DEFAULT_VM_HOST:
     # Update .sops.yaml with the host age key
     echo "   Updating .sops.yaml..."
     just sops-update-host-age-key {{HOST}} "$PUBKEY"
+
+    # Add user age key (reuse primary rain user key for test VMs)
+    RAIN_AGE_KEY=$(sed -n '4p' ../nix-secrets/.sops.yaml | awk '{print $3}')
+    just sops-update-user-age-key rain {{HOST}} "$RAIN_AGE_KEY"
 
     # Add creation rules if they don't exist (user is 'rain' for test VMs)
     echo "   Ensuring creation rules exist..."
@@ -705,12 +720,13 @@ sops-check-key-age:
 # Disk Encryption
 # ============================================================================
 
-# Setup TPM2 automatic unlock for bcachefs encryption
-bcachefs-setup-tpm HOST:
+# Generate TPM token for bcachefs encryption (installation or post-boot)
+# Usage:
+#   just bcachefs-setup-tpm HOST        # Post-boot (on running system)
+#   just bcachefs-setup-tpm HOST /mnt   # During install (from installer)
+bcachefs-setup-tpm HOST MOUNT_ROOT="":
     #!/usr/bin/env bash
     set -euo pipefail
-
-    echo "🔐 Setting up TPM2 automatic unlock for bcachefs on {{HOST}}"
 
     # Check if TPM is enabled in host config
     if ! nix eval .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.enable 2>/dev/null | grep -q "true"; then
@@ -719,14 +735,24 @@ bcachefs-setup-tpm HOST:
         exit 1
     fi
 
-    # Get persist folder and PCR IDs from config
-    PERSIST_FOLDER=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.persistFolder 2>/dev/null || echo "")
+    # Get PCR IDs from config
     PCR_IDS=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.pcrIds 2>/dev/null || echo "7")
 
-    if [ -z "$PERSIST_FOLDER" ]; then
-        echo "❌ persistFolder not set for {{HOST}}"
-        echo "   Set host.persistFolder in your host configuration"
-        exit 1
+    # Determine if running during install or on live system
+    if [ -n "{{MOUNT_ROOT}}" ]; then
+        echo "🔐 Generating TPM token during installation (mount root: {{MOUNT_ROOT}})"
+        PERSIST_FOLDER="{{MOUNT_ROOT}}/persist"
+        IS_INSTALL=true
+    else
+        echo "🔐 Generating TPM token on running system"
+        PERSIST_FOLDER=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.persistFolder 2>/dev/null)
+        IS_INSTALL=false
+
+        if [ -z "$PERSIST_FOLDER" ]; then
+            echo "❌ persistFolder not set for {{HOST}}"
+            echo "   Set host.persistFolder in your host configuration"
+            exit 1
+        fi
     fi
 
     TOKEN_FILE="${PERSIST_FOLDER}/etc/clevis/bcachefs-root.jwe"
@@ -755,12 +781,18 @@ bcachefs-setup-tpm HOST:
 
     echo "✅ TPM token generated successfully!"
     echo "   Token location: $TOKEN_FILE"
+
+    if [ "$IS_INSTALL" = true ]; then
+        echo ""
+        echo "Installation mode: Token will be included in initrd on first boot"
+    else
+        echo ""
+        echo "Next steps:"
+        echo "  1. Rebuild system: sudo nixos-rebuild switch"
+        echo "  2. Reboot to test automatic unlock"
+    fi
     echo ""
-    echo "Next steps:"
-    echo "  1. Rebuild system: sudo nixos-rebuild switch"
-    echo "  2. Reboot to test automatic unlock"
-    echo ""
-    echo "The token is bound to TPM PCR $PCR_IDS (Secure Boot state)"
+    echo "The token is bound to TPM PCR $PCR_IDS"
 
 # Change LUKS disk password and update SOPS secret
 # Interactive workflow: changes device password then syncs to SOPS
