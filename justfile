@@ -419,6 +419,7 @@ vm-status HOST=DEFAULT_VM_HOST:
     if [ -f "$PID_FILE" ] && ps -p "$(cat "$PID_FILE")" > /dev/null 2>&1; then
         echo "✅ VM {{HOST}} is running (PID: $(cat "$PID_FILE"))"
         echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
+        echo "   Initrd SSH (for encrypted hosts): ssh -p 2222 root@127.0.0.1"
         echo "   Display: just vm-start (use SDL window)"
     else
         echo "❌ VM {{HOST}} is not running"
@@ -493,7 +494,7 @@ vm-start HOST=DEFAULT_VM_HOST:
         -device intel-hda \
         -device hda-micro,audiodev=audio0 \
         -device virtio-net,netdev=nic \
-        -netdev "user,hostname={{HOST}},hostfwd=tcp::{{VM_SSH_PORT}}-:22,id=nic" \
+        -netdev "user,hostname={{HOST}},hostfwd=tcp::{{VM_SSH_PORT}}-:22,hostfwd=tcp::2222-:2222,id=nic" \
         -chardev socket,id=chrtpm,path="$TPM_SOCKET" \
         -tpmdev emulator,id=tpm0,chardev=chrtpm \
         -device tpm-tis,tpmdev=tpm0 \
@@ -505,6 +506,7 @@ vm-start HOST=DEFAULT_VM_HOST:
     sleep 2
     echo "✅ VM started with SDL display (hardware accelerated + TPM 2.0)"
     echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
+    echo "   Initrd SSH (for encrypted hosts): ssh -p 2222 root@127.0.0.1"
 
 # Start VM headless (no display, SSH only)
 vm-start-headless HOST=DEFAULT_VM_HOST:
@@ -565,7 +567,7 @@ vm-start-headless HOST=DEFAULT_VM_HOST:
         -device virtio-rng-pci,rng=rng0 \
         -object rng-random,id=rng0,filename=/dev/urandom \
         -device virtio-net,netdev=nic \
-        -netdev "user,hostname={{HOST}},hostfwd=tcp::{{VM_SSH_PORT}}-:22,id=nic" \
+        -netdev "user,hostname={{HOST}},hostfwd=tcp::{{VM_SSH_PORT}}-:22,hostfwd=tcp::2222-:2222,id=nic" \
         -chardev socket,id=chrtpm,path="$TPM_SOCKET" \
         -tpmdev emulator,id=tpm0,chardev=chrtpm \
         -device tpm-tis,tpmdev=tpm0 \
@@ -577,6 +579,7 @@ vm-start-headless HOST=DEFAULT_VM_HOST:
 
     echo "✅ VM started (headless + TPM 2.0)"
     echo "   SSH: ssh -p {{VM_SSH_PORT}} root@127.0.0.1"
+    echo "   Initrd SSH (for encrypted hosts): ssh -p 2222 root@127.0.0.1"
 
 # Quick rebuild: sync and rebuild on running VM (no fresh install)
 vm-quick HOST=DEFAULT_VM_HOST: (vm-sync HOST) (vm-rebuild HOST)
