@@ -109,12 +109,19 @@ install HOST:
     EXTRA_FILES=$(mktemp -d)
     trap "rm -rf $EXTRA_FILES" EXIT
 
-    # Step 1: Pre-generate SSH host key locally
-    echo "🔑 Pre-generating SSH host key..."
+    # Step 1: Pre-generate SSH host keys locally
+    echo "🔑 Pre-generating SSH host keys..."
     mkdir -p "$EXTRA_FILES/etc/ssh"
     ssh-keygen -t ed25519 -f "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" -N "" -q
     chmod 600 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
     chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
+
+    # Generate initrd SSH host key for encrypted hosts (remote unlock)
+    mkdir -p "$EXTRA_FILES/persist/etc/ssh"
+    ssh-keygen -t ed25519 -f "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key" -N "" -q
+    chmod 600 "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key"
+    chmod 644 "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key.pub"
+    echo "   Initrd SSH host key generated for remote unlock"
 
     # Step 2: Derive age key from SSH host key
     echo "🔐 Deriving age key from SSH host key..."
@@ -226,12 +233,19 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     EXTRA_FILES=$(mktemp -d)
     trap "rm -rf $EXTRA_FILES" EXIT
 
-    # Step 1: Pre-generate SSH host key locally
-    echo "🔑 Pre-generating SSH host key..."
+    # Step 1: Pre-generate SSH host keys locally
+    echo "🔑 Pre-generating SSH host keys..."
     mkdir -p "$EXTRA_FILES/etc/ssh"
     ssh-keygen -t ed25519 -f "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" -N "" -q
     chmod 600 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
     chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
+
+    # Generate initrd SSH host key for encrypted hosts (remote unlock)
+    mkdir -p "$EXTRA_FILES/persist/etc/ssh"
+    ssh-keygen -t ed25519 -f "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key" -N "" -q
+    chmod 600 "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key"
+    chmod 644 "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key.pub"
+    echo "   Initrd SSH host key generated for remote unlock"
 
     # Step 2: Derive age key from SSH host key
     echo "🔐 Deriving age key from SSH host key..."
