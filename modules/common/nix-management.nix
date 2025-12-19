@@ -236,6 +236,17 @@ in
           # Clone nix-secrets
           clone_repo "$SECRETS_DIR" "${repoCfg.secretsRepoSsh}" "${repoCfg.secretsRepoHttps}" "${repoCfg.secretsBranch}" "nix-secrets" || true
 
+          # Fix ownership - repos should be owned by the primary user, not root
+          if [[ -d "$CONFIG_DIR" ]]; then
+            chown -R "${hostCfg.primaryUsername}:users" "$CONFIG_DIR"
+            echo "Set ownership of nix-config to ${hostCfg.primaryUsername}"
+          fi
+
+          if [[ -d "$SECRETS_DIR" ]]; then
+            chown -R "${hostCfg.primaryUsername}:users" "$SECRETS_DIR"
+            echo "Set ownership of nix-secrets to ${hostCfg.primaryUsername}"
+          fi
+
           echo "Repo setup complete"
         '';
       };
