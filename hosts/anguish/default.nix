@@ -7,7 +7,7 @@
 # - Headless VM (minimal, fast deploys)
 #
 # This VM validates the nixpkgs bcachefs.nix patterns for TPM unlock
-{ lib, inputs, config, ... }:
+{ lib, inputs, ... }:
 {
   imports = [ ./hardware-configuration.nix ];
 
