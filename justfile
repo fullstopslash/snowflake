@@ -297,16 +297,49 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     fi
     echo "   Password retrieved successfully"
 
-    # Step 5: Start VM and run nixos-anywhere with FULL config
+    # Step 5: Start VM and run nixos-anywhere with FULL config (no reboot yet)
     echo "🚀 Starting VM and deploying FULL configuration..."
-    DISKO_PASSWORD="$DISKO_PASSWORD" ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force --ssh-port "$SSH_PORT" --extra-files "$EXTRA_FILES"
+    DISKO_PASSWORD="$DISKO_PASSWORD" ANYWHERE_PHASES="kexec,disko,install" ./scripts/test-fresh-install.sh {{HOST}} --anywhere --force --ssh-port "$SSH_PORT" --extra-files "$EXTRA_FILES"
+
+    # Step 6: Generate TPM token while filesystem is still mounted on installer
+    echo ""
+    echo "🔐 Generating TPM token during installation..."
+    if nix eval .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.enable 2>/dev/null | grep -q "true"; then
+        # The installer still has /mnt mounted after nixos-anywhere install phase
+        # Generate TPM token pointing to /mnt as the root
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
+            "cd /tmp/nix-config && nix-shell -p clevis jose tpm2-tools --run 'bash -c \"
+                set -euo pipefail
+                source scripts/helpers.sh
+                DISKO_PASSWORD='$DISKO_PASSWORD'
+                PERSIST_FOLDER=/mnt/persist
+                PCR_IDS=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.pcrIds 2>/dev/null || echo '7')
+                TOKEN_PATH=\\\$PERSIST_FOLDER/etc/clevis/bcachefs-root.jwe
+
+                echo 'Generating Clevis TPM token...'
+                mkdir -p \\\$PERSIST_FOLDER/etc/clevis
+                echo \\\$DISKO_PASSWORD | clevis encrypt tpm2 '{\\\"pcr_ids\\\":\\\"'\\\$PCR_IDS'\\\"}' > \\\$TOKEN_PATH
+                chmod 600 \\\$TOKEN_PATH
+                echo '✅ TPM token generated at \\\$TOKEN_PATH'
+            \"'"
+        echo "✅ TPM token generated successfully"
+    else
+        echo "⏭️  Skipping TPM token generation (TPM not enabled for {{HOST}})"
+    fi
+
+    # Step 7: Reboot the installer to boot into installed system
+    echo "🔄 Rebooting into installed system..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 "reboot" || true
+    sleep 5
 
     echo ""
-    echo "✅ Fresh install complete!"
+    echo "✅ Fresh install complete with TPM token!"
+    echo "   System should auto-unlock with TPM on boot"
     echo "   SSH: ssh -p $SSH_PORT root@127.0.0.1"
     echo "   Display: just vm-start (SDL with GPU acceleration)"
     echo ""
-    echo "   The system is fully configured - no second rebuild needed!"
+    echo "   After first boot, rebuild to enable initrd SSH:"
+    echo "   ssh -p $SSH_PORT root@127.0.0.1 'nixos-rebuild switch'"
 
 # Setup age key on VM from SSH host key (required for SOPS secrets)
 vm-setup-age HOST=DEFAULT_VM_HOST:

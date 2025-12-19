@@ -304,6 +304,13 @@ if [[ $USE_ANYWHERE == true ]]; then
 
 	# Deploy FULL config directly from main flake (not nixos-installer)
 	cd "$REPO_ROOT"
+
+	# Use custom phases if specified (e.g., skip reboot for TPM token generation)
+	if [[ -n ${ANYWHERE_PHASES:-} ]]; then
+		info "Using custom nixos-anywhere phases: $ANYWHERE_PHASES"
+		ANYWHERE_ARGS+=(--phases "$ANYWHERE_PHASES")
+	fi
+
 	nix run github:nix-community/nixos-anywhere -- \
 		"${ANYWHERE_ARGS[@]}" \
 		root@127.0.0.1
