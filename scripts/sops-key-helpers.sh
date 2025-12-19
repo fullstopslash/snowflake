@@ -1,75 +1,8 @@
 #!/usr/bin/env bash
 # SOPS helper functions for secure key management
 
-# Store initrd SSH private key in SOPS
-# Usage: sops_store_initrd_key <hostname> <private_key_file>
-sops_store_initrd_key() {
-    local hostname="$1"
-    local key_file="$2"
-    local sops_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/../nix-secrets"
-    local sops_file="${sops_dir}/sops/${hostname}.yaml"
-    local temp_yaml="/tmp/sops-initrd-temp-${hostname}.yaml"
-
-    if [ ! -f "$key_file" ]; then
-        echo "ERROR: Key file not found: $key_file" >&2
-        return 1
-    fi
-
-    # Read the private key
-    local key_content
-    key_content=$(cat "$key_file")
-
-    # Check if SOPS file exists
-    if [ ! -f "$sops_file" ]; then
-        # Create new SOPS file with the key
-        cat > "$temp_yaml" << EOF
-initrd:
-  ssh_host_ed25519_key: |
-$(echo "$key_content" | sed 's/^/    /')
-EOF
-        (cd "$sops_dir" && sops --encrypt "$temp_yaml" > "sops/${hostname}.yaml")
-        rm -f "$temp_yaml"
-    else
-        # Update existing SOPS file - decrypt, modify, re-encrypt
-        local decrypted_yaml="/tmp/sops-decrypt-${hostname}.yaml"
-        sops --decrypt "$sops_file" > "$decrypted_yaml"
-
-        # Create updated YAML with the new key
-        cat > "$temp_yaml" << EOF
-initrd:
-  ssh_host_ed25519_key: |
-$(echo "$key_content" | sed 's/^/    /')
-EOF
-
-        # Merge with existing content (if any)
-        if [ -s "$decrypted_yaml" ] && [ "$(cat "$decrypted_yaml")" != "{}" ]; then
-            # Use yq or manual merge - for now just append initrd section
-            # This is a simple implementation that overwrites initrd section
-            (cd "$sops_dir" && sops --encrypt "$temp_yaml" > "sops/${hostname}.yaml")
-        else
-            (cd "$sops_dir" && sops --encrypt "$temp_yaml" > "sops/${hostname}.yaml")
-        fi
-
-        rm -f "$temp_yaml" "$decrypted_yaml"
-    fi
-
-    echo "✅ Stored initrd SSH key for $hostname in SOPS"
-}
-
-# Retrieve initrd SSH private key from SOPS
-# Usage: sops_get_initrd_key <hostname>
-sops_get_initrd_key() {
-    local hostname="$1"
-    local sops_file="../nix-secrets/sops/${hostname}.yaml"
-
-    if [ ! -f "$sops_file" ]; then
-        echo "ERROR: SOPS file not found: $sops_file" >&2
-        return 1
-    fi
-
-    # Extract the key using sops --extract
-    sops --extract '["initrd"]["ssh_host_ed25519_key"]' "$sops_file" 2>/dev/null
-}
+# Note: Initrd SSH key functions removed - we now use the same SSH host key
+# for both initrd and main system. No separate initrd key management needed.
 
 # Store Clevis token in SOPS
 # Usage: sops_store_clevis_token <hostname> <disk_name> <token_file>
@@ -95,7 +28,7 @@ sops_store_clevis_token() {
     # Check if SOPS file exists
     if [ ! -f "$sops_file" ]; then
         echo "ERROR: SOPS file not found: $sops_file" >&2
-        echo "       Create it first or store initrd key first" >&2
+        echo "       Create it first during host installation" >&2
         return 1
     fi
 
@@ -133,7 +66,5 @@ sops_get_clevis_token() {
 }
 
 # Export functions
-export -f sops_store_initrd_key
-export -f sops_get_initrd_key
 export -f sops_store_clevis_token
 export -f sops_get_clevis_token
