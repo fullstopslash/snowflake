@@ -131,6 +131,8 @@ in
           PermitRootLogin yes
           AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
           HostKey /etc/ssh/initrd_ssh_host_ed25519_key
+          # Disable privilege separation (sshd user doesn't exist in initrd)
+          UsePrivilegeSeparation no
         '';
         "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
       } // lib.optionalAttrs (builtins.pathExists initrdSshKeySource) {
