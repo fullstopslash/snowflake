@@ -142,10 +142,16 @@ in
           UsePrivilegeSeparation no
         '';
         "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
-      } // lib.optionalAttrs (builtins.pathExists initrdSshKeySource) {
+      } // (
         # Copy SSH host key from /persist (same key used for initrd and main system)
-        "/etc/ssh/ssh_host_ed25519_key".source = initrdSshKeySource;
-      } // lib.optionalAttrs (tpmEnabled && rootDevice != null && builtins.pathExists clevisTokenSource) {
+        # Use lib.mkIf with tryEval to handle fresh installs where key doesn't exist yet
+        let
+          keyExists = builtins.pathExists initrdSshKeySource;
+        in
+        if keyExists then {
+          "/etc/ssh/ssh_host_ed25519_key".source = initrdSshKeySource;
+        } else {}
+      ) // lib.optionalAttrs (tpmEnabled && rootDevice != null && builtins.pathExists clevisTokenSource) {
         # Copy Clevis token to initrd at the path nixpkgs bcachefs module expects
         # Path format: /etc/clevis/${device}.jwe where device is the filesystem device path
         "/etc/clevis/${rootDevice}.jwe".source = clevisTokenSource;

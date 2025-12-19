@@ -342,16 +342,32 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     # Step 7: Reboot the installer to boot into installed system
     echo "🔄 Rebooting into installed system..."
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 "reboot" || true
-    sleep 5
+
+    # Step 8: Wait for system to boot and become available
+    echo "⏳ Waiting for system to boot (may take 30-60s for TPM unlock)..."
+    sleep 30
+    for i in {1..30}; do
+        if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 -p "$SSH_PORT" root@127.0.0.1 'echo ready' >/dev/null 2>&1; then
+            echo "✅ System is up!"
+            break
+        fi
+        sleep 2
+    done
+
+    # Step 9: Ensure SSH keys are in /persist and rebuild to enable initrd SSH
+    echo "🔧 Copying SSH keys to /persist and rebuilding for initrd SSH..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
+        'mkdir -p /persist/etc/ssh && \
+         cp /etc/ssh/ssh_host_ed25519_key* /persist/etc/ssh/ && \
+         nixos-rebuild boot --flake github:fullstopslash/snowflake#{{HOST}}'
 
     echo ""
-    echo "✅ Fresh install complete with TPM token!"
-    echo "   System should auto-unlock with TPM on boot"
+    echo "✅ Fresh install complete with initrd SSH enabled!"
+    echo "   System will have remote unlock capability on next boot"
     echo "   SSH: ssh -p $SSH_PORT root@127.0.0.1"
     echo "   Display: just vm-start (SDL with GPU acceleration)"
     echo ""
-    echo "   After first boot, rebuild to enable initrd SSH:"
-    echo "   ssh -p $SSH_PORT root@127.0.0.1 'nixos-rebuild switch'"
+    echo "   To test remote unlock: just vm-stop {{HOST}} && just vm-start {{HOST}}"
 
 # Setup age key on VM from SSH host key (required for SOPS secrets)
 vm-setup-age HOST=DEFAULT_VM_HOST:
