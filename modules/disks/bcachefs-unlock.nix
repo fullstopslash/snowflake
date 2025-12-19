@@ -174,6 +174,9 @@ in
             "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
           }
           # Copy initrd SSH host key into initrd (must exist before encrypted /persist is unlocked)
+          # NOTE: On fresh install via nixos-anywhere, this path doesn't exist during initial build
+          # Initrd SSH will work after first nixos-rebuild on the installed system
+          # For first boot, unlock manually or use TPM if token exists
           (lib.mkIf (builtins.pathExists "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key") {
             "/etc/ssh/initrd_ssh_host_ed25519_key".source =
               "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
