@@ -86,8 +86,9 @@ in
       mutableUsers = false; # Required for password to be set via sops during system activation!
     };
 
-  # SOPS secrets for user passwords (only when hasSecrets && !isMinimal)
-  sops.secrets = lib.mkIf (config.host.hasSecrets && !config.host.isMinimal) (
+  # SOPS secrets for user passwords (when hasSecrets is enabled)
+  # Passwords are needed for both minimal and non-minimal hosts
+  sops.secrets = lib.mkIf config.host.hasSecrets (
     lib.mergeAttrsList (
       map (user: {
         "passwords/${user}" = {
