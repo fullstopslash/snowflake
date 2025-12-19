@@ -73,121 +73,135 @@ in
     boot.supportedFilesystems = [ "bcachefs" ];
 
     # Use systemd in initrd for robust unlock workflow
-    boot.initrd.systemd =
-      let
-        # Bcachefs unlock script with TPM auto-unlock support
-        # Tries TPM first, falls back to password prompt
-        bcachefsUnlockScript = pkgs.writeShellScriptBin "bcachefs-unlock-root" ''
-          keyctl link @u @s
-          mkdir -p /sysroot
+    boot.initrd.systemd = {
+      enable = true;
+      initrdBin = with pkgs; [ keyutils ];
 
-          # Try TPM unlock first if token exists
-          if [ -f "${clevisTokenInitrd}" ]; then
-            echo "🔐 Attempting TPM auto-unlock..."
-            if PASSWORD=$(clevis decrypt < "${clevisTokenInitrd}" 2>/dev/null); then
-              if echo "$PASSWORD" | bcachefs mount /dev/disk/by-label/root /sysroot 2>/dev/null; then
-                echo "✅ TPM unlock successful!"
-                exit 0
-              else
-                echo "⚠️  TPM unlock failed, falling back to password prompt..."
-              fi
-            else
-              echo "⚠️  TPM decryption failed, falling back to password prompt..."
-            fi
-          fi
-
-          # Fall back to interactive password prompt
-          until bcachefs mount /dev/disk/by-label/root /sysroot
-          do
-            sleep 1
-          done
-        '';
-      in
-      {
-        enable = true;
-        initrdBin = with pkgs; [ keyutils ];
-
-        # Set root shell to unlock script for interactive/remote unlock
-        users.root.shell = "${bcachefsUnlockScript}/bin/bcachefs-unlock-root";
-
-        # extraBin for keyctl only (clevis/jose added via contents to avoid conflicts)
-        extraBin = {
-          keyctl = "${pkgs.keyutils}/bin/keyctl";
-        };
-
-        # Configure DHCP for remote unlock (always enabled with bcachefs encryption)
-        network = {
-          enable = true;
-          networks."10-ethernet" = {
-            matchConfig.Name = "en*";
-            networkConfig = {
-              DHCP = "yes";
-              IPv6AcceptRA = true;
-            };
-            dhcpV4Config.RouteMetric = 1024;
-          };
-        };
-
-        # SSH access in initrd for remote unlock
-        services.sshd = {
-          description = "SSH Daemon for remote unlock";
-          wantedBy = [ "initrd.target" ];
-          after = [ "initrd-nixos-copy-secrets.service" ];
-          before = [ "initrd-switch-root.target" ];
-          conflicts = [ "initrd-switch-root.target" ];
-          unitConfig.DefaultDependencies = false;
-
-          serviceConfig = {
-            ExecStart = "${pkgs.openssh}/bin/sshd -D -e -f /etc/ssh/sshd_config.d/initrd.conf";
-            KillMode = "process";
-            Restart = "always";
-          };
-        };
-
-        storePaths = [
-          "${bcachefsUnlockScript}/bin/bcachefs-unlock-root"
-          "${pkgs.openssh}/bin/sshd"
-        ]
-        ++ lib.optionals tpmEnabled [
-          "${pkgs.clevis}"
-          "${pkgs.jose}"
-          "${pkgs.keyutils}"
-          # Include token file if it exists
-          (lib.mkIf (builtins.pathExists clevisTokenPersist) clevisTokenPersist)
-        ];
-
-        # Include clevis/jose packages for TPM unlock
-        packages = lib.optionals tpmEnabled [
-          pkgs.clevis
-          pkgs.jose
-        ];
-
-        # SSH configuration files and TPM token in initrd
-        contents = lib.mkMerge [
-          {
-            "/etc/ssh/sshd_config.d/initrd.conf".text = ''
-              Port ${toString remoteUnlockPort}
-              PermitRootLogin yes
-              AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
-              HostKey /etc/ssh/initrd_ssh_host_ed25519_key
-            '';
-            "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
-          }
-          # Copy initrd SSH host key into initrd (must exist before encrypted /persist is unlocked)
-          # NOTE: On fresh install via nixos-anywhere, this path doesn't exist during initial build
-          # Initrd SSH will work after first nixos-rebuild on the installed system
-          # For first boot, unlock manually or use TPM if token exists
-          (lib.mkIf (builtins.pathExists "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key") {
-            "/etc/ssh/initrd_ssh_host_ed25519_key".source =
-              "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
-          })
-          # Copy TPM token to initrd using systemd.contents (not boot.initrd.secrets)
-          # This avoids the evaluation-time path existence check that breaks boot.initrd.secrets
-          (lib.mkIf (tpmEnabled && builtins.pathExists clevisTokenPersist) {
-            "${clevisTokenInitrd}".source = clevisTokenPersist;
-          })
-        ];
+      # extraBin for keyctl only (clevis/jose added via packages when enabled)
+      extraBin = {
+        keyctl = "${pkgs.keyutils}/bin/keyctl";
       };
+
+      # Configure DHCP for remote unlock (always enabled with bcachefs encryption)
+      network = {
+        enable = true;
+        networks."10-ethernet" = {
+          matchConfig.Name = "en*";
+          networkConfig = {
+            DHCP = "yes";
+            IPv6AcceptRA = true;
+          };
+          dhcpV4Config.RouteMetric = 1024;
+        };
+      };
+
+      # SSH access in initrd for remote unlock
+      services = lib.mkMerge [
+        {
+          sshd = {
+            description = "SSH Daemon for remote unlock";
+            wantedBy = [ "initrd.target" ];
+            after = [ "initrd-nixos-copy-secrets.service" ];
+            before = [ "initrd-switch-root.target" ];
+            conflicts = [ "initrd-switch-root.target" ];
+            unitConfig.DefaultDependencies = false;
+
+            serviceConfig = {
+              ExecStart = "${pkgs.openssh}/bin/sshd -D -e -f /etc/ssh/sshd_config.d/initrd.conf";
+              KillMode = "process";
+              Restart = "always";
+            };
+          };
+        }
+        # Override nixpkgs auto-generated unlock services to add TPM support
+        (lib.mkIf tpmEnabled {
+          # Override root filesystem unlock service
+          "unlock-bcachefs--" = {
+            serviceConfig.ExecStart = lib.mkForce (
+              pkgs.writeShellScript "unlock-root-with-tpm" ''
+                set -euo pipefail
+                DEVICE="/dev/vda3"
+                TOKEN="/etc/clevis/bcachefs-root.jwe"
+
+                ${pkgs.keyutils}/bin/keyctl link @u @s
+
+                if [ -f "$TOKEN" ] && ${pkgs.clevis}/bin/clevis decrypt < "$TOKEN" | ${pkgs.bcachefs-tools}/bin/bcachefs unlock "$DEVICE"
+                then
+                  printf "✅ Unlocked root using TPM\n"
+                else
+                  printf "⚠️  TPM unlock failed, falling back to interactive...\n"
+                  ${pkgs.keyutils}/bin/keyctl link @u @s
+                  ${config.boot.initrd.systemd.package}/bin/systemd-ask-password --timeout=0 "enter passphrase for bcachefs root" | exec ${pkgs.bcachefs-tools}/bin/bcachefs unlock "$DEVICE"
+                fi
+              ''
+            );
+          };
+
+          # Override persist filesystem unlock service
+          "unlock-bcachefs-persist" = {
+            serviceConfig.ExecStart = lib.mkForce (
+              pkgs.writeShellScript "unlock-persist-with-tpm" ''
+                set -euo pipefail
+                DEVICE="/dev/vda2"
+                TOKEN="/etc/clevis/bcachefs-root.jwe"
+
+                ${pkgs.keyutils}/bin/keyctl link @u @s
+
+                if [ -f "$TOKEN" ] && ${pkgs.clevis}/bin/clevis decrypt < "$TOKEN" | ${pkgs.bcachefs-tools}/bin/bcachefs unlock "$DEVICE"
+                then
+                  printf "✅ Unlocked persist using TPM\n"
+                else
+                  printf "⚠️  TPM unlock failed, falling back to interactive...\n"
+                  ${pkgs.keyutils}/bin/keyctl link @u @s
+                  ${config.boot.initrd.systemd.package}/bin/systemd-ask-password --timeout=0 "enter passphrase for bcachefs persist" | exec ${pkgs.bcachefs-tools}/bin/bcachefs unlock "$DEVICE"
+                fi
+              ''
+            );
+          };
+        })
+      ];
+
+      storePaths = [
+        "${pkgs.openssh}/bin/sshd"
+      ]
+      ++ lib.optionals tpmEnabled [
+        "${pkgs.clevis}"
+        "${pkgs.jose}"
+        "${pkgs.keyutils}"
+      ];
+
+      # Include clevis/jose packages for TPM unlock
+      packages = lib.optionals tpmEnabled [
+        pkgs.clevis
+        pkgs.jose
+      ];
+
+      # SSH configuration files and Clevis tokens in initrd
+      contents = lib.mkMerge [
+        {
+          "/etc/ssh/sshd_config.d/initrd.conf".text = ''
+            Port ${toString remoteUnlockPort}
+            PermitRootLogin yes
+            AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
+            HostKey /etc/ssh/initrd_ssh_host_ed25519_key
+          '';
+          "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
+        }
+        # Copy initrd SSH host key into initrd (must exist before encrypted /persist is unlocked)
+        # NOTE: On fresh install via nixos-anywhere, this path doesn't exist during initial build
+        # Initrd SSH will work after first nixos-rebuild on the installed system
+        # For first boot, unlock manually or use TPM if token exists
+        (lib.mkIf (builtins.pathExists "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key") {
+          "/etc/ssh/initrd_ssh_host_ed25519_key".source =
+            "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
+        })
+        # Copy Clevis TPM token to initrd for automatic unlock
+        # Both filesystems use the same passphrase, so one token file is sufficient
+        (lib.mkIf (tpmEnabled && builtins.pathExists clevisTokenPersist) {
+          "/etc/clevis/bcachefs-root.jwe".source = clevisTokenPersist;
+        })
+      ];
+    };
 
     # Ensure bcachefs-tools is available in initrd
     boot.initrd.availableKernelModules = [
