@@ -6,19 +6,12 @@
 #
 # Based on nixpkgs bcachefs.nix module design and FINDINGS from Phase 20-01.
 #
-# Activation:
-#   Automatically enabled when disks.layout contains "bcachefs-encrypt"
-#
-# Boot workflow:
-#   1. initrd systemd detects encrypted bcachefs device
-#   2. Attempts Clevis unlock if configured (TPM/Tang)
-#   3. Falls back to interactive passphrase prompt
-#   4. Unlocks device via kernel keyring
-#   5. Allows filesystem mount to proceed
-#
-# Installation bootstrap:
-#   Uses /tmp/disko-password during format (Phase 17 pattern)
-#   Post-install: configure Clevis or rely on interactive unlock
+# Boot workflow (handled by nixpkgs bcachefs.nix module):
+#   1. initrd systemd detects encrypted bcachefs filesystems
+#   2. Auto-generates unlock-bcachefs-* services for each filesystem
+#   3. If Clevis enabled: attempts clevis decrypt < /etc/clevis/${device}.jwe | bcachefs unlock
+#   4. Falls back to systemd-ask-password interactive prompt on failure
+#   5. Unlocks device via kernel keyring and allows mount to proceed
 {
   inputs,
   config,
@@ -40,7 +33,7 @@ let
   tpmEnabled = hostCfg.encryption.tpm.enable or false;
   pcrIds = hostCfg.encryption.tpm.pcrIds or "7";
 
-  # Remote SSH unlock is always enabled with bcachefs encryption
+  # Remote SSH unlock configuration
   remoteUnlockPort = 2222; # Default port for initrd SSH
 
   # Get authorized keys from primary user's yubikey public keys
@@ -54,114 +47,120 @@ let
       [ ];
 
   # Clevis JWE token paths
-  # Persistent storage (survives reboots, used for auto-enrollment and rebuilds)
   clevisTokenPersist = "${hostCfg.persistFolder}/etc/clevis/bcachefs-root.jwe";
-  # Initrd location (where unlock service looks for it)
-  clevisTokenInitrd = "/etc/clevis/bcachefs-root.jwe";
+
+  # Get filesystem device paths for Clevis configuration
+  # nixpkgs bcachefs module checks if firstDevice(fs) exists in boot.initrd.clevis.devices
+  rootDevice = config.fileSystems."/".device or null;
+  persistDevice = config.fileSystems."/persist".device or null;
 in
 {
   config = lib.mkIf (cfg.enable && isEncrypted) {
-    # SOPS secret for disk password (needed for auto-enrollment)
-    # Uses shared.yaml default password (same as justfile bcachefs-setup-tpm)
-    sops.secrets = lib.mkIf (tpmEnabled && config.host.hasSecrets) {
-      "passwords/disk/default" = {
-        sopsFile = "${sopsFolder}/shared.yaml";
-      };
-    };
-
     # Enable bcachefs filesystem support
     boot.supportedFilesystems = [ "bcachefs" ];
 
-    # Use systemd in initrd for robust unlock workflow
-    boot.initrd.systemd =
-      let
-        # Bcachefs unlock script - simplified wiki pattern
-        # Just loops mounting until password is entered
-        bcachefsUnlockScript = pkgs.writeShellScriptBin "bcachefs-unlock-root" ''
-          keyctl link @u @s
-          mkdir -p /sysroot
-          until bcachefs mount /dev/disk/by-label/root /sysroot
-          do
-            sleep 1
-          done
-        '';
-      in
-      {
-        enable = true;
-        initrdBin = with pkgs; [ keyutils ];
-
-        # Set root shell to unlock script for interactive/remote unlock
-        users.root.shell = "${bcachefsUnlockScript}/bin/bcachefs-unlock-root";
-
-        # Include Clevis and dependencies when TPM unlock is enabled
-        extraBin = lib.mkIf tpmEnabled {
-          clevis = "${pkgs.clevis}/bin/clevis";
-          clevis-decrypt = "${pkgs.clevis}/bin/clevis-decrypt";
-          jose = "${pkgs.jose}/bin/jose";
-          keyctl = "${pkgs.keyutils}/bin/keyctl";
-        };
-
-        # Configure DHCP for remote unlock (always enabled with bcachefs encryption)
-        network = {
-          enable = true;
-          networks."10-ethernet" = {
-            matchConfig.Name = "en*";
-            networkConfig = {
-              DHCP = "yes";
-              IPv6AcceptRA = true;
-            };
-            dhcpV4Config.RouteMetric = 1024;
-          };
-        };
-
-        # SSH access in initrd for remote unlock
-        services.sshd = {
-          description = "SSH Daemon for remote unlock";
-          wantedBy = [ "initrd.target" ];
-          after = [ "initrd-nixos-copy-secrets.service" ];
-          before = [ "initrd-switch-root.target" ];
-          conflicts = [ "initrd-switch-root.target" ];
-          unitConfig.DefaultDependencies = false;
-
-          serviceConfig = {
-            ExecStart = "${pkgs.openssh}/bin/sshd -D -e -f /etc/ssh/sshd_config.d/initrd.conf";
-            KillMode = "process";
-            Restart = "always";
-          };
-        };
-
-        storePaths = [
-          "${bcachefsUnlockScript}/bin/bcachefs-unlock-root"
-          "${pkgs.openssh}/bin/sshd"
-        ];
-
-        # SSH configuration files in initrd
-        contents = {
-          "/etc/ssh/sshd_config.d/initrd.conf".text = ''
-            Port ${toString remoteUnlockPort}
-            PermitRootLogin yes
-            AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
-            HostKey ${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key
-          '';
-          "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
-        };
-      };
-
-    # Ensure bcachefs-tools is available in initrd
+    # Ensure required kernel modules are available
     boot.initrd.availableKernelModules = [
       "bcachefs"
       "sha256"
-      # Note: ChaCha20/Poly1305 are built-in for kernels >= 6.15
+      # ChaCha20/Poly1305 built-in for kernels >= 6.15
       # For older kernels, add: "poly1305" "chacha20"
-      # Network drivers for remote unlock (always enabled with bcachefs encryption)
+      "tpm_crb" # Critical for TPM support
+      # Network drivers for remote unlock
       "r8169" # Realtek Ethernet
       "e1000e" # Intel Ethernet
       "igb" # Intel Gigabit
     ];
 
-    # TPM unlock via custom initrd systemd service
-    # Note: boot.initrd.clevis is LUKS-only and doesn't work for bcachefs
-    # We implement a custom service that uses Clevis for TPM unlock
+    # Use systemd in initrd (required for Clevis integration)
+    boot.initrd.systemd = {
+      enable = true;
+
+      # Configure DHCP for remote unlock
+      network = {
+        enable = true;
+        networks."10-ethernet" = {
+          matchConfig.Name = "en*";
+          networkConfig = {
+            DHCP = "yes";
+            IPv6AcceptRA = true;
+          };
+          dhcpV4Config.RouteMetric = 1024;
+        };
+      };
+
+      # SSH access in initrd for remote unlock
+      services.sshd = {
+        description = "SSH Daemon for remote unlock";
+        wantedBy = [ "initrd.target" ];
+        after = [ "initrd-nixos-copy-secrets.service" ];
+        before = [ "initrd-switch-root.target" ];
+        conflicts = [ "initrd-switch-root.target" ];
+        unitConfig.DefaultDependencies = false;
+
+        serviceConfig = {
+          ExecStart = "${pkgs.openssh}/bin/sshd -D -e -f /etc/ssh/sshd_config.d/initrd.conf";
+          KillMode = "process";
+          Restart = "always";
+        };
+      };
+
+      # Copy SSH config and Clevis tokens into initrd
+      contents = {
+        "/etc/ssh/sshd_config.d/initrd.conf".text = ''
+          Port ${toString remoteUnlockPort}
+          PermitRootLogin yes
+          AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
+          HostKey /etc/ssh/initrd_ssh_host_ed25519_key
+        '';
+        "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
+      } // lib.optionalAttrs (builtins.pathExists "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key") {
+        "/etc/ssh/initrd_ssh_host_ed25519_key".source =
+          "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
+      } // lib.optionalAttrs (tpmEnabled && builtins.pathExists clevisTokenPersist && rootDevice != null) {
+        # Copy Clevis token to initrd at the path nixpkgs bcachefs module expects
+        # Path format: /etc/clevis/${device}.jwe where device is the filesystem device path
+        "/etc/clevis/${rootDevice}.jwe".source = clevisTokenPersist;
+      } // lib.optionalAttrs (tpmEnabled && builtins.pathExists clevisTokenPersist && persistDevice != null && persistDevice != rootDevice) {
+        # Persist filesystem token (if different device than root)
+        "/etc/clevis/${persistDevice}.jwe".source = clevisTokenPersist;
+      };
+
+      storePaths = [
+        "${pkgs.openssh}/bin/sshd"
+      ] ++ lib.optionals tpmEnabled [
+        "${pkgs.clevis}"
+        "${pkgs.jose}"
+      ];
+
+      # Include clevis/jose packages for TPM unlock
+      packages = lib.optionals tpmEnabled [
+        pkgs.clevis
+        pkgs.jose
+      ];
+    };
+
+    # Enable Clevis for automated TPM unlock
+    # Note: boot.initrd.clevis is primarily for LUKS, but nixpkgs bcachefs module
+    # checks for clevis.enable and device presence to trigger clevis unlock
+    boot.initrd.clevis = lib.mkIf (tpmEnabled && rootDevice != null && builtins.pathExists clevisTokenPersist) {
+      enable = true;
+      # Device entries must match filesystem device paths exactly
+      # The bcachefs module checks: hasAttr (firstDevice fs) config.boot.initrd.clevis.devices
+      # secretFile is required by clevis module (for LUKS), but bcachefs looks for
+      # tokens at /etc/clevis/${device}.jwe which we provide via contents above
+      devices = {
+        ${rootDevice}.secretFile = clevisTokenPersist;
+      } // lib.optionalAttrs (persistDevice != null && persistDevice != rootDevice) {
+        ${persistDevice}.secretFile = clevisTokenPersist;
+      };
+    };
+
+    # Make clevis available in running system for token generation
+    environment.systemPackages = lib.optionals tpmEnabled [
+      pkgs.clevis
+      pkgs.jose
+    ];
 
     # Documentation for users
     warnings =
@@ -172,7 +171,10 @@ in
           Boot unlock behavior:
           ${
             if tpmEnabled then
-              "- TPM2 automatic unlock via Clevis (enabled)"
+              ''
+                - TPM2 automatic unlock via Clevis (enabled)
+                - Fallback to interactive passphrase prompt
+              ''
             else
               "- Interactive passphrase prompt via systemd-ask-password"
           }
@@ -187,15 +189,19 @@ in
                 After enabling, generate Clevis token:
                   sudo just bcachefs-setup-tpm
               ''
-            else
+            else if !builtins.pathExists clevisTokenPersist then
               ''
-                TPM unlock is enabled.
-                Token will be automatically generated on first boot.
-                After first boot, rebuild system to include token in initrd:
-                  sudo nixos-rebuild switch
+                TPM unlock is enabled but token not found.
+                Generate Clevis token:
+                  sudo just bcachefs-setup-tpm
 
                 Token location: ${clevisTokenPersist}
-                Will be copied to initrd at: ${clevisTokenInitrd}
+              ''
+            else
+              ''
+                TPM unlock is configured.
+                Token location: ${clevisTokenPersist}
+                Clevis will attempt automatic unlock, with fallback to interactive prompt.
               ''
           }
 
@@ -203,12 +209,10 @@ in
           - SSH into initrd: ssh -p ${toString remoteUnlockPort} root@<host-ip>
           - Password prompt will appear automatically
           - Authorized keys: primary user's yubikey keys
-          - Host key: ${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key
 
           Security note:
           - ChaCha20/Poly1305 AEAD provides authenticated encryption
           - Tamper detection and replay protection included
-          - Each block has unique nonce with chain of trust to superblock
           - TPM binding to PCR ${pcrIds} (Secure Boot state)
 
           See docs/bcachefs.md for detailed encryption workflows.
@@ -220,120 +224,5 @@ in
           Set host.persistFolder in your host configuration.
         ''
       ];
-
-    # Copy secrets from persist into initrd
-    # Only include if files exist (to avoid breaking fresh installs)
-    boot.initrd.secrets =
-      (lib.mkIf (tpmEnabled && builtins.pathExists clevisTokenPersist) {
-        "${clevisTokenInitrd}" = clevisTokenPersist;
-      })
-      //
-      (
-        let
-          sshHostKeyPath = "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
-        in
-        lib.mkIf (builtins.pathExists sshHostKeyPath) {
-          "/etc/ssh/initrd_ssh_host_ed25519_key" = sshHostKeyPath;
-        }
-      );
-
-    # Make clevis available in running system for token generation
-    environment.systemPackages = lib.mkIf tpmEnabled [
-      pkgs.clevis
-      pkgs.jose
-    ];
-
-    # Kernel keyring management
-    # The bcachefs unlock process adds keys to the kernel keyring
-    # NixOS bcachefs.nix module handles keyring linking automatically
-    # No additional configuration needed here
-
-    # Passphrase management notes (for documentation)
-    # - Format-time: /tmp/disko-password (Phase 17 compatibility)
-    # - Boot-time: systemd-ask-password (interactive) or Clevis (automated)
-    # - Post-install change: bcachefs set-passphrase /dev/device
-    # - Recovery: Boot from live media, unlock manually, then mount
-
-    # Note: NixOS bcachefs module already sets kernelPackages to latest
-    # No need to override here
-
-    # Automatic TPM token enrollment on first boot
-    # This service runs AFTER the system boots successfully (not during activation)
-    # to avoid breaking nixos-anywhere installation
-    systemd.services.bcachefs-tpm-auto-enroll = lib.mkIf tpmEnabled {
-      description = "Auto-enroll TPM token for bcachefs encryption";
-      wantedBy = [ "multi-user.target" ];
-      after = [
-        "network-online.target"
-        "sops-nix.service"
-      ];
-      wants = [ "network-online.target" ];
-
-      unitConfig = {
-        # Only run if token doesn't exist AND stamp file doesn't exist
-        ConditionPathExists = [
-          "!${clevisTokenPersist}"
-          "!${hostCfg.persistFolder}/var/lib/bcachefs-tpm-enrolled.stamp"
-        ];
-      };
-
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-      };
-
-      path = with pkgs; [
-        clevis
-        jose
-        bcachefs-tools
-        coreutils
-        gnugrep
-        sops
-      ];
-
-      script = ''
-        set -euo pipefail
-
-        echo "🔐 Auto-enrolling TPM token for bcachefs..."
-
-        # Get disk password from SOPS secret
-        SOPS_FILE="${config.sops.secrets."passwords/disk/default".path}"
-
-        if [ ! -f "$SOPS_FILE" ]; then
-          echo "❌ SOPS password file not found at $SOPS_FILE"
-          echo "   TPM auto-enrollment requires SOPS to be configured"
-          exit 1
-        fi
-
-        DISK_PASSWORD=$(cat "$SOPS_FILE")
-
-        if [ -z "$DISK_PASSWORD" ]; then
-          echo "❌ Failed to retrieve disk password from SOPS"
-          exit 1
-        fi
-
-        # Create directory for token
-        mkdir -p "$(dirname "${clevisTokenPersist}")"
-
-        # Generate Clevis JWE token with TPM2
-        echo "🔑 Generating TPM2 Clevis token (PCR ${pcrIds})..."
-        echo "$DISK_PASSWORD" | ${pkgs.clevis}/bin/clevis encrypt tpm2 '{"pcr_ids":"${pcrIds}"}' > "${clevisTokenPersist}"
-
-        # Set proper permissions
-        chmod 600 "${clevisTokenPersist}"
-        chown root:root "${clevisTokenPersist}"
-
-        # Create stamp file to prevent re-running
-        mkdir -p "${hostCfg.persistFolder}/var/lib"
-        touch "${hostCfg.persistFolder}/var/lib/bcachefs-tpm-enrolled.stamp"
-
-        echo "✅ TPM token enrolled successfully!"
-        echo "   Token location: ${clevisTokenPersist}"
-        echo "   Token will be included in initrd on next rebuild"
-        echo ""
-        echo "⚠️  IMPORTANT: Run 'sudo nixos-rebuild switch' to include token in initrd"
-        echo "   After rebuild, TPM unlock will work on next boot"
-      '';
-    };
   };
 }
