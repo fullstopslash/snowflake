@@ -7,9 +7,18 @@
 # - Headless VM (minimal, fast deploys)
 #
 # This VM validates the nixpkgs bcachefs.nix patterns for TPM unlock
-{ lib, ... }:
+{ lib, inputs, config, ... }:
 {
   imports = [ ./hardware-configuration.nix ];
+
+  # SOPS secrets configuration
+  sops.secrets."passwords/rain" = {
+    sopsFile = "${inputs.nix-secrets}/sops/shared.yaml";
+    neededForUsers = true;
+  };
+  sops.secrets."passwords/disk/default" = {
+    sopsFile = "${inputs.nix-secrets}/sops/shared.yaml";
+  };
 
   # Disk configuration via modules/disks
   # Using bcachefs native encryption (NOT LUKS)
