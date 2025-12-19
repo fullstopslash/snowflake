@@ -88,13 +88,22 @@ in
         "network-online.target"
         "sops-nix.service"
         "systemd-tmpfiles-setup.service"
+        "tailscaled.service"
+        "nss-lookup.target"
       ];
-      wants = [ "network-online.target" ];
+      wants = [
+        "network-online.target"
+        "tailscaled.service"
+        "nss-lookup.target"
+      ];
       serviceConfig = {
         Type = "oneshot";
         User = primaryUser;
         Group = "users";
         RemainAfterExit = true;
+        # Restart on failure with exponential backoff
+        Restart = "on-failure";
+        RestartSec = "30s";
       };
       script = ''
         set -eu
@@ -151,6 +160,39 @@ in
           echo "sync_address = \"$SYNC_ADDRESS\"" > "$CONFIG_FILE"
         fi
         echo "Configured sync_address: $SYNC_ADDRESS"
+
+        # Extract hostname from sync_address URL for DNS check
+        # URL format: http://hostname:port or https://hostname:port
+        SYNC_HOSTNAME=$(echo "$SYNC_ADDRESS" | ${pkgs.gnused}/bin/sed -E 's|^https?://([^:/]+).*|\1|')
+        echo "Extracted hostname for DNS check: $SYNC_HOSTNAME"
+
+        # Wait for DNS resolution with retries (up to 60 seconds)
+        # This ensures Tailscale DNS or local DNS is fully operational
+        echo "Waiting for DNS resolution of $SYNC_HOSTNAME..."
+        MAX_RETRIES=12
+        RETRY_COUNT=0
+        DNS_RESOLVED=false
+
+        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+          if ${pkgs.dnsutils}/bin/host "$SYNC_HOSTNAME" >/dev/null 2>&1; then
+            echo "DNS resolution successful for $SYNC_HOSTNAME"
+            DNS_RESOLVED=true
+            break
+          else
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "DNS resolution failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying in 5 seconds..."
+              sleep 5
+            fi
+          fi
+        done
+
+        if [ "$DNS_RESOLVED" = "false" ]; then
+          echo "ERROR: Failed to resolve $SYNC_HOSTNAME after $MAX_RETRIES attempts" 1>&2
+          echo "This may indicate the Atuin server is offline or DNS is misconfigured" 1>&2
+          echo "Service will retry in 30 seconds (configured RestartSec)" 1>&2
+          exit 1
+        fi
 
         # Check if already logged in with valid session
         if [ -f "$SESSION_FILE" ]; then
