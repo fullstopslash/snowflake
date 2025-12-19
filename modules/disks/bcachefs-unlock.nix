@@ -51,6 +51,11 @@ let
   clevisTokenSource = "${sopsFolder}/clevis/bcachefs-root.jwe";
   clevisTokenPersist = "${hostCfg.persistFolder}/etc/clevis/bcachefs-root.jwe";
 
+  # Initrd SSH host key paths
+  # Pre-generated and stored in nix-secrets for nixos-anywhere deployment
+  initrdSshKeySource = "${builtins.toString inputs.nix-secrets}/ssh/initrd/${hostCfg.hostName}_initrd_ed25519";
+  initrdSshKeyPersist = "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
+
   # Get filesystem device paths for Clevis configuration
   # nixpkgs bcachefs module checks if firstDevice(fs) exists in boot.initrd.clevis.devices
   rootDevice = config.fileSystems."/".device or null;
@@ -116,9 +121,9 @@ in
           HostKey /etc/ssh/initrd_ssh_host_ed25519_key
         '';
         "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
-      } // lib.optionalAttrs (builtins.pathExists "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key") {
-        "/etc/ssh/initrd_ssh_host_ed25519_key".source =
-          "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
+      } // lib.optionalAttrs (builtins.pathExists initrdSshKeySource) {
+        # Copy pre-generated initrd SSH host key from nix-secrets
+        "/etc/ssh/initrd_ssh_host_ed25519_key".source = initrdSshKeySource;
       } // lib.optionalAttrs (tpmEnabled && rootDevice != null && builtins.pathExists clevisTokenSource) {
         # Copy Clevis token to initrd at the path nixpkgs bcachefs module expects
         # Path format: /etc/clevis/${device}.jwe where device is the filesystem device path
