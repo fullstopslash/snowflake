@@ -96,11 +96,23 @@ in
         };
       };
 
+      # Fix SSH host key permissions (Nix store files are 0444, SSH needs 0600)
+      services.fix-initrd-ssh-perms = lib.mkIf (builtins.pathExists initrdSshKeySource) {
+        description = "Fix initrd SSH host key permissions";
+        wantedBy = [ "sshd.service" ];
+        before = [ "sshd.service" ];
+        unitConfig.DefaultDependencies = false;
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.coreutils}/bin/chmod 0600 /etc/ssh/initrd_ssh_host_ed25519_key";
+        };
+      };
+
       # SSH access in initrd for remote unlock
       services.sshd = {
         description = "SSH Daemon for remote unlock";
         wantedBy = [ "initrd.target" ];
-        after = [ "initrd-nixos-copy-secrets.service" ];
+        after = [ "initrd-nixos-copy-secrets.service" "fix-initrd-ssh-perms.service" ];
         before = [ "initrd-switch-root.target" ];
         conflicts = [ "initrd-switch-root.target" ];
         unitConfig.DefaultDependencies = false;
@@ -123,11 +135,7 @@ in
         "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
       } // lib.optionalAttrs (builtins.pathExists initrdSshKeySource) {
         # Copy pre-generated initrd SSH host key from nix-secrets
-        # Must set mode to 0600 for SSH to accept it (Nix store files are 0444)
-        "/etc/ssh/initrd_ssh_host_ed25519_key" = {
-          source = initrdSshKeySource;
-          mode = "0600";
-        };
+        "/etc/ssh/initrd_ssh_host_ed25519_key".source = initrdSshKeySource;
       } // lib.optionalAttrs (tpmEnabled && rootDevice != null && builtins.pathExists clevisTokenSource) {
         # Copy Clevis token to initrd at the path nixpkgs bcachefs module expects
         # Path format: /etc/clevis/${device}.jwe where device is the filesystem device path
