@@ -306,22 +306,22 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     echo "🔐 Generating TPM token during installation..."
     if nix eval .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.enable 2>/dev/null | grep -q "true"; then
         # The installer still has /mnt mounted after nixos-anywhere install phase
-        # Generate TPM token pointing to /mnt as the root
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
-            "cd /tmp/nix-config && nix-shell -p clevis jose tpm2-tools --run 'bash -c \"
-                set -euo pipefail
-                source scripts/helpers.sh
-                DISKO_PASSWORD='$DISKO_PASSWORD'
-                PERSIST_FOLDER=/mnt/persist
-                PCR_IDS=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.pcrIds 2>/dev/null || echo '7')
-                TOKEN_PATH=\\\$PERSIST_FOLDER/etc/clevis/bcachefs-root.jwe
+        # Get PCR IDs from host config
+        PCR_IDS=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.pcrIds 2>/dev/null || echo "7")
 
-                echo 'Generating Clevis TPM token...'
-                mkdir -p \\\$PERSIST_FOLDER/etc/clevis
-                echo \\\$DISKO_PASSWORD | clevis encrypt tpm2 '{\\\"pcr_ids\\\":\\\"'\\\$PCR_IDS'\\\"}' > \\\$TOKEN_PATH
-                chmod 600 \\\$TOKEN_PATH
-                echo '✅ TPM token generated at \\\$TOKEN_PATH'
-            \"'"
+        # Generate TPM token on the installer
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
+            "nix-shell -p clevis jose tpm2-tools --run '
+                set -euo pipefail
+                PERSIST_FOLDER=/mnt/persist
+                TOKEN_PATH=\$PERSIST_FOLDER/etc/clevis/bcachefs-root.jwe
+
+                echo \"Generating Clevis TPM token with PCR IDs: $PCR_IDS\"
+                mkdir -p \$PERSIST_FOLDER/etc/clevis
+                echo \"$DISKO_PASSWORD\" | clevis encrypt tpm2 \"{\\\"pcr_ids\\\":\\\"$PCR_IDS\\\"}\" > \$TOKEN_PATH
+                chmod 600 \$TOKEN_PATH
+                echo \"✅ TPM token generated at \$TOKEN_PATH\"
+            '"
         echo "✅ TPM token generated successfully"
     else
         echo "⏭️  Skipping TPM token generation (TPM not enabled for {{HOST}})"
