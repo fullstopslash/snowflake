@@ -355,7 +355,7 @@ boot.supportedFilesystems = [ "bcachefs" ];
 
 **Phase 17 Compatibility**: Phase 17 uses `/tmp/disko-password` for LUKS password management. The same pattern should work for bcachefs with appropriate formatting configuration.
 
-**Format-Time vs Mount-Time**: 
+**Format-Time vs Mount-Time**:
 - **Format-time**: `bcachefs format --encrypted` prompts for passphrase interactively
 - **Mount-time**: Password file can be provided via mount options or stdin to unlock command
 
@@ -443,7 +443,7 @@ mount -o X-mount.subdir=persist /dev/vda2 /mnt/persist
 
 **Passphrase Change**: Use `bcachefs set-passphrase /dev/device` on an unmounted filesystem to change the encryption passphrase. [Source: Debian manpage](https://manpages.debian.org/experimental/bcachefs-tools/bcachefs.8.en.html)
 
-**Emergency Access**: 
+**Emergency Access**:
 - `bcachefs remove-passphrase /dev/device` — Removes passphrase protection (filesystem becomes unencrypted)
 - `--no_passphrase` during format — Creates encrypted filesystem without passphrase protection (key stored unencrypted)
 [Source: Debian manpage](https://manpages.debian.org/experimental/bcachefs-tools/bcachefs.8.en.html)
@@ -513,7 +513,7 @@ Based on disko bcachefs.nix example pattern:
               content = {
                 type = "bcachefs";
                 # Encryption enabled via extraFormatArgs
-                extraFormatArgs = [ 
+                extraFormatArgs = [
                   "--encrypted"
                   "--compression=lz4"
                   "--background_compression=lz4"
@@ -567,7 +567,7 @@ For bcachefs with subvolumes and impermanence:
               size = "100%";
               content = {
                 type = "bcachefs";
-                extraFormatArgs = [ 
+                extraFormatArgs = [
                   "--encrypted"
                   "--compression=lz4"
                 ];
@@ -622,10 +622,10 @@ Enable bcachefs support and configure initrd unlocking:
 {
   # Enable bcachefs filesystem support
   boot.supportedFilesystems = [ "bcachefs" ];
-  
+
   # Ensure kernel supports bcachefs (6.7+)
   boot.kernelPackages = pkgs.linuxPackages_latest;
-  
+
   # Optional: Enable Clevis for automated TPM/Tang unlock
   boot.initrd.clevis = {
     enable = true;
@@ -636,10 +636,10 @@ Enable bcachefs support and configure initrd unlocking:
       };
     };
   };
-  
+
   # For systemd-based initrd (recommended)
   boot.initrd.systemd.enable = true;
-  
+
   # Impermanence configuration (if using impermanence pattern)
   environment.persistence."/persist" = {
     directories = [
@@ -662,7 +662,7 @@ Enable bcachefs support and configure initrd unlocking:
 - Clevis integration optional but recommended for TPM unlock
 - systemd in initrd enables robust unlock workflow
 
-**Sources**: 
+**Sources**:
 - [NixOS Wiki Bcachefs](https://wiki.nixos.org/wiki/Bcachefs)
 - [nixpkgs bcachefs.nix module](https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/tasks/filesystems/bcachefs.nix)
 
@@ -676,18 +676,18 @@ For custom unlock logic without Clevis:
 {
   boot.initrd.systemd = {
     enable = true;
-    
+
     # Custom bcachefs unlock service
     services.bcachefs-unlock = {
       description = "Unlock bcachefs root filesystem";
       before = [ "sysroot.mount" ];
       wants = [ "systemd-cryptsetup@root.service" ];
-      
+
       unitConfig = {
         DefaultDependencies = "no";
         ConditionPathExists = "/dev/disk/by-label/bcachefs-root";
       };
-      
+
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
@@ -761,7 +761,7 @@ Integrate with existing password management:
   # Use Phase 17's password prompt infrastructure
   # This assumes /tmp/disko-password is created during install
   # via the same prompt mechanism as LUKS passwords
-  
+
   disko.devices.disk.main.content.partitions.root.content = {
     type = "bcachefs";
     extraFormatArgs = [ "--encrypted" ];
@@ -769,13 +769,13 @@ Integrate with existing password management:
     passwordFile = "/tmp/disko-password";
     mountpoint = "/";
   };
-  
+
   # For boot unlock, store password in initrd
   # (Alternative to Clevis/TPM for simple passphrase unlock)
   boot.initrd.secrets = {
     "/etc/bcachefs-root.key" = "/persist/etc/bcachefs-root.key";
   };
-  
+
   # Custom unlock that reads from keyfile
   boot.initrd.postDeviceCommands = lib.mkBefore ''
     # Unlock bcachefs root with stored keyfile
@@ -792,4 +792,3 @@ Integrate with existing password management:
 - Aligns with Phase 17's password management patterns
 
 **Security Note**: Storing unencrypted key in initrd means disk is protected at rest but auto-unlocks on boot (similar to LUKS with keyfile). For stronger security, use Clevis with TPM or interactive prompt.
-
