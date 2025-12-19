@@ -47,6 +47,7 @@
     hostName = builtins.baseNameOf (toString ./.);
     primaryUsername = "rain";
     persistFolder = "/persist"; # Required for impermanence layout
+    hasSecrets = true; # Enable SOPS secret decryption
 
     # Encryption configuration
     encryption = {
