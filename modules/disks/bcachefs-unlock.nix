@@ -169,10 +169,15 @@ in
               Port ${toString remoteUnlockPort}
               PermitRootLogin yes
               AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
-              HostKey ${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key
+              HostKey /etc/ssh/initrd_ssh_host_ed25519_key
             '';
             "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
           }
+          # Copy initrd SSH host key into initrd (must exist before encrypted /persist is unlocked)
+          (lib.mkIf (builtins.pathExists "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key") {
+            "/etc/ssh/initrd_ssh_host_ed25519_key".source =
+              "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
+          })
           # Copy TPM token to initrd using systemd.contents (not boot.initrd.secrets)
           # This avoids the evaluation-time path existence check that breaks boot.initrd.secrets
           (lib.mkIf (tpmEnabled && builtins.pathExists clevisTokenPersist) {
