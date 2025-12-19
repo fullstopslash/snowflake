@@ -55,11 +55,6 @@ in
       # This avoids storing secrets in the nix store
     };
 
-    # Ensure syncthing service is enabled for the user
-    systemd.services."syncthing@${username}" = {
-      wantedBy = [ "multi-user.target" ];
-    };
-
     # Configure syncthing after initialization via REST API
     # This uses device IDs from nix-secrets flake and configures them at runtime
     systemd.services.syncthing-configure = {

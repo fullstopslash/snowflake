@@ -20,6 +20,7 @@
       };
       services = {
         networking = [
+          "networking-base" # Provides systemd-resolved for DNS
           "openssh"
           "ssh"
           "tailscale"
