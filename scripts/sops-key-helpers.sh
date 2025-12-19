@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# SOPS helper functions for secure key management
+
+# Store initrd SSH private key in SOPS
+# Usage: sops_store_initrd_key <hostname> <private_key_file>
+sops_store_initrd_key() {
+    local hostname="$1"
+    local key_file="$2"
+    local sops_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/../nix-secrets"
+    local sops_file="${sops_dir}/sops/${hostname}.yaml"
+    local temp_yaml="/tmp/sops-initrd-temp-${hostname}.yaml"
+
+    if [ ! -f "$key_file" ]; then
+        echo "ERROR: Key file not found: $key_file" >&2
+        return 1
+    fi
+
+    # Read the private key
+    local key_content
+    key_content=$(cat "$key_file")
+
+    # Check if SOPS file exists
+    if [ ! -f "$sops_file" ]; then
+        # Create new SOPS file with the key
+        cat > "$temp_yaml" << EOF
+initrd:
+  ssh_host_ed25519_key: |
+$(echo "$key_content" | sed 's/^/    /')
+EOF
+        (cd "$sops_dir" && sops --encrypt "$temp_yaml" > "sops/${hostname}.yaml")
+        rm -f "$temp_yaml"
+    else
+        # Update existing SOPS file - decrypt, modify, re-encrypt
+        local decrypted_yaml="/tmp/sops-decrypt-${hostname}.yaml"
+        sops --decrypt "$sops_file" > "$decrypted_yaml"
+
+        # Create updated YAML with the new key
+        cat > "$temp_yaml" << EOF
+initrd:
+  ssh_host_ed25519_key: |
+$(echo "$key_content" | sed 's/^/    /')
+EOF
+
+        # Merge with existing content (if any)
+        if [ -s "$decrypted_yaml" ] && [ "$(cat "$decrypted_yaml")" != "{}" ]; then
+            # Use yq or manual merge - for now just append initrd section
+            # This is a simple implementation that overwrites initrd section
+            (cd "$sops_dir" && sops --encrypt "$temp_yaml" > "sops/${hostname}.yaml")
+        else
+            (cd "$sops_dir" && sops --encrypt "$temp_yaml" > "sops/${hostname}.yaml")
+        fi
+
+        rm -f "$temp_yaml" "$decrypted_yaml"
+    fi
+
+    echo "✅ Stored initrd SSH key for $hostname in SOPS"
+}
+
+# Retrieve initrd SSH private key from SOPS
+# Usage: sops_get_initrd_key <hostname>
+sops_get_initrd_key() {
+    local hostname="$1"
+    local sops_file="../nix-secrets/sops/${hostname}.yaml"
+
+    if [ ! -f "$sops_file" ]; then
+        echo "ERROR: SOPS file not found: $sops_file" >&2
+        return 1
+    fi
+
+    # Extract the key using sops --extract
+    sops --extract '["initrd"]["ssh_host_ed25519_key"]' "$sops_file" 2>/dev/null
+}
+
+# Store Clevis token in SOPS
+# Usage: sops_store_clevis_token <hostname> <disk_name> <token_file>
+# Example: sops_store_clevis_token anguish bcachefs-root /persist/etc/clevis/bcachefs-root.jwe
+sops_store_clevis_token() {
+    local hostname="$1"
+    local disk_name="$2"  # e.g., "bcachefs-root", "bcachefs-data"
+    local token_file="$3"
+    local sops_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/../nix-secrets"
+    local sops_file="${sops_dir}/sops/${hostname}.yaml"
+    local temp_yaml="/tmp/sops-clevis-temp-${hostname}.yaml"
+    local decrypted_yaml="/tmp/sops-decrypt-${hostname}.yaml"
+
+    if [ ! -f "$token_file" ]; then
+        echo "ERROR: Token file not found: $token_file" >&2
+        return 1
+    fi
+
+    # Read the JWE token (it's JSON) and escape it for YAML
+    local token_content
+    token_content=$(cat "$token_file" | jq -c .)
+
+    # Check if SOPS file exists
+    if [ ! -f "$sops_file" ]; then
+        echo "ERROR: SOPS file not found: $sops_file" >&2
+        echo "       Create it first or store initrd key first" >&2
+        return 1
+    fi
+
+    # Decrypt existing file
+    sops --decrypt "$sops_file" > "$decrypted_yaml"
+
+    # Use jq to merge the token into the structure
+    jq --arg disk "$disk_name" --argjson token "$token_content" \
+        '.clevis[$disk].token = $token' \
+        "$decrypted_yaml" > "$temp_yaml"
+
+    # Re-encrypt
+    (cd "$sops_dir" && sops --encrypt "$temp_yaml" > "sops/${hostname}.yaml")
+
+    # Cleanup
+    rm -f "$temp_yaml" "$decrypted_yaml"
+
+    echo "✅ Stored Clevis token for $hostname/$disk_name in SOPS"
+}
+
+# Retrieve Clevis token from SOPS
+# Usage: sops_get_clevis_token <hostname> <disk_name>
+sops_get_clevis_token() {
+    local hostname="$1"
+    local disk_name="$2"
+    local sops_file="../nix-secrets/sops/${hostname}.yaml"
+
+    if [ ! -f "$sops_file" ]; then
+        echo "ERROR: SOPS file not found: $sops_file" >&2
+        return 1
+    fi
+
+    # Extract the token
+    sops --extract "[\"clevis\"][\"$disk_name\"][\"token\"]" "$sops_file" 2>/dev/null
+}
+
+# Export functions
+export -f sops_store_initrd_key
+export -f sops_get_initrd_key
+export -f sops_store_clevis_token
+export -f sops_get_clevis_token

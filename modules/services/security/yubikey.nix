@@ -12,8 +12,8 @@
   ...
 }:
 let
-  cfg = config.myModules.services.security.yubikey;
   homeDirectory = "${config.host.home}";
+  cfg = config.myModules.services.security.yubikey;
   yubikey-up =
     let
       yubikeyIds = lib.concatStringsSep " " (

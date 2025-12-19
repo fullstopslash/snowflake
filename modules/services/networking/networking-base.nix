@@ -2,20 +2,13 @@
 #
 # Usage: modules.services.networking = [ "networking-base" ]
 {
-  config,
-  lib,
   pkgs,
   ...
 }:
-let
-  cfg = config.myModules.services.networking.networkingBase;
-in
 {
-  options.myModules.services.networking.networkingBase = {
-    enable = lib.mkEnableOption "Base networking configuration";
-  };
+  description = "Base networking configuration";
 
-  config = lib.mkIf cfg.enable {
+  config = {
     # Network packages
     environment.systemPackages = with pkgs; [
       wireguard-tools

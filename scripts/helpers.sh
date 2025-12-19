@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
+# Load SOPS key helpers
+source "$(dirname "${BASH_SOURCE[0]}")/sops-key-helpers.sh"
+
 ### UX helpers
 
 function red() {

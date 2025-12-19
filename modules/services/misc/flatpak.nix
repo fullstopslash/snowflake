@@ -1,19 +1,12 @@
 # Flatpak module
 {
-  config,
-  lib,
   pkgs,
   ...
 }:
-let
-  cfg = config.myModules.services.misc.flatpak;
-in
 {
-  options.myModules.services.misc.flatpak = {
-    enable = lib.mkEnableOption "Flatpak support";
-  };
+  description = "Flatpak support";
 
-  config = lib.mkIf cfg.enable {
+  config = {
     services.flatpak.enable = true;
 
     # Flatpak systemd service

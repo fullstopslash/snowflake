@@ -191,7 +191,6 @@ in
 {
   options.myModules.services.dotfiles.chezmoiSync = {
     enable = lib.mkEnableOption "automatic chezmoi repository synchronization";
-
     repoUrl = lib.mkOption {
       type = lib.types.str;
       example = "git@github.com:user/dotfiles.git";

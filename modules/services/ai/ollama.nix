@@ -5,15 +5,10 @@
   lib,
   ...
 }:
-let
-  cfg = config.myModules.services.ai.ollama;
-in
 {
-  options.myModules.services.ai.ollama = {
-    enable = lib.mkEnableOption "Ollama with ROCm support";
-  };
+  description = "Ollama with ROCm support";
 
-  config = lib.mkIf cfg.enable {
+  config = {
     services.ollama = {
       enable = true;
       package = pkgs.ollama;

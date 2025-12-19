@@ -5,15 +5,10 @@
   lib,
   ...
 }:
-let
-  cfg = config.myModules.services.security.clamav;
-in
 {
-  options.myModules.services.security.clamav = {
-    enable = lib.mkEnableOption "semi-active antivirus with ClamAV";
-  };
+  description = "semi-active antivirus with ClamAV";
 
-  config = lib.mkIf cfg.enable (
+  config = (
     let
       sus-user-dirs = [
         "downloads"

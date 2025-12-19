@@ -60,7 +60,6 @@
     # VM HARDWARE (minimal)
     # ========================================
     networking = {
-      networkmanager.enable = lib.mkDefault true;
       enableIPv6 = lib.mkDefault false;
     };
 

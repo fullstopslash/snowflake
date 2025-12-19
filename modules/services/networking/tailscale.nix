@@ -7,19 +7,15 @@
   ...
 }:
 let
-  cfg = config.myModules.services.networking.tailscale;
-
   # Get the primary user for Tailscale operator permissions
   userNames = builtins.attrNames config.users.users;
   normalUsers = builtins.filter (n: (config.users.users."${n}".isNormalUser or false)) userNames;
   operatorUser = if normalUsers != [ ] then builtins.head normalUsers else "root";
 in
 {
-  options.myModules.services.networking.tailscale = {
-    enable = lib.mkEnableOption "Tailscale VPN";
-  };
+  description = "Tailscale VPN";
 
-  config = lib.mkIf cfg.enable {
+  config = {
     # SOPS secrets for Tailscale OAuth
     sops.secrets = {
       "tailscale/oauth_client_id" = {
@@ -86,7 +82,7 @@ in
       interfaceName = "tailscale0"; # optimized startup
       # Additional options to prevent interference with local network while allowing Tailnet access
       extraUpFlags = [
-        "--accept-dns=true" # Don't use Tailscale DNS
+        "--accept-dns=true" # Use Tailscale DNS (MagicDNS)
         "--shields-up=false" # Don't block local network access
         "--accept-routes=false" # Don't accept routes from Tailscale
         "--operator=${operatorUser}" # Allow primary user to administer tailscale

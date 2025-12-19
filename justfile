@@ -117,11 +117,11 @@ install HOST:
     chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
 
     # Generate initrd SSH host key for encrypted hosts (remote unlock)
-    mkdir -p "$EXTRA_FILES/persist/etc/ssh"
-    ssh-keygen -t ed25519 -f "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key" -N "" -q
-    chmod 600 "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key"
-    chmod 644 "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key.pub"
-    echo "   Initrd SSH host key generated for remote unlock"
+    echo "🔑 Generating initrd SSH host key..."
+    INITRD_KEY_DIR=$(mktemp -d)
+    ssh-keygen -t ed25519 -f "$INITRD_KEY_DIR/initrd_key" -N "" -C "root@{{HOST}}-initrd" -q
+    chmod 600 "$INITRD_KEY_DIR/initrd_key"
+    chmod 644 "$INITRD_KEY_DIR/initrd_key.pub"
 
     # Step 2: Derive age key from SSH host key
     echo "🔐 Deriving age key from SSH host key..."
@@ -150,16 +150,55 @@ install HOST:
         sops updatekeys -y "$file"
     done
 
-    # Commit and push
+    # Step 3.5: Store initrd SSH key in nix-secrets with SOPS encryption
+    echo "🔑 Storing initrd SSH host key in nix-secrets..."
+    cd ../nix-secrets
+
+    # Check if key already exists in SOPS
+    source {{justfile_directory()}}/{{HELPERS_PATH}}
+    if sops_get_initrd_key {{HOST}} >/dev/null 2>&1; then
+        echo "   ⚠️  Initrd SSH key already exists in SOPS for {{HOST}}"
+        echo "   Using existing key from SOPS..."
+        # Retrieve existing key from SOPS for deployment
+        sops_get_initrd_key {{HOST}} > "$INITRD_KEY_DIR/initrd_key"
+        chmod 600 "$INITRD_KEY_DIR/initrd_key"
+    else
+        # Store public key in nix-secrets for reference (not a secret)
+        mkdir -p ssh/initrd-public
+        cp "$INITRD_KEY_DIR/initrd_key.pub" "ssh/initrd-public/{{HOST}}_initrd_ed25519.pub"
+        INITRD_FINGERPRINT=$(ssh-keygen -lf "$INITRD_KEY_DIR/initrd_key.pub")
+        echo "   Initrd SSH fingerprint: $INITRD_FINGERPRINT"
+
+        # SOPS-encrypt private key in nix-secrets (SECURE)
+        echo "   SOPS-encrypting initrd private key..."
+        sops_store_initrd_key {{HOST}} "$INITRD_KEY_DIR/initrd_key"
+
+        # Stage public key for commit
+        source {{justfile_directory()}}/scripts/vcs-helpers.sh
+        vcs_add "ssh/initrd-public/{{HOST}}_initrd_ed25519.pub"
+    fi
+
+    # Place decrypted key in extra-files for deployment
+    mkdir -p "$EXTRA_FILES/persist/etc/ssh"
+    cp "$INITRD_KEY_DIR/initrd_key" "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key"
+    chmod 600 "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key"
+
+    # Clean up temp key
+    rm -rf "$INITRD_KEY_DIR"
+    echo "   ✅ Initrd SSH key generated and SOPS-encrypted"
+
+    cd "{{justfile_directory()}}"
+
+    # Commit and push (includes age keys + SOPS-encrypted initrd SSH + rekeyed secrets)
     echo "   Committing and pushing..."
     cd ../nix-secrets && \
         source {{justfile_directory()}}/scripts/vcs-helpers.sh && \
         vcs_add .sops.yaml sops/*.yaml && \
-        (vcs_commit "chore: register {{HOST}} age key and rekey secrets" || true) && \
+        (vcs_commit "chore: register {{HOST}} keys (age + SOPS-encrypted initrd SSH) and rekey secrets" || true) && \
         vcs_push
     cd "{{justfile_directory()}}"
 
-    # Step 4: Update local flake.lock to get rekeyed secrets
+    # Step 4: Update local flake.lock to get rekeyed secrets and initrd key
     echo "📥 Updating local nix-secrets flake input..."
     nix flake update nix-secrets
 
@@ -241,11 +280,31 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
 
     # Generate initrd SSH host key for encrypted hosts (remote unlock)
+    echo "🔑 Generating initrd SSH host key..."
+    INITRD_KEY_DIR=$(mktemp -d)
+    ssh-keygen -t ed25519 -f "$INITRD_KEY_DIR/initrd_key" -N "" -C "root@{{HOST}}-initrd" -q
+    chmod 600 "$INITRD_KEY_DIR/initrd_key"
+    chmod 644 "$INITRD_KEY_DIR/initrd_key.pub"
+
+    # Store public key in nix-secrets for reference (not a secret)
+    mkdir -p ../nix-secrets/ssh/initrd-public
+    cp "$INITRD_KEY_DIR/initrd_key.pub" "../nix-secrets/ssh/initrd-public/{{HOST}}_initrd_ed25519.pub"
+    INITRD_FINGERPRINT=$(ssh-keygen -lf "$INITRD_KEY_DIR/initrd_key.pub")
+    echo "   Initrd SSH fingerprint: $INITRD_FINGERPRINT"
+
+    # SOPS-encrypt private key in nix-secrets (SECURE)
+    echo "   SOPS-encrypting initrd private key..."
+    source {{HELPERS_PATH}}
+    sops_store_initrd_key {{HOST}} "$INITRD_KEY_DIR/initrd_key"
+
+    # Place decrypted key in extra-files for deployment
     mkdir -p "$EXTRA_FILES/persist/etc/ssh"
-    ssh-keygen -t ed25519 -f "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key" -N "" -q
+    cp "$INITRD_KEY_DIR/initrd_key" "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key"
     chmod 600 "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key"
-    chmod 644 "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key.pub"
-    echo "   Initrd SSH host key generated for remote unlock"
+
+    # Clean up temp key
+    rm -rf "$INITRD_KEY_DIR"
+    echo "   ✅ Initrd SSH key generated and SOPS-encrypted"
 
     # Step 2: Derive age key from SSH host key
     echo "🔐 Deriving age key from SSH host key..."
@@ -273,17 +332,25 @@ vm-fresh HOST=DEFAULT_VM_HOST:
         echo "     Rekeying $file..."
         sops updatekeys -y "$file"
     done
+    cd "{{justfile_directory()}}"
 
-    # Commit and push
+    # Step 3.5: Stage public key and SOPS-encrypted secrets for commit
+    echo "📝 Staging keys in nix-secrets..."
+    cd ../nix-secrets
+    source {{justfile_directory()}}/scripts/vcs-helpers.sh
+    vcs_add "ssh/initrd-public/{{HOST}}_initrd_ed25519.pub"
+    cd "{{justfile_directory()}}"
+
+    # Commit and push (includes age keys + SOPS-encrypted initrd keys + rekeyed secrets)
     echo "   Committing and pushing..."
     cd ../nix-secrets && \
         source {{justfile_directory()}}/scripts/vcs-helpers.sh && \
         vcs_add .sops.yaml sops/*.yaml && \
-        (vcs_commit "chore: register {{HOST}} age key and rekey secrets" || true) && \
+        (vcs_commit "chore: register {{HOST}} keys (age + SOPS-encrypted initrd SSH) and rekey secrets" || true) && \
         vcs_push
     cd "{{justfile_directory()}}"
 
-    # Step 4: Update local flake.lock to get rekeyed secrets
+    # Step 4: Update local flake.lock to get rekeyed secrets and initrd key
     echo "📥 Updating local nix-secrets flake input..."
     nix flake update nix-secrets
 
@@ -773,11 +840,22 @@ sops-check-key-age:
 # Disk Encryption
 # ============================================================================
 
-# Generate TPM token for bcachefs encryption (installation or post-boot)
+# Generate TPM token for bcachefs encryption using secure SOPS workflow
 # Usage:
-#   just bcachefs-setup-tpm HOST        # Post-boot (on running system)
-#   just bcachefs-setup-tpm HOST /mnt   # During install (from installer)
-bcachefs-setup-tpm HOST MOUNT_ROOT="":
+#   just bcachefs-setup-tpm HOST [DISK_NAME]        # Post-boot (on running system)
+#   just bcachefs-setup-tpm HOST bcachefs-root      # Specify disk name
+#
+# For multi-disk setups:
+#   just bcachefs-setup-tpm HOST bcachefs-root
+#   just bcachefs-setup-tpm HOST bcachefs-data
+#   just bcachefs-setup-tpm HOST bcachefs-backup
+#
+# Security:
+#   - Token MUST be generated on target host (requires physical TPM)
+#   - Token is TPM-bound (hardware protection)
+#   - Token is SOPS-encrypted in nix-secrets (defense in depth)
+#   - Use the Clevis token manager script for all operations
+bcachefs-setup-tpm HOST DISK_NAME="bcachefs-root":
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -788,64 +866,49 @@ bcachefs-setup-tpm HOST MOUNT_ROOT="":
         exit 1
     fi
 
-    # Get PCR IDs from config
-    PCR_IDS=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.pcrIds 2>/dev/null || echo "7")
-
-    # Determine if running during install or on live system
-    if [ -n "{{MOUNT_ROOT}}" ]; then
-        echo "🔐 Generating TPM token during installation (mount root: {{MOUNT_ROOT}})"
-        PERSIST_FOLDER="{{MOUNT_ROOT}}/persist"
-        IS_INSTALL=true
-    else
-        echo "🔐 Generating TPM token on running system"
-        PERSIST_FOLDER=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.persistFolder 2>/dev/null)
-        IS_INSTALL=false
-
-        if [ -z "$PERSIST_FOLDER" ]; then
-            echo "❌ persistFolder not set for {{HOST}}"
-            echo "   Set host.persistFolder in your host configuration"
-            exit 1
-        fi
-    fi
-
-    TOKEN_FILE="${PERSIST_FOLDER}/etc/clevis/bcachefs-root.jwe"
-
-    # Create directory for token
-    echo "📁 Creating Clevis token directory..."
-    mkdir -p "$(dirname "$TOKEN_FILE")"
-
-    # Get disk password from SOPS
-    echo "🔑 Retrieving disk encryption password from SOPS..."
-    source {{HELPERS_PATH}}
-    DISK_PASSWORD=$(sops_get_disk_password {{HOST}})
-    if [ -z "$DISK_PASSWORD" ]; then
-        echo "❌ Failed to retrieve disk password from SOPS"
-        exit 1
-    fi
-    echo "   Password retrieved successfully"
-
-    # Generate Clevis JWE token with TPM2
-    echo "🔐 Generating TPM2 Clevis token (PCR $PCR_IDS)..."
-    echo "$DISK_PASSWORD" | clevis encrypt tpm2 '{"pcr_ids":"'"$PCR_IDS"'"}' > "$TOKEN_FILE"
-
-    # Set proper permissions
-    chmod 600 "$TOKEN_FILE"
-    chown root:root "$TOKEN_FILE"
-
-    echo "✅ TPM token generated successfully!"
-    echo "   Token location: $TOKEN_FILE"
-
-    if [ "$IS_INSTALL" = true ]; then
-        echo ""
-        echo "Installation mode: Token will be included in initrd on first boot"
-    else
-        echo ""
-        echo "Next steps:"
-        echo "  1. Rebuild system: sudo nixos-rebuild switch"
-        echo "  2. Reboot to test automatic unlock"
-    fi
+    echo "🔐 Generating TPM token for {{HOST}}/{{DISK_NAME}}..."
     echo ""
-    echo "The token is bound to TPM PCR $PCR_IDS"
+    echo "IMPORTANT: This command must be run ON the target host ({{HOST}})"
+    echo "           TPM token generation requires physical TPM hardware access"
+    echo ""
+
+    # Get PCR IDs from host configuration
+    PCR_IDS=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.encryption.tpm.pcrIds 2>/dev/null || echo "0,7")
+    echo "📌 Using PCR IDs from config: $PCR_IDS"
+    echo ""
+
+    # Source helper functions for SOPS operations
+    source {{HELPERS_PATH}}
+
+    # Use the Clevis token manager to generate and SOPS-encrypt the token
+    # This handles:
+    # 1. Retrieving disk password from SOPS
+    # 2. Generating Clevis token bound to TPM
+    # 3. Storing token in /persist/etc/clevis/
+    # 4. SOPS-encrypting token in nix-secrets
+    # 5. Committing and pushing to nix-secrets
+    ./scripts/bcachefs-clevis-token-manager.sh generate {{HOST}} {{DISK_NAME}} "$PCR_IDS"
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "✅ TPM token setup complete!"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "Summary:"
+    echo "  - Token generated on {{HOST}} for {{DISK_NAME}}"
+    echo "  - TPM binding: PCR $PCR_IDS"
+    echo "  - Token location: /persist/etc/clevis/{{DISK_NAME}}.jwe"
+    echo "  - SOPS backup: ../nix-secrets/sops/{{HOST}}.yaml"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Update flake:    cd ~/nix-config && nix flake update nix-secrets"
+    echo "  2. Rebuild:         sudo nixos-rebuild boot"
+    echo "  3. Test unlock:     sudo reboot (should auto-unlock with TPM)"
+    echo ""
+    echo "For multi-disk setups, repeat with different DISK_NAME:"
+    echo "  just bcachefs-setup-tpm {{HOST}} bcachefs-data"
+    echo "  just bcachefs-setup-tpm {{HOST}} bcachefs-backup"
+    echo ""
 
 # Change LUKS disk password and update SOPS secret
 # Interactive workflow: changes device password then syncs to SOPS

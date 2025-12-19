@@ -6,15 +6,10 @@
   config,
   ...
 }:
-let
-  cfg = config.myModules.services.displayManager.greetd;
-in
 {
-  options.myModules.services.displayManager.greetd = {
-    enable = lib.mkEnableOption "greetd display manager with tuigreet";
-  };
+  description = "greetd display manager with tuigreet";
 
-  config = lib.mkIf cfg.enable {
+  config = {
     # Minimal greetd configuration using tuigreet (TUI greeter - more reliable)
     services.greetd = {
       enable = true;

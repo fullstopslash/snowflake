@@ -5,7 +5,6 @@
   ...
 }:
 let
-  cfg = config.myModules.services.networking.openssh;
   # Use port from host.networking.ports.tcp.ssh if defined, otherwise default to 22
   sshPort = config.host.networking.ports.tcp.ssh or 22;
 
@@ -15,11 +14,9 @@ let
   hasOptinPersistence = false;
 in
 {
-  options.myModules.services.networking.openssh = {
-    enable = lib.mkEnableOption "OpenSSH server";
-  };
+  description = "OpenSSH server";
 
-  config = lib.mkIf cfg.enable {
+  config = {
     services.openssh = {
       enable = true;
       ports = [ sshPort ];

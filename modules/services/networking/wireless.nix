@@ -42,11 +42,9 @@ let
   keyFiles = lib.mapAttrs' createWifi config.networking.wireless.networks;
 in
 {
-  options.myModules.services.networking.wireless = {
-    enable = lib.mkEnableOption "Wireless network configuration";
-  };
+  description = "Wireless network configuration";
 
-  config = lib.mkIf (cfg.enable && nmCfg.enable) {
+  config = lib.mkIf config.networking.networkmanager.enable {
     environment.etc = keyFiles;
 
     systemd.services.NetworkManager-predefined-connections = {

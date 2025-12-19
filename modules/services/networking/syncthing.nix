@@ -22,16 +22,13 @@
   ...
 }:
 let
-  cfg = config.myModules.services.networking.syncthing;
   username = config.host.username;
   homeDir = config.host.home;
 in
 {
-  options.myModules.services.networking.syncthing = {
-    enable = lib.mkEnableOption "Syncthing file synchronization";
-  };
+  description = "Syncthing file synchronization";
 
-  config = lib.mkIf cfg.enable {
+  config = {
     # Install syncthing packages
     environment.systemPackages =
       with pkgs;
@@ -61,9 +58,9 @@ in
       description = "Configure Syncthing devices and default folder path";
       after = [
         "syncthing-init.service"
-        "syncthing@${username}.service"
+        "syncthing.service"
       ];
-      wants = [ "syncthing@${username}.service" ];
+      wants = [ "syncthing.service" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
         Type = "oneshot";

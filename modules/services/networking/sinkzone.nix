@@ -23,7 +23,6 @@ in
 {
   options.myModules.services.networking.sinkzone = {
     enable = lib.mkEnableOption "Sinkzone DNS blocking service";
-
     package = lib.mkOption {
       type = lib.types.package;
       default = sinkzonePkg;

@@ -23,9 +23,6 @@ let
   cfg = config.disks;
   hostCfg = config.host;
 
-  # SOPS folder path
-  sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
-
   # Check if layout uses bcachefs native encryption
   isEncrypted = lib.strings.hasInfix "bcachefs-encrypt" cfg.layout;
 
@@ -47,14 +44,23 @@ let
       [ ];
 
   # Clevis JWE token paths
-  # Token stored in nix-secrets for build-time access (pathExists works with Nix store paths)
-  clevisTokenSource = "${sopsFolder}/clevis/bcachefs-root.jwe";
-  clevisTokenPersist = "${hostCfg.persistFolder}/etc/clevis/bcachefs-root.jwe";
+  # Security model:
+  # - SOPS-encrypted in nix-secrets (defense in depth, even though TPM-bound)
+  # - Deployed to /persist during installation via nixos-anywhere --extra-files
+  # - bcachefs encryption protects /persist at rest
+  # - Build-time: Copy from /persist to initrd (no SOPS decryption needed)
+  clevisTokenSource = "${hostCfg.persistFolder}/etc/clevis/bcachefs-root.jwe";
+  clevisTokenPersist = clevisTokenSource; # Same location
 
   # Initrd SSH host key paths
-  # Pre-generated and stored in nix-secrets for nixos-anywhere deployment
-  initrdSshKeySource = "${builtins.toString inputs.nix-secrets}/ssh/initrd/${hostCfg.hostName}_initrd_ed25519";
-  initrdSshKeyPersist = "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
+  # Security model:
+  # - Private key: SOPS-encrypted in nix-secrets/sops/<hostname>.yaml
+  # - Public key: Plain text in nix-secrets/ssh/initrd-public/ for TOFU verification
+  # - Deployed to /persist during installation via nixos-anywhere --extra-files
+  # - bcachefs encryption protects /persist at rest
+  # - Build-time: Copy from /persist to initrd (no SOPS decryption needed)
+  initrdSshKeySource = "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
+  initrdSshKeyPersist = initrdSshKeySource; # Same location
 
   # Get filesystem device paths for Clevis configuration
   # nixpkgs bcachefs module checks if firstDevice(fs) exists in boot.initrd.clevis.devices
@@ -136,7 +142,7 @@ in
         '';
         "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
       } // lib.optionalAttrs (builtins.pathExists initrdSshKeySource) {
-        # Copy pre-generated initrd SSH host key from nix-secrets
+        # Copy initrd SSH host key from /persist (deployed via nixos-anywhere)
         "/etc/ssh/initrd_ssh_host_ed25519_key".source = initrdSshKeySource;
       } // lib.optionalAttrs (tpmEnabled && rootDevice != null && builtins.pathExists clevisTokenSource) {
         # Copy Clevis token to initrd at the path nixpkgs bcachefs module expects
@@ -170,7 +176,7 @@ in
       # The bcachefs module checks: hasAttr (firstDevice fs) config.boot.initrd.clevis.devices
       # secretFile is required by clevis module (for LUKS), but bcachefs looks for
       # tokens at /etc/clevis/${device}.jwe which we provide via contents above
-      # Only set devices if token file exists (build-time check using nix-secrets path)
+      # Only set devices if token file exists (build-time check using /persist path)
       devices = lib.optionalAttrs (builtins.pathExists clevisTokenSource) {
         ${rootDevice}.secretFile = clevisTokenSource;
       } // lib.optionalAttrs (persistDevice != null && persistDevice != rootDevice && builtins.pathExists clevisTokenSource) {
@@ -238,6 +244,27 @@ in
           - TPM binding to PCR ${pcrIds} (Secure Boot state)
 
           See docs/bcachefs.md for detailed encryption workflows.
+        ''
+      ]
+      ++ lib.optionals (isEncrypted && !builtins.pathExists initrdSshKeySource) [
+        ''
+          WARNING: Initrd SSH host key not found on /persist.
+
+          Expected location: ${initrdSshKeySource}
+
+          Without a persistent initrd SSH key, the remote unlock fingerprint
+          will change on every rebuild, breaking TOFU (trust-on-first-use).
+
+          To generate and deploy the key:
+            Use: just vm-fresh ${hostCfg.hostName}
+            (Automatically generates SOPS-encrypted key and deploys to /persist)
+
+          Or manually:
+            1. Generate key and SOPS-encrypt in nix-secrets
+            2. Deploy to ${initrdSshKeySource} during installation
+            3. Rebuild to include persistent key
+
+          Security: Private keys are SOPS-encrypted in nix-secrets, deployed to /persist.
         ''
       ]
       ++ lib.optionals (tpmEnabled && hostCfg.persistFolder == "") [

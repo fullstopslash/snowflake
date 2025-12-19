@@ -7,16 +7,11 @@
 # - /mnt/apps - Applications and shared software
 #
 # Uses systemd automount to avoid boot delays when storage server is unavailable.
-{ config, lib, ... }:
-let
-  cfg = config.myModules.services.storage.networkStorage;
-in
+{ ... }:
 {
-  options.myModules.services.storage.networkStorage = {
-    enable = lib.mkEnableOption "Network storage NFS mounts";
-  };
+  description = "Network storage NFS mounts";
 
-  config = lib.mkIf cfg.enable {
+  config = {
     # Enable NFS client support
     services.rpcbind.enable = true;
     boot.supportedFilesystems = [ "nfs" ];

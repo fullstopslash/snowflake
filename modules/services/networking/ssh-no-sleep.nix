@@ -69,11 +69,9 @@ let
   '';
 in
 {
-  options.myModules.services.networking.sshNoSleep = {
-    enable = lib.mkEnableOption "SSH session sleep inhibitor";
-  };
+  description = "SSH session sleep inhibitor";
 
-  config = lib.mkIf cfg.enable {
+  config = {
     security.pam.services.sshd.text = lib.mkDefault (
       lib.mkAfter "# Prevent sleep on active SSH\nsession optional pam_exec.so quiet ${ssh_script}"
     );

@@ -1,13 +1,8 @@
 { config, lib, ... }:
-let
-  cfg = config.myModules.services.development.containers;
-in
 {
-  options.myModules.services.development.containers = {
-    enable = lib.mkEnableOption "Docker container configuration";
-  };
+  description = "Docker container configuration";
 
-  config = lib.mkIf cfg.enable {
+  config = {
     # Compose-style layout: write docker-compose YAML and manage via systemd
     virtualisation.docker.daemon.settings = {
       "log-driver" = "json-file";
