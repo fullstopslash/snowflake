@@ -123,7 +123,11 @@ in
         "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
       } // lib.optionalAttrs (builtins.pathExists initrdSshKeySource) {
         # Copy pre-generated initrd SSH host key from nix-secrets
-        "/etc/ssh/initrd_ssh_host_ed25519_key".source = initrdSshKeySource;
+        # Must set mode to 0600 for SSH to accept it (Nix store files are 0444)
+        "/etc/ssh/initrd_ssh_host_ed25519_key" = {
+          source = initrdSshKeySource;
+          mode = "0600";
+        };
       } // lib.optionalAttrs (tpmEnabled && rootDevice != null && builtins.pathExists clevisTokenSource) {
         # Copy Clevis token to initrd at the path nixpkgs bcachefs module expects
         # Path format: /etc/clevis/${device}.jwe where device is the filesystem device path
