@@ -116,12 +116,12 @@ install HOST:
     chmod 600 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
     chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
 
-    # Generate initrd SSH host key for encrypted hosts (remote unlock)
-    echo "🔑 Generating initrd SSH host key..."
-    INITRD_KEY_DIR=$(mktemp -d)
-    ssh-keygen -t ed25519 -f "$INITRD_KEY_DIR/initrd_key" -N "" -C "root@{{HOST}}-initrd" -q
-    chmod 600 "$INITRD_KEY_DIR/initrd_key"
-    chmod 644 "$INITRD_KEY_DIR/initrd_key.pub"
+    # Deploy SSH host key to /persist (used by both initrd and main system)
+    mkdir -p "$EXTRA_FILES/persist/etc/ssh"
+    cp "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
+    cp "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub" "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
+    chmod 600 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
+    chmod 644 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
 
     # Step 2: Derive age key from SSH host key
     echo "🔐 Deriving age key from SSH host key..."
@@ -150,51 +150,12 @@ install HOST:
         sops updatekeys -y "$file"
     done
 
-    # Step 3.5: Store initrd SSH key in nix-secrets with SOPS encryption
-    echo "🔑 Storing initrd SSH host key in nix-secrets..."
-    cd ../nix-secrets
-
-    # Check if key already exists in SOPS
-    source {{justfile_directory()}}/{{HELPERS_PATH}}
-    if sops_get_initrd_key {{HOST}} >/dev/null 2>&1; then
-        echo "   ⚠️  Initrd SSH key already exists in SOPS for {{HOST}}"
-        echo "   Using existing key from SOPS..."
-        # Retrieve existing key from SOPS for deployment
-        sops_get_initrd_key {{HOST}} > "$INITRD_KEY_DIR/initrd_key"
-        chmod 600 "$INITRD_KEY_DIR/initrd_key"
-    else
-        # Store public key in nix-secrets for reference (not a secret)
-        mkdir -p ssh/initrd-public
-        cp "$INITRD_KEY_DIR/initrd_key.pub" "ssh/initrd-public/{{HOST}}_initrd_ed25519.pub"
-        INITRD_FINGERPRINT=$(ssh-keygen -lf "$INITRD_KEY_DIR/initrd_key.pub")
-        echo "   Initrd SSH fingerprint: $INITRD_FINGERPRINT"
-
-        # SOPS-encrypt private key in nix-secrets (SECURE)
-        echo "   SOPS-encrypting initrd private key..."
-        sops_store_initrd_key {{HOST}} "$INITRD_KEY_DIR/initrd_key"
-
-        # Stage public key for commit
-        source {{justfile_directory()}}/scripts/vcs-helpers.sh
-        vcs_add "ssh/initrd-public/{{HOST}}_initrd_ed25519.pub"
-    fi
-
-    # Place decrypted key in extra-files for deployment
-    mkdir -p "$EXTRA_FILES/persist/etc/ssh"
-    cp "$INITRD_KEY_DIR/initrd_key" "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key"
-    chmod 600 "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key"
-
-    # Clean up temp key
-    rm -rf "$INITRD_KEY_DIR"
-    echo "   ✅ Initrd SSH key generated and SOPS-encrypted"
-
-    cd "{{justfile_directory()}}"
-
-    # Commit and push (includes age keys + SOPS-encrypted initrd SSH + rekeyed secrets)
+    # Commit and push (includes age keys + rekeyed secrets)
     echo "   Committing and pushing..."
     cd ../nix-secrets && \
         source {{justfile_directory()}}/scripts/vcs-helpers.sh && \
         vcs_add .sops.yaml sops/*.yaml && \
-        (vcs_commit "chore: register {{HOST}} keys (age + SOPS-encrypted initrd SSH) and rekey secrets" || true) && \
+        (vcs_commit "chore: register {{HOST}} age key and rekey secrets" || true) && \
         vcs_push
     cd "{{justfile_directory()}}"
 
@@ -279,32 +240,13 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     chmod 600 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
     chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
 
-    # Generate initrd SSH host key for encrypted hosts (remote unlock)
-    echo "🔑 Generating initrd SSH host key..."
-    INITRD_KEY_DIR=$(mktemp -d)
-    ssh-keygen -t ed25519 -f "$INITRD_KEY_DIR/initrd_key" -N "" -C "root@{{HOST}}-initrd" -q
-    chmod 600 "$INITRD_KEY_DIR/initrd_key"
-    chmod 644 "$INITRD_KEY_DIR/initrd_key.pub"
-
-    # Store public key in nix-secrets for reference (not a secret)
-    mkdir -p ../nix-secrets/ssh/initrd-public
-    cp "$INITRD_KEY_DIR/initrd_key.pub" "../nix-secrets/ssh/initrd-public/{{HOST}}_initrd_ed25519.pub"
-    INITRD_FINGERPRINT=$(ssh-keygen -lf "$INITRD_KEY_DIR/initrd_key.pub")
-    echo "   Initrd SSH fingerprint: $INITRD_FINGERPRINT"
-
-    # SOPS-encrypt private key in nix-secrets (SECURE)
-    echo "   SOPS-encrypting initrd private key..."
-    source {{HELPERS_PATH}}
-    sops_store_initrd_key {{HOST}} "$INITRD_KEY_DIR/initrd_key"
-
-    # Place decrypted key in extra-files for deployment
+    # Deploy SSH host key to /persist (used by both initrd and main system)
     mkdir -p "$EXTRA_FILES/persist/etc/ssh"
-    cp "$INITRD_KEY_DIR/initrd_key" "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key"
-    chmod 600 "$EXTRA_FILES/persist/etc/ssh/initrd_ssh_host_ed25519_key"
-
-    # Clean up temp key
-    rm -rf "$INITRD_KEY_DIR"
-    echo "   ✅ Initrd SSH key generated and SOPS-encrypted"
+    cp "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
+    cp "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub" "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
+    chmod 600 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
+    chmod 644 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
+    echo "   ✅ SSH host key deployed to /persist (used for both initrd and main system)"
 
     # Step 2: Derive age key from SSH host key
     echo "🔐 Deriving age key from SSH host key..."
@@ -346,7 +288,7 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     cd ../nix-secrets && \
         source {{justfile_directory()}}/scripts/vcs-helpers.sh && \
         vcs_add .sops.yaml sops/*.yaml && \
-        (vcs_commit "chore: register {{HOST}} keys (age + SOPS-encrypted initrd SSH) and rekey secrets" || true) && \
+        (vcs_commit "chore: register {{HOST}} age key and rekey secrets" || true) && \
         vcs_push
     cd "{{justfile_directory()}}"
 
