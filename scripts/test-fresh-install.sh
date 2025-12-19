@@ -245,7 +245,7 @@ if [[ $USE_ANYWHERE == true ]]; then
 		-device virtio-rng-pci,rng=rng0 \
 		-object rng-random,id=rng0,filename=/dev/urandom \
 		-device virtio-net,netdev=nic \
-		-netdev "user,hostname=${HOSTNAME}-fresh,hostfwd=tcp::${SSH_PORT}-:22,id=nic" \
+		-netdev "user,hostname=${HOSTNAME}-fresh,hostfwd=tcp::2222-:2222,hostfwd=tcp::${SSH_PORT}-:22,id=nic" \
 		-drive "if=pflash,format=raw,unit=0,file=$OVMF_CODE,readonly=on" \
 		-drive "if=pflash,format=raw,unit=1,file=$OVMF_VARS" \
 		-drive "media=cdrom,index=0,file=$ISO_PATH" \
@@ -348,7 +348,7 @@ QEMU_ARGS=(
 	-device virtio-rng-pci,rng=rng0
 	-object rng-random,id=rng0,filename=/dev/urandom
 	-device virtio-net,netdev=nic
-	-netdev "user,hostname=${HOSTNAME}-fresh,hostfwd=tcp::${SSH_PORT}-:22,id=nic"
+	-netdev "user,hostname=${HOSTNAME}-fresh,hostfwd=tcp::2222-:2222,hostfwd=tcp::${SSH_PORT}-:22,id=nic"
 	-global driver=cfi.pflash01,property=secure,value=on
 	-drive "if=pflash,format=raw,unit=0,file=$OVMF_CODE,readonly=on"
 	-drive "if=pflash,format=raw,unit=1,file=$OVMF_VARS"
