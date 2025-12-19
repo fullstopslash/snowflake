@@ -7,9 +7,13 @@
 # - Headless VM (minimal, fast deploys)
 #
 # This VM validates the nixpkgs bcachefs.nix patterns for TPM unlock
-{ lib, ... }:
+{
+  lib,
+  inputs,
+  ...
+}:
 let
-  sopsFolder = ../../nix-secrets/sops;
+  sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 in
 {
   imports = [ ./hardware-configuration.nix ];
