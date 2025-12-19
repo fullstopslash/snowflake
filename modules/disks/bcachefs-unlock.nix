@@ -137,7 +137,7 @@ in
           Port ${toString remoteUnlockPort}
           PermitRootLogin yes
           AuthorizedKeysFile /etc/ssh/authorized_keys.d/root
-          HostKey /etc/ssh/initrd_ssh_host_ed25519_key
+          HostKey /etc/ssh/ssh_host_ed25519_key
           # Disable privilege separation (sshd user doesn't exist in initrd)
           UsePrivilegeSeparation no
         '';
