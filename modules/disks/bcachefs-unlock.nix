@@ -54,12 +54,13 @@ let
 
   # Initrd SSH host key paths
   # Security model:
-  # - Private key: SOPS-encrypted in nix-secrets/sops/<hostname>.yaml
-  # - Public key: Plain text in nix-secrets/ssh/initrd-public/ for TOFU verification
+  # Use the same SSH host key for both initrd and main system
+  # - Consistent fingerprint whether connecting to initrd or booted system
+  # - Simpler TOFU (trust on first use) - one key to trust
   # - Deployed to /persist during installation via nixos-anywhere --extra-files
   # - bcachefs encryption protects /persist at rest
   # - Build-time: Copy from /persist to initrd (no SOPS decryption needed)
-  initrdSshKeySource = "${hostCfg.persistFolder}/etc/ssh/initrd_ssh_host_ed25519_key";
+  initrdSshKeySource = "${hostCfg.persistFolder}/etc/ssh/ssh_host_ed25519_key";
   initrdSshKeyPersist = initrdSshKeySource; # Same location
 
   # Get filesystem device paths for Clevis configuration
@@ -110,7 +111,7 @@ in
         unitConfig.DefaultDependencies = false;
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${pkgs.coreutils}/bin/chmod 0600 /etc/ssh/initrd_ssh_host_ed25519_key";
+          ExecStart = "${pkgs.coreutils}/bin/chmod 0600 /etc/ssh/ssh_host_ed25519_key";
         };
       };
 
@@ -142,8 +143,8 @@ in
         '';
         "/etc/ssh/authorized_keys.d/root".text = lib.concatStringsSep "\n" authorizedKeys;
       } // lib.optionalAttrs (builtins.pathExists initrdSshKeySource) {
-        # Copy initrd SSH host key from /persist (deployed via nixos-anywhere)
-        "/etc/ssh/initrd_ssh_host_ed25519_key".source = initrdSshKeySource;
+        # Copy SSH host key from /persist (same key used for initrd and main system)
+        "/etc/ssh/ssh_host_ed25519_key".source = initrdSshKeySource;
       } // lib.optionalAttrs (tpmEnabled && rootDevice != null && builtins.pathExists clevisTokenSource) {
         # Copy Clevis token to initrd at the path nixpkgs bcachefs module expects
         # Path format: /etc/clevis/${device}.jwe where device is the filesystem device path
