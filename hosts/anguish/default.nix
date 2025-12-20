@@ -24,6 +24,11 @@
   # Disable GRUB, use systemd-boot (from vmHeadless role)
   boot.loader.grub.enable = lib.mkForce false;
 
+  # Add local DNS entries for services not accessible via VM's QEMU user-mode networking
+  networking.extraHosts = ''
+    192.168.86.82 waterbug.lan
+  '';
+
   # Force disable GUI packages for minimal VM
   programs.kdeconnect.enable = lib.mkForce false;
   services.displayManager.sddm.enable = lib.mkForce false;
