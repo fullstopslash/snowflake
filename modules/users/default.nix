@@ -12,9 +12,6 @@ let
   host = config.host;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 
-  # Capture stateVersion from NixOS config for use in home-manager modules
-  homeStateVersion = config.stateVersions.home;
-
   # List of yubikey public keys for the primary user
   pubKeys = lib.filesystem.listFilesRecursive (
     lib.custom.relativeToRoot "modules/users/${host.primaryUsername}/keys/"
