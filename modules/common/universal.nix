@@ -83,4 +83,30 @@
 
   # Enable firmware with a license allowing redistribution
   hardware.enableRedistributableFirmware = lib.mkIf pkgs.stdenv.isLinux true;
+
+  # Home-manager profile directories (needed for fresh installs)
+  # Home-manager looks for profiles in both locations:
+  # 1. /nix/var/nix/profiles/per-user/$USER (system-level)
+  # 2. ~/.local/state/nix/profiles (user-level, preferred)
+  system.activationScripts.nix-profile-dirs = lib.mkIf pkgs.stdenv.isLinux (
+    lib.stringAfter [ "users" ] ''
+      # System-level profile directory
+      mkdir -p /nix/var/nix/profiles/per-user/${config.host.primaryUsername}
+      chown ${config.host.primaryUsername}:users /nix/var/nix/profiles/per-user/${config.host.primaryUsername}
+
+      # User-level profile directory (home-manager prefers this)
+      home="${config.host.home}"
+      mkdir -p "$home/.local/state/nix/profiles"
+      chown -R ${config.host.primaryUsername}:users "$home/.local"
+    ''
+  );
+
+  # Sudo configuration (NixOS only)
+  security.sudo.extraConfig = lib.mkIf pkgs.stdenv.isLinux ''
+    Defaults lecture = never # rollback results in sudo lectures after each reboot, it's somewhat useless anyway
+    Defaults pwfeedback # password input feedback - makes typed password visible as asterisks
+    Defaults timestamp_timeout=120 # only ask for password every 2h
+    # Keep SSH_AUTH_SOCK so that pam_ssh_agent_auth.so can do its magic.
+    Defaults env_keep+=SSH_AUTH_SOCK
+  '';
 }
