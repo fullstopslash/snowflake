@@ -21,6 +21,7 @@ in
   imports = [
     # Home Manager (unstable - all hosts use the same version)
     inputs.home-manager-unstable.nixosModules.home-manager
+    (lib.custom.relativeToRoot "home-manager") # Home-manager system integration
 
     (lib.custom.relativeToRoot "modules/common") # Includes universal.nix, sops.nix, nix.nix
     (lib.custom.relativeToRoot "modules/selection.nix") # Unified module selection system
@@ -38,18 +39,6 @@ in
 
   # Use mkMerge to combine unconditional and conditional config
   config = lib.mkMerge [
-    # Unconditional: Home-manager defaults (always set since module is imported above)
-    {
-      home-manager = {
-        useGlobalPkgs = lib.mkDefault true;
-        backupFileExtension = lib.mkDefault "bk";
-        extraSpecialArgs = lib.mkDefault {
-          inherit inputs;
-          host = config.host;
-        };
-      };
-    }
-
     # Conditional: Role-specific config that extends universal settings
     (lib.mkIf anyRoleEnabled {
       #
