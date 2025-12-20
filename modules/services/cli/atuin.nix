@@ -171,7 +171,7 @@ in
         DNS_RESOLVED=false
 
         while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-          if ${pkgs.dnsutils}/bin/host "$SYNC_HOSTNAME" >/dev/null 2>&1; then
+          if ${pkgs.getent}/bin/getent hosts "$SYNC_HOSTNAME" >/dev/null 2>&1; then
             echo "DNS resolution successful for $SYNC_HOSTNAME"
             DNS_RESOLVED=true
             break
