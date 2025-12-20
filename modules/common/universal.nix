@@ -48,15 +48,18 @@
   # ========== System-wide Packages ==========
   # Available even when logged in as root
   #
-  environment.systemPackages = [ pkgs.openssh ]
-    ++ lib.optionals (pkgs.stdenv.isLinux && (!config.host.isHeadless or false)) [
-      # Terminal emulator terminfo (NixOS only, skip on headless)
-      pkgs.kitty.terminfo
-      pkgs.ghostty.terminfo
-    ];
+  environment.systemPackages = [
+    pkgs.openssh
+    pkgs.just # Justfile task runner
+    pkgs.rsync # File synchronization
+  ] ++ lib.optionals (pkgs.stdenv.isLinux && (!config.host.isHeadless or false)) [
+    # Terminal emulator terminfo (NixOS only, skip on headless)
+    pkgs.kitty.terminfo
+    pkgs.ghostty.terminfo
+  ];
 
   #
-  # ========== Shell Configuration ==========
+  # ========== Shell and Version Control ==========
   # On darwin it's important this is outside home-manager
   #
   programs.zsh = {
@@ -64,6 +67,7 @@
     enableCompletion = true;
     promptInit = "source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme";
   };
+  programs.git.enable = true;
 
   #
   # ========== Overlays ==========

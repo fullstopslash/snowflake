@@ -24,16 +24,6 @@ let
   primaryUserPubKeys = lib.lists.forEach pubKeys (key: builtins.readFile key);
 in
 {
-  # No matter what environment we are in we want these tools for root, and the user(s)
-  programs.zsh.enable = true;
-  programs.git.enable = true;
-  environment = {
-    systemPackages = [
-      pkgs.just
-      pkgs.rsync
-    ];
-  };
-
   # Import all non-root users
   users = {
     users =
