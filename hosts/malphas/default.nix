@@ -135,66 +135,66 @@
 
   # Unresolved DNS blocking for focus mode
   # Integrates with systemd-resolved: apps -> 127.0.0.53 -> 127.0.0.2 (unresolved) -> upstream
-  services.unresolved = {
-    enable = true;
-    mode = "allowlist";
-    upstreamNameservers = ["192.168.86.82" "1.1.1.1"];
-    startBlocking = false; # Start with blocking disabled
-    allowlist = [
-      # NixOS infrastructure
-      "*.nixos.org"
-      "nixos.org"
-      "*.cachix.org"
-      "cachix.org"
-
-      # Development essentials
-      "github.com"
-      "*.github.com"
-      "*.githubusercontent.com"
-      "gitlab.com"
-      "*.gitlab.com"
-      "*.stackoverflow.com"
-      "stackoverflow.com"
-
-      # Package registries
-      "*.npmjs.org"
-      "*.crates.io"
-      "*.pypi.org"
-      "*.rubygems.org"
-
-      # Cloud providers
-      "*.amazonaws.com"
-      "*.cloudflare.com"
-      "*.fastly.net"
-
-      # AI tools
-      "*.anthropic.com"
-      "anthropic.com"
-      "*.openai.com"
-      "openai.com"
-      "chatgpt.com"
-      "*.chatgpt.com"
-      "*.gemini.google.com"
-      "gemini.google.com"
-      "aistudio.google.com"
-      "generativelanguage.googleapis.com"
-
-      # Google Mail
-      "mail.google.com"
-      "*.mail.google.com"
-
-      # Communication
-      "*.discord.com"
-      "discord.com"
-      "*.slack.com"
-
-      # Local network
-      "*.lan"
-      "*.local"
-      "*.chimera-micro.ts.net"
-    ];
-  };
+  # services.unresolved = {
+  #   enable = true;
+  #   mode = "allowlist";
+  #   upstreamNameservers = ["192.168.86.82" "1.1.1.1"];
+  #   startBlocking = false; # Start with blocking disabled
+  #   allowlist = [
+  #     # NixOS infrastructure
+  #     "*.nixos.org"
+  #     "nixos.org"
+  #     "*.cachix.org"
+  #     "cachix.org"
+  #
+  #     # Development essentials
+  #     "github.com"
+  #     "*.github.com"
+  #     "*.githubusercontent.com"
+  #     "gitlab.com"
+  #     "*.gitlab.com"
+  #     "*.stackoverflow.com"
+  #     "stackoverflow.com"
+  #
+  #     # Package registries
+  #     "*.npmjs.org"
+  #     "*.crates.io"
+  #     "*.pypi.org"
+  #     "*.rubygems.org"
+  #
+  #     # Cloud providers
+  #     "*.amazonaws.com"
+  #     "*.cloudflare.com"
+  #     "*.fastly.net"
+  #
+  #     # AI tools
+  #     "*.anthropic.com"
+  #     "anthropic.com"
+  #     "*.openai.com"
+  #     "openai.com"
+  #     "chatgpt.com"
+  #     "*.chatgpt.com"
+  #     "*.gemini.google.com"
+  #     "gemini.google.com"
+  #     "aistudio.google.com"
+  #     "generativelanguage.googleapis.com"
+  #
+  #     # Google Mail
+  #     "mail.google.com"
+  #     "*.mail.google.com"
+  #
+  #     # Communication
+  #     "*.discord.com"
+  #     "discord.com"
+  #     "*.slack.com"
+  #
+  #     # Local network
+  #     "*.lan"
+  #     "*.local"
+  #     "*.chimera-micro.ts.net"
+  #   ];
+  # };
 
   # Disable sinkzone (replaced by unresolved)
-  services.sinkzone.enable = false;
+  # services.sinkzone.enable = false;
 }
