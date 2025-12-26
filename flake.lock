@@ -681,8 +681,7 @@
         "nixpkgs-stable": "nixpkgs-stable",
         "sops-nix": "sops-nix",
         "starship-jj": "starship-jj",
-        "stylix": "stylix",
-        "unresolved": "unresolved"
+        "stylix": "stylix"
       }
     },
     "rust-analyzer-src": {
@@ -958,23 +957,6 @@
         "owner": "numtide",
         "repo": "treefmt-nix",
         "type": "github"
-      }
-    },
-    "unresolved": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1766086220,
-        "narHash": "sha256-rTxUHXqxuHcAoi+mbXvWwXpk8HgY5I1cxjfKKz3TSbw=",
-        "path": "/home/rain/projects/unresolved",
-        "type": "path"
-      },
-      "original": {
-        "path": "/home/rain/projects/unresolved",
-        "type": "path"
       }
     }
   },

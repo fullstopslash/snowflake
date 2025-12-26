@@ -75,7 +75,7 @@ in {
     interfaceName = "tailscale0"; # optimized startup
     # Additional options to prevent interference with local network while allowing Tailnet access
     extraUpFlags = [
-      "--accept-dns=true" # Don't use Tailscale DNS
+      "--accept-dns=true" # Use Tailscale MagicDNS for *.ts.net domains
       "--shields-up=false" # Don't block local network access
       "--accept-routes=false" # Don't accept routes from Tailscale
       "--operator=${operatorUser}" # Allow primary user to administer tailscale
@@ -89,12 +89,15 @@ in {
         description = "Generate Tailscale auth key via OAuth";
         wantedBy = ["multi-user.target"];
         before = ["tailscaled.service"];
-        after = ["network-online.target" "NetworkManager-wait-online.service"];
-        wants = ["network-online.target" "NetworkManager-wait-online.service"];
+        after = ["network-online.target" "NetworkManager-wait-online.service" "systemd-resolved.service"];
+        wants = ["network-online.target" "NetworkManager-wait-online.service" "systemd-resolved.service"];
         serviceConfig = {
           Type = "oneshot";
           User = "root";
           Group = "root";
+          Restart = "on-failure";
+          RestartSec = "5s";
+          TimeoutStartSec = "120s";
           ExecStart = pkgs.writeShellScript "tailscale-oauth-key" ''
             #!/usr/bin/env sh
             set -eu

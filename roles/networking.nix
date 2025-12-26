@@ -58,7 +58,7 @@
     # };
     resolved = {
       enable = true;
-      # dnssec = "allow-downgrade";
+      dnssec = "allow-downgrade"; # Validate DNSSEC when available, fallback if not
       # dnsovertls = "true";
     };
     openssh = {

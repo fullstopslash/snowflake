@@ -1,7 +1,15 @@
 # Gaming role
-{pkgs, ...}: {
+{
+  pkgs,
+  lib,
+  ...
+}: {
   # Steam Controller settings
   hardware.steam-hardware.enable = true;
+
+  # Disable Avahi - Sunshine enables it by default but we don't need mDNS discovery
+  # Using explicit IP addresses or Tailscale hostnames instead
+  services.avahi.enable = lib.mkForce false;
 
   # Gaming programs
   programs = {

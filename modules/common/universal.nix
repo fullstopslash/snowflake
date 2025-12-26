@@ -110,6 +110,19 @@
     polkit.enable = true;
     sudo.wheelNeedsPassword = false;
     rtkit.enable = true;
+
+    # Allow wheel group to reboot/shutdown without authentication
+    polkit.extraConfig = ''
+      polkit.addRule(function(action, subject) {
+        if ((action.id == "org.freedesktop.login1.reboot" ||
+             action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
+             action.id == "org.freedesktop.login1.power-off" ||
+             action.id == "org.freedesktop.login1.power-off-multiple-sessions") &&
+            subject.isInGroup("wheel")) {
+          return polkit.Result.YES;
+        }
+      });
+    '';
   };
 
   # Systemd configuration (consolidated to avoid repeated keys)
