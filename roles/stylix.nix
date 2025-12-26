@@ -148,6 +148,7 @@ in {
     systemd.user.services.set-wallpaper = {
       description = "Set wallpaper on login";
       wantedBy = ["graphical-session.target"];
+      after = ["graphical-session.target"];
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${pkgs.feh}/bin/feh --bg-scale ${cfg.wallpaper}";

@@ -176,6 +176,12 @@
   # Primary group for user rain
   users.groups.rain = {};
 
+  # Enable user lingering for reliable user service startup
+  # This ensures user services can start even if graphical session hasn't fully initialized
+  systemd.tmpfiles.rules = [
+    "f /var/lib/systemd/linger/rain 0644 root root - -"
+  ];
+
   # Non-gaming global env vars can live here; gaming vars moved to gaming role
 
   # Boot settings (consolidated to avoid repeated keys)

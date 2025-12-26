@@ -228,19 +228,35 @@ in {
         Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.hyprland pkgs.hyprlock pkgs.coreutils]}";
       };
     };
-    # Ensure portal environment is correct for Hyprland session only
-    portal-env = {
-      description = "Set portal environment for Hyprland";
+    # Wait for Hyprland compositor and export environment
+    # This ensures WAYLAND_DISPLAY is set before other services start
+    hyprland-environment = {
+      description = "Wait for Hyprland compositor and export environment";
       wantedBy = ["hyprland-session.target"];
       partOf = ["hyprland-session.target"];
       before = ["xdg-desktop-portal.service" "xdg-desktop-portal-hyprland.service"];
       serviceConfig = {
         Type = "oneshot";
-        Environment = "XDG_CURRENT_DESKTOP=Hyprland";
-        ExecStart = [
-          "${pkgs.systemd}/bin/systemctl --user import-environment XDG_CURRENT_DESKTOP WAYLAND_DISPLAY"
-          "${pkgs.dbus}/bin/dbus-update-activation-environment --systemd XDG_CURRENT_DESKTOP WAYLAND_DISPLAY"
-        ];
+        RemainAfterExit = true;
+        ExecStart = pkgs.writeShellScript "wait-for-hyprland" ''
+          #!/usr/bin/env sh
+          # Wait for Hyprland socket or WAYLAND_DISPLAY to be available
+          for i in {1..30}; do
+            if [ -n "$WAYLAND_DISPLAY" ] && [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
+              # Wayland display is ready
+              export XDG_CURRENT_DESKTOP=Hyprland
+              ${pkgs.systemd}/bin/systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
+              ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
+              exit 0
+            fi
+            sleep 0.5
+          done
+          # Fallback: Set basic environment even if compositor not fully ready
+          export XDG_CURRENT_DESKTOP=Hyprland
+          ${pkgs.systemd}/bin/systemctl --user import-environment XDG_CURRENT_DESKTOP
+          ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd XDG_CURRENT_DESKTOP
+          exit 0
+        '';
       };
     };
     hyprpaper = {
@@ -305,12 +321,16 @@ in {
       description = "KDE Connect indicator";
       wantedBy = ["hyprland-session.target"];
       partOf = ["hyprland-session.target"];
+      after = ["hyprland-environment.service"];
       serviceConfig = {
         Type = "simple";
         ExecStart = "${pkgs.kdePackages.kdeconnect-kde}/bin/kdeconnect-indicator";
         Restart = "on-failure";
-        RestartSec = 1;
-        Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.kdePackages.kdeconnect-kde]}";
+        RestartSec = 5;
+        Environment = [
+          "PATH=${pkgs.lib.makeBinPath [pkgs.kdePackages.kdeconnect-kde]}"
+          "QT_QPA_PLATFORM=wayland"
+        ];
       };
     };
 
