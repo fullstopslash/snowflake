@@ -42,10 +42,6 @@
       url = "github:jacopone/antigravity-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    unresolved = {
-      url = "path:/home/rain/projects/unresolved";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     # Fix Dolphin OpenURI behavior via overlay
     # dolphin-overlay = {
     #   url = "github:rumboon/dolphin-overlay";
@@ -114,9 +110,6 @@
 
           # Host-specific configuration
           ./hosts/${hostname}/default.nix
-
-          # Unresolved DNS blocking module
-          inputs.unresolved.nixosModules.unresolved
 
           # Dynamic hostname setting
           {networking.hostName = hostname;}

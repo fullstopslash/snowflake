@@ -24,6 +24,19 @@
       allowedTCPPorts = [10400 10700];
       allowedUDPPorts = [41641];
     };
+    # IPv6 configuration
+    enableIPv6 = true;
+    # DNS nameservers
+    nameservers = ["1.1.1.1" "1.0.0.1"];
+  };
+
+  # Kernel networking parameters
+  boot.kernel.sysctl = {
+    "net.ipv4.conf.all.forwarding" = true;
+    "net.ipv6.conf.all.forwarding" = true;
+    # Accept IPv6 Router Advertisements even when forwarding is enabled
+    "net.ipv6.conf.all.accept_ra" = 2;
+    "net.ipv6.conf.default.accept_ra" = 2;
   };
 
   # DNSSEC enabled: Technitium validates upstream, systemd-resolved validates locally
