@@ -244,6 +244,7 @@
     qview
     kdePackages.gwenview
     swayimg
+    zathura
 
     # Package managers
   ];

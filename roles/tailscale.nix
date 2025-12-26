@@ -33,39 +33,39 @@ in {
     firewall = {
       trustedInterfaces = ["tailscale0"];
     };
-    nftables = {
-      enable = true;
-      ruleset = ''
-        table inet tailscale0 {
-          chain output {
-            type route hook output priority -100; policy accept;
-            ip daddr 100.64.0.0/10 ct mark set 0x00000f41 meta mark set 0x6d6f6c65;
-          }
-
-          chain input {
-            type filter hook input priority -100; policy accept;
-            ip saddr 100.64.0.0/10 ct mark set 0x00000f41 meta mark set 0x6d6f6c65;
-          }
-        }
-
-        # Protect local network traffic from Tailscale interference
-        table inet local_network_protection {
-          chain prerouting {
-            type filter hook prerouting priority -300; policy accept;
-            # Mark local network traffic to bypass Tailscale routing
-            # Only apply to specific local network ranges
-            ip saddr 192.168.86.0/24 ct mark set 0x00000f42 meta mark set 0x6c6f6361;
-          }
-
-          chain output {
-            type route hook output priority -300; policy accept;
-            # Ensure local network traffic doesn't get routed through Tailscale
-            # Only apply to specific local network ranges
-            ip daddr 192.168.86.0/24 ct mark set 0x00000f42 meta mark set 0x6c6f6361;
-          }
-        }
-      '';
-    };
+    # nftables = {
+    #   enable = true;
+    #   ruleset = ''
+    #     table inet tailscale0 {
+    #       chain output {
+    #         type route hook output priority -100; policy accept;
+    #         ip daddr 100.64.0.0/10 ct mark set 0x00000f41 meta mark set 0x6d6f6c65;
+    #       }
+    #
+    #       chain input {
+    #         type filter hook input priority -100; policy accept;
+    #         ip saddr 100.64.0.0/10 ct mark set 0x00000f41 meta mark set 0x6d6f6c65;
+    #       }
+    #     }
+    #
+    #     # Protect local network traffic from Tailscale interference
+    #     table inet local_network_protection {
+    #       chain prerouting {
+    #         type filter hook prerouting priority -300; policy accept;
+    #         # Mark local network traffic to bypass Tailscale routing
+    #         # Only apply to specific local network ranges
+    #         ip saddr 192.168.86.0/24 ct mark set 0x00000f42 meta mark set 0x6c6f6361;
+    #       }
+    #
+    #       chain output {
+    #         type route hook output priority -300; policy accept;
+    #         # Ensure local network traffic doesn't get routed through Tailscale
+    #         # Only apply to specific local network ranges
+    #         ip daddr 192.168.86.0/24 ct mark set 0x00000f42 meta mark set 0x6c6f6361;
+    #       }
+    #     }
+    #   '';
+    # };
   };
 
   services.tailscale = {

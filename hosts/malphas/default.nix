@@ -32,7 +32,7 @@
     ../../roles/obs.nix
     ../../roles/waybar.nix
     ../../roles/networking.nix
-    ../../roles/sinkzone.nix
+    # ../../roles/sinkzone.nix
     # ../../roles/vpn.nix
     ../../roles/tailscale.nix
     ../../roles/syncthing.nix

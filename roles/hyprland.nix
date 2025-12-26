@@ -108,6 +108,9 @@ in {
     waybar
     eww
     rofi
+    # NetworkManager GUI tools
+    networkmanagerapplet  # Provides nm-applet and nm-connection-editor
+    networkmanager_dmenu  # Rofi/dmenu WiFi menu
     # Additional packages for waybar modules
     networkmanager
     wirelesstools
@@ -308,6 +311,18 @@ in {
         Restart = "on-failure";
         RestartSec = 1;
         Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.kdePackages.kdeconnect-kde]}";
+      };
+    };
+
+    nm-applet = {
+      description = "NetworkManager applet";
+      wantedBy = ["hyprland-session.target"];
+      partOf = ["hyprland-session.target"];
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${pkgs.networkmanagerapplet}/bin/nm-applet --indicator";
+        Restart = "on-failure";
+        RestartSec = 1;
       };
     };
 

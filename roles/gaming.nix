@@ -99,7 +99,7 @@
 
     # Gaming utilities
     mangohud
-    mangojuice
+    stable.mangojuice
 
     # gamescope
     #   (writeShellScriptBin "gamescope-hdr" ''

@@ -26,7 +26,8 @@
     };
   };
 
-  # Optional: soften DNSSEC to avoid flaky captive/Wi‑Fi resumes
+  # DNSSEC enabled: Technitium validates upstream, systemd-resolved validates locally
+  # Defense-in-depth: dual validation for enhanced security
   # Core network services; split others into dedicated roles
   services = {
     avahi = {

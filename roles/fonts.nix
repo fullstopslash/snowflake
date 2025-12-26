@@ -19,6 +19,7 @@
     noto-fonts-monochrome-emoji
     noto-fonts-cjk-sans
     liberation_ttf
+    libertinus
     fira
     fira-code
     fira-code-symbols
