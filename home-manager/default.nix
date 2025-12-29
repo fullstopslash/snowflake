@@ -29,7 +29,7 @@ let
     lib.optional (lib.pathExists fullPath) fullPath;
 in
 
-lib.mkIf (inputs ? "home-manager") {
+lib.mkIf ((inputs ? "home-manager") || (inputs ? "home-manager-unstable")) {
   home-manager = {
     # Use global pkgs instead of home-manager's own
     useGlobalPkgs = lib.mkDefault true;
