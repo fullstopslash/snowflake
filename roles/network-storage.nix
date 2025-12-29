@@ -20,7 +20,8 @@ _: {
   # };
 
   # NFS mounts with boot optimizations
-  fileSystems."/storage" = {
+  # Moved from /storage to /mnt/storage to avoid bwrap/autofs issues with Steam FHS environment
+  fileSystems."/mnt/storage" = {
     device = "waterbug.lan:/mnt/storage/storage";
     fsType = "nfs";
     options = [
@@ -80,7 +81,7 @@ _: {
     (commonMountOptions
       // {
         what = "waterbug.lan:/mnt/storage/storage";
-        where = "/storage";
+        where = "/mnt/storage";
       })
   ];
 
@@ -92,7 +93,7 @@ _: {
       };
     };
   in [
-    (commonAutoMountOptions // {where = "/storage";})
+    (commonAutoMountOptions // {where = "/mnt/storage";})
     (commonAutoMountOptions // {where = "/mnt/apps";})
   ];
 }

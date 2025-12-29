@@ -1,7 +1,7 @@
 # VPN role (Mullvad)
 {pkgs, ...}: {
   services.mullvad-vpn = {
-    enable = false;
+    enable = true;
     package = pkgs.mullvad-vpn;
   };
 }
