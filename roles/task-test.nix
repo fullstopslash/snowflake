@@ -59,6 +59,17 @@
       autoPinAfterBoot = lib.mkDefault true; # Auto-pin for testing golden generation workflow
     };
 
+    # ========================================
+    # CHEZMOI DOTFILE SYNC (for testing GitOps workflow)
+    # ========================================
+    # Enable chezmoi-sync to test jj-based conflict-free dotfile management
+    myModules.services.dotfiles.chezmoiSync = {
+      enable = lib.mkDefault true;
+      repoUrl = lib.mkDefault "git@github.com:fullstopslash/dotfiles.git";
+      autoCommit = lib.mkDefault true;
+      autoPush = lib.mkDefault true;
+    };
+
     # Test VMs need sops passwords, so override isMinimal from VM role
     host.isMinimal = lib.mkForce false;
 
