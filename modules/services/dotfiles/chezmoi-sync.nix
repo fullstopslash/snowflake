@@ -285,9 +285,10 @@ in
     sops.secrets = lib.mkIf config.host.hasSecrets {
       "dotfiles/acoustid_api" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        path = "/run/secrets/acoustid_api";
         owner = primaryUser.name;
         mode = "0400";
+        # path option removed - defaults to /run/secrets/dotfiles/acoustid_api
+        # This prevents conflict with sops-nix's /run/secrets symlink management
       };
     };
   };
