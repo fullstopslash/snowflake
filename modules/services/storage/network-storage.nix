@@ -3,7 +3,7 @@
 # Usage: modules.services.storage = [ "network-storage" ]
 #
 # Provides automounted NFS shares from waterbug.lan storage server:
-# - /storage - Main storage pool
+# - /mnt/storage - Main storage pool
 # - /mnt/apps - Applications and shared software
 #
 # Uses systemd automount to avoid boot delays when storage server is unavailable.
@@ -33,7 +33,7 @@
           commonMountOptions
           // {
             what = "waterbug.lan:/mnt/storage/storage";
-            where = "/storage";
+            where = "/mnt/storage";
           }
         )
         (
@@ -56,7 +56,7 @@
         };
       in
       [
-        (commonAutoMountOptions // { where = "/storage"; })
+        (commonAutoMountOptions // { where = "/mnt/storage"; })
         (commonAutoMountOptions // { where = "/mnt/apps"; })
       ];
   };
