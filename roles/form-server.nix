@@ -57,21 +57,24 @@
     };
 
     # ========================================
-    # HOSTSPEC (non-derived options only)
+    # SYSTEM CONFIGURATION
     # ========================================
-    host = {
-      # Architecture (servers are typically x86_64)
+    # Architecture (servers are typically x86_64)
+    system = {
       architecture = lib.mkDefault "x86_64-linux";
+      nixpkgsVariant = lib.mkDefault "stable";
+      isDarwin = lib.mkDefault false;
+    };
 
-      isProduction = lib.mkDefault true;
-      wifi = lib.mkDefault false;
+    # Hardware defaults
+    hardware.host.wifi = lib.mkDefault false;
 
-      secretCategories = {
-        base = lib.mkDefault true;
-        server = lib.mkDefault true;
-        network = lib.mkDefault true;
-        cli = lib.mkDefault true;
-      };
+    # Secret categories
+    sops.categories = {
+      base = lib.mkDefault true;
+      server = lib.mkDefault true;
+      network = lib.mkDefault true;
+      cli = lib.mkDefault true;
     };
   };
 }

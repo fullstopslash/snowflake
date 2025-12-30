@@ -22,8 +22,8 @@
   ...
 }:
 let
-  username = config.host.username;
-  homeDir = config.host.home;
+  username = config.identity.primaryUsername;
+  homeDir = config.identity.home;
 in
 {
   description = "Syncthing file synchronization";
@@ -35,7 +35,7 @@ in
       [
         syncthing
       ]
-      ++ lib.optionals (!config.host.isHeadless or false) [
+      ++ lib.optionals (!false) [
         syncthingtray
       ];
 

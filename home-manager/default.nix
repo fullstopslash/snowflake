@@ -18,8 +18,11 @@
 
 let
   platform = if isDarwin then "darwin" else "nixos";
-  host = config.host;
   homeStateVersion = config.stateVersions.home;
+
+  # Check if system is minimal (no desktop or window managers)
+  isMinimal =
+    (config.modules.apps.desktop or [ ]) == [ ] && (config.modules.apps.window-managers or [ ]) == [ ];
 
   fullPathIfExists =
     path:
@@ -39,7 +42,8 @@ lib.mkIf ((inputs ? "home-manager") || (inputs ? "home-manager-unstable")) {
     # Special args passed to all home-manager modules
     extraSpecialArgs = {
       inherit pkgs inputs;
-      host = config.host;
+      # Expose identity and system config to home-manager
+      inherit (config) identity system;
     };
 
     # Configure home-manager for all non-root users
@@ -48,11 +52,11 @@ lib.mkIf ((inputs ? "home-manager") || (inputs ? "home-manager-unstable")) {
         map (user: {
           "${user}".imports = lib.flatten [
             # Chezmoi dotfiles management - applies to all non-minimal users
-            (lib.optional (!host.isMinimal) (lib.custom.relativeToRoot "home-manager/chezmoi.nix"))
+            (lib.optional (!isMinimal) (lib.custom.relativeToRoot "home-manager/chezmoi.nix"))
             # User-specific and host-specific home-manager configs
-            (lib.optional (!host.isMinimal) (
+            (lib.optional (!isMinimal) (
               map (fullPathIfExists) [
-                "home-manager/users/${user}/${host.hostName}.nix"
+                "home-manager/users/${user}/${config.identity.hostName}.nix"
                 "home-manager/users/${user}/common"
                 "home-manager/users/${user}/common/${platform}.nix"
               ]
@@ -69,7 +73,7 @@ lib.mkIf ((inputs ? "home-manager") || (inputs ? "home-manager-unstable")) {
               }
             )
           ];
-        }) config.host.users
+        }) config.identity.users
       ))
       # Root user configuration
       // {

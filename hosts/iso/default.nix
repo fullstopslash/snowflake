@@ -25,7 +25,7 @@
 
   # Minimal host config - just what's needed for SSH keys
   # ISO is for recovery/install - secrets bootstrapped post-install on target system
-  host = {
+  identity = {
     hostName = "mitosis"; # Discoverable via mitosis.local
     primaryUsername = "nixos"; # Standard installer username
     hasSecrets = lib.mkForce false; # ISO doesn't have secrets

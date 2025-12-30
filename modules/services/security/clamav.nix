@@ -38,16 +38,17 @@
             USERID=''${ADDRESS#/run/user/}
             sudo -u "#$USERID" DBUS_SESSION_BUS_ADDRESS="unix:path=$ADDRESS/bus" ${pkgs.libnotify}/bin/notify-send -u critical -i dialog-warning "Suspicious file" "$ALERT"
         done
-        ${lib.optionalString (config.host ? email && config.host.email ? notifier && config.host ? domain)
+        ${lib.optionalString
+          (config.host ? email && config.identity.email ? notifier && config.host ? domain)
           ''
             TMPDIR=$(mktemp -d)
             cat >"$TMPDIR"/clamav-mail.txt <<-EOF
-                From:${config.host.email.notifier}
+                From:${config.identity.email.notifier}
                 Subject: [$(hostname)] $(date) Suspicious file detected!
 
                 $ALERT
                 EOF
-                  msmtp -t $(hostname).alerts.net@${config.host.domain} <"$TMPDIR"/clamav-mail.txt
+                  msmtp -t $(hostname).alerts.net@${config.identity.domain} <"$TMPDIR"/clamav-mail.txt
           ''
         }
       '';

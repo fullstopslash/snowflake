@@ -142,8 +142,8 @@ in
   };
 
   config = lib.mkMerge [
-    # Auto-enable when host.hasSecrets = true
-    (lib.mkIf config.host.hasSecrets {
+    # Auto-enable when SOPS is configured
+    (lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
       myModules.security.sops-enforcement.enable = lib.mkDefault true;
     })
 

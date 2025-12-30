@@ -18,7 +18,7 @@ let
       false;
   hostName = config.networking.hostName;
   homeBase = if pkgs.stdenv.isLinux then "/home" else "/Users";
-  homeDirectory = "${config.host.home}";
+  homeDirectory = "${config.identity.home}";
   rootHome = if pkgs.stdenv.isLinux then config.users.users.root.home else "/var/root";
   excludes = lib.flatten [
     "**/.direnv"
@@ -97,7 +97,7 @@ in
     };
     borgPort = lib.mkOption {
       type = lib.types.str; # FIXME(borg): int?
-      default = "${builtins.toString config.host.networking.ports.tcp.ssh}";
+      default = "${builtins.toString config.identity.networking.ports.tcp.ssh}";
       description = "The ssh port to use for the borg server";
     };
     borgBackupPath = lib.mkOption {
@@ -112,12 +112,12 @@ in
     };
     borgNotifyFrom = lib.mkOption {
       type = lib.types.str;
-      default = "box@${config.host.domain}";
+      default = "box@${config.identity.domain}";
       description = "The email address that msmtp notifications will be sent from";
     };
     borgNotifyTo = lib.mkOption {
       type = lib.types.str;
-      default = "admin@${config.host.domain}";
+      default = "admin@${config.identity.domain}";
       description = "The email address that msmtp notifications will be sent to";
     };
     borgRemotePath = lib.mkOption {
@@ -132,7 +132,7 @@ in
     };
     borgCacheDir =
       let
-        persistFolder = lib.optionalString isImpermanent config.host.persistFolder;
+        persistFolder = lib.optionalString isImpermanent config.hardware.host.persistFolder;
       in
       lib.mkOption {
         type = lib.types.str;
@@ -542,8 +542,8 @@ in
           {
             tmpfiles.rules =
               let
-                user = config.users.users.${config.host.username}.name;
-                group = config.users.users.${config.host.username}.group;
+                user = config.users.users.${config.identity.primaryUsername}.name;
+                group = config.users.users.${config.identity.primaryUsername}.group;
               in
               # https://www.man7.org/linux/man-pages/man5/tmpfiles.d.5.html
               [ "d ${homeDirectory}/mount/backup/ 0750 ${user} ${group} -" ];

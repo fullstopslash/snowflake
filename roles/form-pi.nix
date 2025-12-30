@@ -55,19 +55,22 @@
     };
 
     # ========================================
-    # HOSTSPEC (non-derived options only)
+    # SYSTEM CONFIGURATION
     # ========================================
-    host = {
-      # Architecture (Raspberry Pi is aarch64)
+    # Architecture (Raspberry Pi is aarch64)
+    system = {
       architecture = lib.mkDefault "aarch64-linux";
+      nixpkgsVariant = lib.mkDefault "stable";
+      isDarwin = lib.mkDefault false;
+    };
 
-      isProduction = lib.mkDefault true;
-      wifi = lib.mkDefault true;
+    # Hardware defaults
+    hardware.host.wifi = lib.mkDefault true;
 
-      secretCategories = {
-        base = lib.mkDefault true;
-        network = lib.mkDefault true;
-      };
+    # Secret categories
+    sops.categories = {
+      base = lib.mkDefault true;
+      network = lib.mkDefault true;
     };
   };
 }

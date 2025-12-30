@@ -22,18 +22,23 @@ in
     enable = lib.mkEnableOption "SSH client configuration";
     deployUserKey = lib.mkOption {
       type = lib.types.bool;
-      default = !config.host.useYubikey or false;
+      default = !config.myModules.services.security.yubikey.enable or false;
       description = "Deploy user SSH key from SOPS (disabled for Yubikey hosts)";
+    };
+    workMode = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable work-specific SSH configuration and known hosts";
     };
   };
 
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     # Deploy SSH key from SOPS for non-Yubikey hosts
     # The key is symlinked to ~/.ssh/id_ed25519 by chezmoi dotfiles
-    sops.secrets = lib.mkIf (cfg.deployUserKey && config.host.hasSecrets) {
+    sops.secrets = lib.mkIf (cfg.deployUserKey && (config.sops.defaultSopsFile or null) != null) {
       "keys/ssh/ed25519" = {
         sopsFile = "${sopsFolder}/shared.yaml";
-        owner = config.host.primaryUsername;
+        owner = config.identity.primaryUsername;
         mode = "0400";
       };
     };
@@ -51,10 +56,13 @@ in
           github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
         '')
       ]
-      ++ lib.optional (!config.host.isMinimal) (
-        pkgs.writeText "custom_private_known_hosts" inputs.nix-secrets.networking.ssh.knownHostsFileContents
-      )
-      ++ lib.optional (config.host.isWork or false) (
+      ++
+        lib.optional
+          ((config.modules.apps.desktop or [ ]) != [ ] || (config.modules.apps.window-managers or [ ]) != [ ])
+          (
+            pkgs.writeText "custom_private_known_hosts" inputs.nix-secrets.networking.ssh.knownHostsFileContents
+          )
+      ++ lib.optional cfg.workMode (
         pkgs.writeText "custom_work_known_hosts" inputs.nix-secrets.work.ssh.knownHostsFileContents
       );
     };

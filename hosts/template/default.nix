@@ -7,7 +7,7 @@
 # WHAT GOES IN A HOST CONFIG:
 #   1. Hardware configuration (hardware-configuration.nix, disk config)
 #   2. Role selection: roles = [ "desktop" "development" ]
-#   3. Identity (host.hostName)
+#   3. Identity (identity.hostName)
 #   4. Hardware quirks (boot loader, kernel modules, etc.)
 #
 # WHAT COMES FROM ROLES:
@@ -43,7 +43,7 @@
   # ========================================
   # HOST IDENTITY
   # ========================================
-  host = {
+  identity = {
     hostName = "myhost";
     hasSecrets = false; # Template doesn't have SOPS secrets
   };

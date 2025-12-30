@@ -22,7 +22,7 @@
   ...
 }:
 let
-  primaryUser = config.host.primaryUsername;
+  primaryUser = config.identity.primaryUsername;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 in
 {

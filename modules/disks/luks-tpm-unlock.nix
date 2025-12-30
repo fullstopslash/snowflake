@@ -36,7 +36,6 @@
 }:
 let
   cfg = config.disks;
-  hostCfg = config.host;
 
   # SOPS folder path
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
@@ -45,8 +44,9 @@ let
   isLuks = lib.strings.hasInfix "luks" cfg.layout;
 
   # TPM unlock configuration
-  tpmEnabled = hostCfg.encryption.tpm.enable or false;
-  pcrIds = hostCfg.encryption.tpm.pcrIds or "0+7";
+  tpmEnabled = config.hardware.host.encryption.tpm.enable or false;
+  pcrIds = config.hardware.host.encryption.tpm.pcrIds or "0+7";
+  persistFolder = config.hardware.host.persistFolder or "";
 
   # LUKS device path (standardized name across all LUKS layouts)
   luksDevice = "/dev/disk/by-id/dm-name-encrypted-nixos";
@@ -55,7 +55,7 @@ in
 {
   config = lib.mkIf (cfg.enable && isLuks && tpmEnabled) {
     # SOPS secret for disk password (needed for auto-enrollment)
-    sops.secrets = lib.mkIf config.host.hasSecrets {
+    sops.secrets = lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
       "passwords/disk/default" = {
         sopsFile = "${sopsFolder}/shared.yaml";
       };
@@ -77,7 +77,7 @@ in
 
       unitConfig = {
         # Only run if stamp file doesn't exist (prevents re-running)
-        ConditionPathExists = "!${hostCfg.persistFolder}/var/lib/luks-tpm-enrolled.stamp";
+        ConditionPathExists = "!${persistFolder}/var/lib/luks-tpm-enrolled.stamp";
       };
 
       serviceConfig = {
@@ -119,8 +119,8 @@ in
           echo "   This is normal for systems without TPM hardware"
 
           # Create stamp file to prevent repeated checks
-          mkdir -p "${hostCfg.persistFolder}/var/lib"
-          touch "${hostCfg.persistFolder}/var/lib/luks-tpm-enrolled.stamp"
+          mkdir -p "${persistFolder}/var/lib"
+          touch "${persistFolder}/var/lib/luks-tpm-enrolled.stamp"
           exit 0
         fi
 
@@ -131,8 +131,8 @@ in
           echo "✅ TPM already enrolled"
 
           # Create stamp file
-          mkdir -p "${hostCfg.persistFolder}/var/lib"
-          touch "${hostCfg.persistFolder}/var/lib/luks-tpm-enrolled.stamp"
+          mkdir -p "${persistFolder}/var/lib"
+          touch "${persistFolder}/var/lib/luks-tpm-enrolled.stamp"
           exit 0
         fi
 
@@ -176,8 +176,8 @@ in
           echo "🔄 TPM automatic unlock will be active on next boot"
 
           # Create stamp file
-          mkdir -p "${hostCfg.persistFolder}/var/lib"
-          touch "${hostCfg.persistFolder}/var/lib/luks-tpm-enrolled.stamp"
+          mkdir -p "${persistFolder}/var/lib"
+          touch "${persistFolder}/var/lib/luks-tpm-enrolled.stamp"
         else
           echo "❌ TPM enrollment failed"
           echo "   System will continue using password-only unlock"

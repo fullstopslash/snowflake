@@ -242,7 +242,7 @@ in
       [
         tailscale
       ]
-      ++ lib.optionals (!config.host.isHeadless or false) [
+      ++ lib.optionals (!false) [
         ktailctl
       ];
   };

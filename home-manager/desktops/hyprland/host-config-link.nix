@@ -11,7 +11,7 @@
   ...
 }:
 let
-  hostname = config.host.hostName;
+  hostname = config.identity.hostName;
   hostConfigDir = ./host-configs;
   mainConfigFile = "${hostConfigDir}/hyprland.conf";
   commonConfigFile = "${hostConfigDir}/common.conf";

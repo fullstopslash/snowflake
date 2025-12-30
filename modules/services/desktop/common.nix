@@ -8,7 +8,8 @@
 }:
 let
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
-  hasDesktopSecrets = config.host.hasSecrets && config.host.secretCategories.desktop or false;
+  hasDesktopSecrets =
+    ((config.sops.defaultSopsFile or null) != null) && (config.sops.categories.desktop or false);
 in
 {
   description = "common desktop environment";
@@ -49,7 +50,7 @@ in
         #     User = "rain";
         #   };
         # };
-        post-sleep-samsung = lib.mkIf config.host.secretCategories.desktop {
+        post-sleep-samsung = lib.mkIf (config.sops.categories.desktop or false) {
           description = "Post-sleep script";
           after = [
             "suspend.target"
@@ -120,7 +121,7 @@ in
         HASS_SERVER=${config.sops.placeholder."env_hass_server"}
         HASS_TOKEN=${config.sops.placeholder."env_hass_token"}
       '';
-      owner = config.host.username;
+      owner = config.identity.primaryUsername;
       mode = "0400";
     };
 

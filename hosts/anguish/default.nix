@@ -48,7 +48,7 @@
   # ========================================
   # HOST IDENTITY
   # ========================================
-  host = {
+  identity = {
     hostName = builtins.baseNameOf (toString ./.);
     primaryUsername = "rain";
     persistFolder = "/persist"; # Required for impermanence layout

@@ -90,20 +90,21 @@
     documentation.enable = lib.mkDefault false;
 
     # ========================================
-    # HOSTSPEC (non-derived options only)
+    # SYSTEM CONFIGURATION
     # ========================================
-    host = {
-      # Architecture and nixpkgs variant (VMs use unstable for testing)
+    # Architecture and nixpkgs variant (VMs use unstable for testing)
+    system = {
       architecture = lib.mkDefault "x86_64-linux";
       nixpkgsVariant = lib.mkDefault "unstable";
+      isDarwin = lib.mkDefault false;
+    };
 
-      isProduction = lib.mkDefault false;
-      hasSecrets = lib.mkDefault true;
-      wifi = lib.mkDefault false;
+    # Hardware defaults
+    hardware.host.wifi = lib.mkDefault false;
 
-      secretCategories = {
-        base = lib.mkDefault true;
-      };
+    # Secret categories
+    sops.categories = {
+      base = lib.mkDefault true;
     };
   };
 }

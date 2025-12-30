@@ -5,8 +5,8 @@
   ...
 }:
 let
-  browser = [ "${config.host.defaultBrowser}.desktop" ];
-  editor = [ "${config.host.defaultEditor}.desktop" ];
+  browser = [ "${config.myModules.apps.xdg.defaultBrowser or "firefox"}.desktop" ];
+  editor = [ "${config.myModules.apps.xdg.defaultEditor or "nvim"}.desktop" ];
   # FIXME(xdg): Where possible these should use config options like above to reference whatever is configured as the default
   media = [ "vlc.desktop" ];
   writer = [ "libreoffice-writer.desktop" ];

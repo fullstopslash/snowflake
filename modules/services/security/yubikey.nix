@@ -12,7 +12,7 @@
   ...
 }:
 let
-  homeDirectory = "${config.host.home}";
+  homeDirectory = "${config.identity.home}";
   cfg = config.myModules.services.security.yubikey;
   yubikey-up =
     let

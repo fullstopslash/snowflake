@@ -30,7 +30,7 @@ in
       enable = true;
       package = pkgs.ly;
       settings = {
-        default_user = lib.mkDefault config.host.primaryUsername;
+        default_user = lib.mkDefault config.identity.primaryUsername;
         save = lib.mkDefault false;
         animate = lib.mkDefault true;
         animation = lib.mkDefault "3";

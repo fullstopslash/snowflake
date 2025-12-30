@@ -41,23 +41,18 @@ in
     # Conditional: Role-specific config that extends universal settings
     (lib.mkIf anyRoleEnabled {
       #
-      # ========== Role-specific host defaults ==========
+      # ========== Role-specific defaults ==========
       # These extend the universal defaults in modules/common/universal.nix
       #
-      host = {
+      identity = {
         # Identity defaults
         primaryUsername = lib.mkDefault "rain";
         handle = lib.mkDefault "fullstopslash";
+      };
 
-        # Universal behavioral defaults
-        # Note: isProduction is set per hardware role (server/pi=true, vm=false)
-        hasSecrets = lib.mkDefault true;
-        useAtticCache = lib.mkDefault true;
-
-        # Secret categories - base is always enabled, roles add more
-        secretCategories = {
-          base = lib.mkDefault true;
-        };
+      # Secret categories - base is always enabled, roles add more
+      sops.categories = {
+        base = lib.mkDefault true;
       };
 
     })

@@ -8,7 +8,7 @@
   # We must clear hashedPasswordFile (set by users/default.nix) to let initialPassword work
   users = {
     mutableUsers = lib.mkForce false;
-    users.${config.host.username} = {
+    users.${config.identity.primaryUsername} = {
       isNormalUser = true;
       # Clear hashedPasswordFile from users/default.nix (empty string "" causes locked account)
       hashedPasswordFile = lib.mkForce null;

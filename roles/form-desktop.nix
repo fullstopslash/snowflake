@@ -72,27 +72,24 @@
     };
 
     # ========================================
-    # HOSTSPEC (non-derived options only)
+    # SYSTEM CONFIGURATION
     # ========================================
-    # Note: useWayland, isDevelopment, isMinimal, useWindowManager are now
-    # derived from modules.* selections in host-spec.nix
-    host = {
-      # Architecture and nixpkgs variant
+    # Architecture and nixpkgs variant
+    system = {
       architecture = lib.mkDefault "x86_64-linux";
       nixpkgsVariant = lib.mkDefault "stable";
+      isDarwin = lib.mkDefault false;
+    };
 
-      # Hardware default (desktops typically use ethernet)
-      wifi = lib.mkDefault false;
-      # Form factor
-      isMobile = lib.mkDefault false;
+    # Hardware defaults (desktops typically use ethernet)
+    hardware.host.wifi = lib.mkDefault false;
 
-      # Secret categories
-      secretCategories = {
-        base = lib.mkDefault true;
-        desktop = lib.mkDefault true;
-        network = lib.mkDefault true;
-        cli = lib.mkDefault true;
-      };
+    # Secret categories
+    sops.categories = {
+      base = lib.mkDefault true;
+      desktop = lib.mkDefault true;
+      network = lib.mkDefault true;
+      cli = lib.mkDefault true;
     };
   };
 }

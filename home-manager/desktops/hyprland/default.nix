@@ -58,7 +58,7 @@ in
     };
 
     # Plugins (disabled for griefling VM to avoid build issues)
-    plugins = lib.mkIf (config.host.hostName != "griefling") [
+    plugins = lib.mkIf (config.identity.hostName != "griefling") [
       pkgs.hyprlandPlugins.hy3
     ];
 

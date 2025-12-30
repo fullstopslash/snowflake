@@ -26,7 +26,7 @@
   # ========== Identity Defaults ==========
   # Hosts can override these with lib.mkForce
   #
-  host = {
+  identity = {
     primaryUsername = lib.mkDefault "rain";
     handle = lib.mkDefault "fullstopslash";
 
@@ -40,11 +40,6 @@
   };
 
   #
-  # ========== Networking ==========
-  #
-  networking.hostName = config.host.hostName;
-
-  #
   # ========== System-wide Packages ==========
   # Available even when logged in as root
   #
@@ -52,7 +47,8 @@
     pkgs.openssh
     pkgs.just # Justfile task runner
     pkgs.rsync # File synchronization
-  ] ++ lib.optionals (pkgs.stdenv.isLinux && (!config.host.isHeadless or false)) [
+  ]
+  ++ lib.optionals pkgs.stdenv.isLinux [
     # Terminal emulator terminfo (NixOS only, skip on headless)
     pkgs.kitty.terminfo
     pkgs.ghostty.terminfo
@@ -95,13 +91,13 @@
   system.activationScripts.nix-profile-dirs = lib.mkIf pkgs.stdenv.isLinux (
     lib.stringAfter [ "users" ] ''
       # System-level profile directory
-      mkdir -p /nix/var/nix/profiles/per-user/${config.host.primaryUsername}
-      chown ${config.host.primaryUsername}:users /nix/var/nix/profiles/per-user/${config.host.primaryUsername}
+      mkdir -p /nix/var/nix/profiles/per-user/${config.identity.primaryUsername}
+      chown ${config.identity.primaryUsername}:users /nix/var/nix/profiles/per-user/${config.identity.primaryUsername}
 
       # User-level profile directory (home-manager prefers this)
-      home="${config.host.home}"
+      home="${config.identity.home}"
       mkdir -p "$home/.local/state/nix/profiles"
-      chown -R ${config.host.primaryUsername}:users "$home/.local"
+      chown -R ${config.identity.primaryUsername}:users "$home/.local"
     ''
   );
 

@@ -6,7 +6,7 @@
 }:
 let
   # Use port from host.networking.ports.tcp.ssh if defined, otherwise default to 22
-  sshPort = config.host.networking.ports.tcp.ssh or 22;
+  sshPort = config.identity.networking.ports.tcp.ssh or 22;
 
   # Sops needs access to the keys before the persist dirs are even mounted; so
   # just persisting the keys won't work, we must point at /persist

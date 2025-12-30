@@ -36,7 +36,7 @@
   # ========================================
   # HOST IDENTITY
   # ========================================
-  host = {
+  identity = {
     hostName = builtins.baseNameOf (toString ./.);
     primaryUsername = "rain";
   };

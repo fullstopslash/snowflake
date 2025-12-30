@@ -56,7 +56,7 @@ in
         ];
         modules-center = [ "hyprland/window" ];
         modules-right =
-          if config.host.isMobile then
+          if false then
             [
               "gamemode"
               "pulseaudio"

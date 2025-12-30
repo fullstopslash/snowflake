@@ -45,7 +45,7 @@
                     ];
                   };
                   "@persist" = {
-                    mountpoint = "${config.host.persistFolder}";
+                    mountpoint = "${config.hardware.host.persistFolder}";
                     mountOptions = [
                       "compress=zstd"
                       "noatime"

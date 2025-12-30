@@ -32,7 +32,7 @@
   # ========================================
   # HOST IDENTITY
   # ========================================
-  host = {
+  identity = {
     hostName = "misery";
     primaryUsername = "rain";
     hasSecrets = true; # Testing secrets with LUKS

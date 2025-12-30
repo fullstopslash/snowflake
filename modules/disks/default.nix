@@ -101,7 +101,7 @@ let
                   mountOptions = btrfsMountOpts;
                 };
                 "@persist" = {
-                  mountpoint = config.host.persistFolder;
+                  mountpoint = config.hardware.host.persistFolder;
                   mountOptions = btrfsMountOpts;
                 };
                 "@nix" = {
@@ -144,7 +144,7 @@ let
                     mountOptions = btrfsMountOpts;
                   };
                   "@persist" = {
-                    mountpoint = config.host.persistFolder;
+                    mountpoint = config.hardware.host.persistFolder;
                     mountOptions = btrfsMountOpts;
                   };
                   "@nix" = {
@@ -168,7 +168,7 @@ let
 
   bcachefsImpermanenceLayout = import ./bcachefs-impermanence-disk.nix {
     disk = cfg.device;
-    persistFolder = config.host.persistFolder;
+    persistFolder = config.hardware.host.persistFolder;
   };
 
   bcachefsLuksLayout = import ./bcachefs-luks-disk.nix {
@@ -177,7 +177,7 @@ let
 
   bcachefsLuksImpermanenceLayout = import ./bcachefs-luks-impermanence-disk.nix {
     disk = cfg.device;
-    persistFolder = config.host.persistFolder;
+    persistFolder = config.hardware.host.persistFolder;
   };
 
   bcachefsEncryptLayout = import ./bcachefs-encrypt-disk.nix {
@@ -186,7 +186,7 @@ let
 
   bcachefsEncryptImpermanenceLayout = import ./bcachefs-encrypt-impermanence-disk.nix {
     disk = cfg.device;
-    persistFolder = config.host.persistFolder;
+    persistFolder = config.hardware.host.persistFolder;
   };
 
   # Select layout based on option

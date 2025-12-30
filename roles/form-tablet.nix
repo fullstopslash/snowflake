@@ -31,17 +31,22 @@
     powerManagement.enable = lib.mkDefault true;
 
     # ========================================
-    # HOSTSPEC (non-derived options only)
+    # SYSTEM CONFIGURATION
     # ========================================
-    host = {
-      isMobile = lib.mkDefault true;
-      wifi = lib.mkDefault true;
+    system = {
+      architecture = lib.mkDefault "x86_64-linux";
+      nixpkgsVariant = lib.mkDefault "stable";
+      isDarwin = lib.mkDefault false;
+    };
 
-      secretCategories = {
-        base = lib.mkDefault true;
-        desktop = lib.mkDefault true;
-        network = lib.mkDefault true;
-      };
+    # Hardware defaults
+    hardware.host.wifi = lib.mkDefault true;
+
+    # Secret categories
+    sops.categories = {
+      base = lib.mkDefault true;
+      desktop = lib.mkDefault true;
+      network = lib.mkDefault true;
     };
   };
 }
