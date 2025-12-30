@@ -6,7 +6,7 @@
   ...
 }:
 {
-  description = "Bcachefs filesystem with impermanence";
+  # Bcachefs filesystem with impermanence
 
   config = {
     disko.devices = {

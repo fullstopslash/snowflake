@@ -5,7 +5,7 @@
 # Usage: modules.apps.productivity = [ "productivity" ]
 { pkgs, ... }:
 {
-  description = "Productivity and office apps";
+  # Productivity and office apps
   config = {
     environment.systemPackages = with pkgs; [
       libreoffice

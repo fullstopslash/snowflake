@@ -26,7 +26,7 @@ let
   homeDir = config.identity.home;
 in
 {
-  description = "Syncthing file synchronization";
+  # Syncthing file synchronization
 
   config = {
     # Install syncthing packages

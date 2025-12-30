@@ -5,7 +5,7 @@
   ...
 }:
 {
-  description = "Simple Bcachefs filesystem layout";
+  # Simple Bcachefs filesystem layout
 
   config = {
     disko.devices = {

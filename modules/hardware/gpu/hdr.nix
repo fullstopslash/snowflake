@@ -1,6 +1,6 @@
 { pkgs, ... }:
 {
-  description = "HDR (High Dynamic Range) display support";
+  # HDR (High Dynamic Range) display support
 
   config = {
     environment.variables = {

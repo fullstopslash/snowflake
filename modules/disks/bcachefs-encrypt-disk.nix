@@ -20,7 +20,7 @@
   ...
 }:
 {
-  description = "Bcachefs with native encryption";
+  # Bcachefs with native encryption
 
   config = {
     disko.devices = {

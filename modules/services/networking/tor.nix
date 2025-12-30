@@ -5,7 +5,7 @@
   ...
 }:
 {
-  description = "Tor anonymity network";
+  # Tor anonymity network
 
   config = {
     # Install Tor packages

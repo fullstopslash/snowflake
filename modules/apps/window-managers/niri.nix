@@ -1,6 +1,6 @@
 { pkgs, ... }:
 {
-  description = "Niri compositor";
+  # Niri compositor
   config = {
     # Install niri (no module exists; provide via packages and session entry)
 

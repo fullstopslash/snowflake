@@ -25,7 +25,7 @@
   ...
 }:
 {
-  description = "Bcachefs with native encryption and impermanence";
+  # Bcachefs with native encryption and impermanence
 
   config = {
     disko.devices = {

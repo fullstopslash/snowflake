@@ -6,7 +6,7 @@
 #   myModules.apps.desktop.creative.enable = true;
 { pkgs, ... }:
 {
-  description = "Creative and media production apps";
+  # Creative and media production apps
   config = {
     environment.systemPackages = with pkgs; [
       # Graphics

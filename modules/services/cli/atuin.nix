@@ -26,7 +26,7 @@ let
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 in
 {
-  description = "Atuin shell history sync service";
+  # Atuin shell history sync service
 
   config = {
     # Add atuin to system packages so users can run it from PATH

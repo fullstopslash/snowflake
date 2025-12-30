@@ -8,7 +8,7 @@
   ...
 }:
 {
-  description = "Btrfs filesystem with LUKS encryption and impermanence";
+  # Btrfs filesystem with LUKS encryption and impermanence
 
   config = {
     disko.devices = {

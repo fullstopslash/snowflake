@@ -4,7 +4,7 @@
   ...
 }:
 {
-  description = "Flatpak support";
+  # Flatpak support
 
   config = {
     services.flatpak.enable = true;

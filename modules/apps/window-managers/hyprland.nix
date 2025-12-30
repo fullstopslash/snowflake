@@ -4,7 +4,7 @@
 # should be managed via raw config files in ~/.config/hypr/, not in Nix.
 { lib, pkgs, inputs, ... }:
 {
-  description = "Hyprland desktop";
+  # Hyprland desktop
   config = {
     programs.hyprland = {
       enable = true;

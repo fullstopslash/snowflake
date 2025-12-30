@@ -7,7 +7,7 @@
 # Usage: myModules.apps.browsers.chromium.enable = true;
 { pkgs, ... }:
 {
-  description = "Chromium browser (ungoogled-chromium)";
+  # Chromium browser (ungoogled-chromium)
   config = {
     environment.systemPackages = [ pkgs.ungoogled-chromium ];
   };

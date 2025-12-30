@@ -7,7 +7,7 @@
   ...
 }:
 {
-  description = "Bcachefs with LUKS encryption and impermanence";
+  # Bcachefs with LUKS encryption and impermanence
 
   config = {
     disko.devices = {

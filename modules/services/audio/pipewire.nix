@@ -6,7 +6,7 @@
   ...
 }:
 {
-  description = "PipeWire audio server";
+  # PipeWire audio server
   config = {
     # RealtimeKit for low-latency audio scheduling
     security.rtkit.enable = true;

@@ -6,7 +6,7 @@
 # Usage: myModules.apps.browsers.brave.enable = true;
 { pkgs, ... }:
 {
-  description = "Brave browser";
+  # Brave browser
   config = {
     environment.systemPackages = [ pkgs.unstable.brave ];
   };

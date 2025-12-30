@@ -6,7 +6,7 @@
 # Usage: myModules.apps.browsers.microsoftEdge.enable = true;
 { pkgs, ... }:
 {
-  description = "Microsoft Edge browser";
+  # Microsoft Edge browser
   config = {
     environment.systemPackages = [ pkgs.microsoft-edge ];
   };

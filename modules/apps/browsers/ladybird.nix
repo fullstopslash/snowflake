@@ -6,7 +6,7 @@
 # Usage: myModules.apps.browsers.ladybird.enable = true;
 { pkgs, ... }:
 {
-  description = "Ladybird browser";
+  # Ladybird browser
   config = {
     environment.systemPackages = [ pkgs.ladybird ];
   };

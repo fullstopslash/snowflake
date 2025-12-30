@@ -6,7 +6,7 @@
   ...
 }:
 {
-  description = "Ollama with ROCm support";
+  # Ollama with ROCm support
 
   config = {
     services.ollama = {

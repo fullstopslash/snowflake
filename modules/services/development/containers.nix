@@ -1,6 +1,6 @@
 { config, lib, ... }:
 {
-  description = "Docker container configuration";
+  # Docker container configuration
 
   config = {
     # Compose-style layout: write docker-compose YAML and manage via systemd

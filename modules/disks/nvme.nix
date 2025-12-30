@@ -5,7 +5,7 @@
   ...
 }:
 {
-  description = "Multi-disk Btrfs layout with LUKS and FIDO2 support";
+  # Multi-disk Btrfs layout with LUKS and FIDO2 support
 
   config = {
     disko.devices = {

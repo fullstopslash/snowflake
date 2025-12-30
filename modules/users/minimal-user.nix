@@ -1,6 +1,6 @@
 { config, lib, ... }:
 {
-  description = "Minimal user configuration for installer/bootstrap";
+  # Minimal user configuration for installer/bootstrap
 
   # Minimal user configuration for installer/bootstrap
   # Uses empty password for LY console login - SSH uses key auth

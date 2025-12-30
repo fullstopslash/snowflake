@@ -3,7 +3,7 @@
 # Usage: modules.apps.development = [ "neovim" ]
 { pkgs, inputs, ... }:
 {
-  description = "Neovim with mcphub.nvim";
+  # Neovim with mcphub.nvim
   config = {
     environment.systemPackages = with pkgs; [
       neovim

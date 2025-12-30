@@ -8,7 +8,7 @@
   ...
 }:
 {
-  description = "Btrfs filesystem with impermanence";
+  # Btrfs filesystem with impermanence
 
   config = {
     disko.devices = {

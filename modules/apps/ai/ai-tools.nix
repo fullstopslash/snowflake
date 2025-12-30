@@ -6,7 +6,7 @@ let
   ollamaCfg = config.services.ollama;
 in
 {
-  description = "AI development tools (aider, aichat)";
+  # AI development tools (aider, aichat)
   config = {
     environment.systemPackages = with pkgs; [
       aider-chat

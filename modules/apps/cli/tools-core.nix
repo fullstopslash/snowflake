@@ -1,7 +1,7 @@
 # CLI tools rollup role (temporary consolidation)
 { pkgs, ... }:
 {
-  description = "Core CLI tools";
+  # Core CLI tools
   config = {
     environment.systemPackages = with pkgs; [
       # Core utilities

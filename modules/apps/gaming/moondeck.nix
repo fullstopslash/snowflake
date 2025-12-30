@@ -10,7 +10,7 @@ let
   };
 in
 {
-  description = "Moondeck Buddy for Steam Deck streaming";
+  # Moondeck Buddy for Steam Deck streaming
   config = {
     nixpkgs.overlays = [ overlay ];
     environment.systemPackages = [ pkgs.moondeck-buddy ];

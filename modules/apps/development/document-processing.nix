@@ -1,7 +1,7 @@
 # Document processing role for wiki Makefile
 { pkgs, ... }:
 {
-  description = "Document processing tools (pandoc, texlive, typst)";
+  # Document processing tools (pandoc, texlive, typst)
   config = {
     # Document processing packages for wiki Makefile
     environment.systemPackages = with pkgs; [

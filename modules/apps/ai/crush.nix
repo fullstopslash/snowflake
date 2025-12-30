@@ -6,7 +6,7 @@ let
   ollamaUrl = "http://${ollamaCfg.host}:${toString ollamaCfg.port}";
 in
 {
-  description = "Crush AI coding agent";
+  # Crush AI coding agent
   config = {
     # Disabled: nix-ai-tools flake input not available
     # environment.systemPackages = with inputs.nix-ai-tools.packages.${pkgs.stdenv.hostPlatform.system}; [

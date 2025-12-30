@@ -1,7 +1,7 @@
 # Plasma desktop role
 { pkgs, ... }:
 {
-  description = "KDE Plasma 6 desktop";
+  # KDE Plasma 6 desktop
   config = {
     environment.systemPackages = with pkgs; [
       # Force stable xwayland to override Plasma's default

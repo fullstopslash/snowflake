@@ -4,7 +4,7 @@ let
   openwakewordCfg = config.services.wyoming.openwakeword;
 in
 {
-  description = "Wyoming voice assistant";
+  # Wyoming voice assistant
   config = {
     services = {
       wyoming.satellite = {

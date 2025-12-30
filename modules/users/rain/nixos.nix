@@ -5,7 +5,7 @@
   ...
 }:
 {
-  description = "NixOS user configuration for rain";
+  # NixOS user configuration for rain
 
   config = {
     isNormalUser = true;

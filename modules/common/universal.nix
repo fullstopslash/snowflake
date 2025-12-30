@@ -22,7 +22,7 @@
   ...
 }:
 {
-  description = "Universal settings for ALL hosts (NixOS, Darwin, VMs, ISOs) - identity, packages, shell, overlays, localization";
+  # Universal settings for ALL hosts (NixOS, Darwin, VMs, ISOs) - identity, packages, shell, overlays, localization
 
   config = {
     #

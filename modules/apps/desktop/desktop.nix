@@ -5,7 +5,7 @@
 # Usage: modules.apps.desktop = [ "desktop" ]
 { pkgs, ... }:
 {
-  description = "Desktop utilities and tools";
+  # Desktop utilities and tools
   config = {
     environment.systemPackages = with pkgs; [
       grimblast

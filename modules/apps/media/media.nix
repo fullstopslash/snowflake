@@ -5,7 +5,7 @@
 # Usage: modules.apps.media = [ "media" ]
 { pkgs, ... }:
 {
-  description = "Media apps (Jellyfin, Spotify, VLC, etc)";
+  # Media apps (Jellyfin, Spotify, VLC, etc)
   config = {
     # Media packages
     environment.systemPackages = with pkgs; [

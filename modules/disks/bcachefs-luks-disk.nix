@@ -7,7 +7,7 @@
   ...
 }:
 {
-  description = "Bcachefs filesystem with LUKS encryption";
+  # Bcachefs filesystem with LUKS encryption
 
   config = {
     disko.devices = {

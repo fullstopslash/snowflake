@@ -7,7 +7,7 @@
   ...
 }:
 {
-  description = "greetd display manager with tuigreet";
+  # greetd display manager with tuigreet
 
   config = {
     # Minimal greetd configuration using tuigreet (TUI greeter - more reliable)

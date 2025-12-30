@@ -6,7 +6,7 @@
 # Usage: myModules.apps.browsers.firefox.enable = true;
 { pkgs, ... }:
 {
-  description = "Firefox browser";
+  # Firefox browser
   config = {
     environment.systemPackages = [ pkgs.firefox ];
 

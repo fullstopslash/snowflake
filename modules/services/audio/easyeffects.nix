@@ -1,7 +1,7 @@
 # EasyEffects systemd user service
 { pkgs, ... }:
 {
-  description = "EasyEffects systemd user service";
+  # EasyEffects systemd user service
   config = {
     environment.systemPackages = with pkgs; [
       easyeffects

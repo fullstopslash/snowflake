@@ -6,7 +6,7 @@
   ...
 }:
 {
-  description = "QuickEMU for quick VM creation";
+  # QuickEMU for quick VM creation
 
   config = {
     environment.systemPackages = with pkgs; [

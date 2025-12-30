@@ -12,7 +12,7 @@ let
   hasConfig = builtins.pathExists configFile;
 in
 {
-  description = "Zellij terminal multiplexer";
+  # Zellij terminal multiplexer
   config = {
     environment.systemPackages = [ pkgs.zellij ];
 

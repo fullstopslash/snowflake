@@ -1,7 +1,7 @@
 # CLI tools rollup role (temporary consolidation)
 { pkgs, ... }:
 {
-  description = "Full set of CLI tools";
+  # Full set of CLI tools
   config = {
     programs = {
       bat.enable = true;

@@ -6,7 +6,7 @@
 # Usage: myModules.apps.desktop.rofi.enable = true;
 { pkgs, ... }:
 {
-  description = "Rofi - Application launcher for Wayland";
+  # Rofi - Application launcher for Wayland
   config = {
     environment.systemPackages = [ pkgs.rofi-wayland ];
   };

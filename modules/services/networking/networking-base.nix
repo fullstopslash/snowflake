@@ -6,7 +6,7 @@
   ...
 }:
 {
-  description = "Base networking configuration";
+  # Base networking configuration
 
   config = {
     # Network packages

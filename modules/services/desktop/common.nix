@@ -12,7 +12,7 @@ let
     ((config.sops.defaultSopsFile or null) != null) && (config.sops.categories.desktop or false);
 in
 {
-  description = "common desktop environment";
+  # common desktop environment
   config = {
     # Allow insecure packages specifically required for the desktop role
     nixpkgs.config.permittedInsecurePackages = [

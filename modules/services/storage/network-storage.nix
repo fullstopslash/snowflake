@@ -9,7 +9,7 @@
 # Uses systemd automount to avoid boot delays when storage server is unavailable.
 { ... }:
 {
-  description = "Network storage NFS mounts";
+  # Network storage NFS mounts
 
   config = {
     # Enable NFS client support

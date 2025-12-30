@@ -50,6 +50,24 @@ update:
 # Update and then rebuild
 rebuild-update: update rebuild
 
+# Smart rebuild: sync upstream + dotfiles + rebuild in one command
+rebuild-smart *FLAGS:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  scripts/rebuild-smart.sh {{FLAGS}}
+
+# Smart rebuild with flake update
+rebuild-smart-update:
+  @just rebuild-smart --update
+
+# Offline rebuild (skip upstream/dotfiles sync)
+rebuild-smart-offline:
+  @just rebuild-smart --offline
+
+# Dry run to see what would be done
+rebuild-smart-dry:
+  @just rebuild-smart --dry-run
+
 # Git diff there entire repo expcept for flake.lock
 diff:
   git diff ':!flake.lock'

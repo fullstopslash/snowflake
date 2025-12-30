@@ -42,7 +42,7 @@ let
   keyFiles = lib.mapAttrs' createWifi config.networking.wireless.networks;
 in
 {
-  description = "Wireless network configuration";
+  # Wireless network configuration
 
   config = lib.mkIf config.networking.networkmanager.enable {
     environment.etc = keyFiles;

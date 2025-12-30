@@ -5,7 +5,7 @@
 # Usage: modules.apps.gaming = [ "gaming" ]
 { pkgs, config, ... }:
 {
-  description = "Gaming apps and utilities";
+  # Gaming apps and utilities
   config = {
     # Steam Controller settings
     hardware.steam-hardware.enable = true;

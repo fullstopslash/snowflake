@@ -6,7 +6,7 @@
 # Usage: myModules.apps.desktop.waybar.enable = true;
 { pkgs, ... }:
 {
-  description = "Waybar - Status bar for Wayland";
+  # Waybar - Status bar for Wayland
   config = {
     environment.systemPackages = [
       pkgs.waybar

@@ -1,0 +1,135 @@
+================================================================================
+TRUENAS APPS MIGRATION VERIFICATION - EXECUTIVE SUMMARY
+================================================================================
+Date: 2025-12-30
+Total Containers: 71
+
+MIGRATION STATUS: 63% COMPLETE (CRITICAL APPS STILL USING IX-APPS)
+
+Phase 26 (9 apps):  ✅ 100% COMPLETE
+Phase 27 (19 apps): ⚠️  53% COMPLETE
+
+--------------------------------------------------------------------------------
+APPS SUCCESSFULLY MIGRATED TO /mnt/apps/apps/
+--------------------------------------------------------------------------------
+Total: 45 unique apps using /mnt/apps/apps/
+
+Phase 26 Apps (ALL MIGRATED - 9/9):
+  ✅ qbittorrent    ✅ sabnzbd       ✅ prowlarr
+  ✅ sonarr         ✅ radarr        ✅ bazarr
+  ✅ jellyseerr     ✅ jellyfin      ✅ janitorr
+
+Phase 27 Apps (PARTIAL - 10/19):
+  ✅ homarr         ✅ SuggestArr    ✅ audiobookrequest
+  ✅ huntarr        ✅ decluttarr    ✅ whisparr
+  ✅ ytdl-sub       ✅ nzbget        ✅ gluetun
+  ✅ tdarr (rendered-tdarr-1)
+
+Other Apps Successfully Migrated:
+  • Media: audiobookshelf, komga, stash, streamy-vectorchord
+  • Infrastructure: nextcloud, atuin, portainer, planka
+  • Utilities: checkrr, configarr, kapowarr, jackett, pinchflat, karakeep
+  • Services: apprise-api, changedetection, ersatztv, faster-whisper
+  • Apps: freshrss, ntfy, readeck, searxng, crafty-4
+
+--------------------------------------------------------------------------------
+APPS STILL USING /mnt/.ix-apps/ PATHS (NEED MIGRATION)
+--------------------------------------------------------------------------------
+Total: 9 apps (17 containers including support containers)
+
+PRIMARY APPS NEEDING RECONFIGURATION:
+
+1. ⚠️ calibre (ix-calibre-calibre-1) - STOPPED
+   • Data: /mnt/apps/apps/calibre/config (9.6M) - DATA EXISTS
+   • Config: Still points to /mnt/.ix-apps/app_mounts/calibre/config
+   • Action: Update TrueNAS config to use new path
+
+2. ⚠️ calibre-web (ix-calibre-web-calibre-web-1) - STOPPED
+   • Data: /mnt/apps/apps/calibre-web/config - DATA EXISTS
+   • Config: Still points to /mnt/.ix-apps/app_mounts/calibre-web/config
+   • Action: Update TrueNAS config to use new path
+
+3. ⚠️ syncthing (ix-syncthing-syncthing-1) - STOPPED
+   • Data: /mnt/apps/apps/syncthing/config - DATA EXISTS
+   • Config: Still points to /mnt/.ix-apps/app_mounts/syncthing/config
+   • Action: Update TrueNAS config to use new path
+
+4. ⚠️ n8n (ix-n8n-n8n-1) - STOPPED
+   • Data: /mnt/apps/apps/n8n/data (364M) - DATA EXISTS
+   • Config: Still points to /mnt/.ix-apps/app_mounts/n8n/data
+   • Action: Update TrueNAS config to use new path
+
+5. ⚠️ n8n-postgres (ix-n8n-postgres-1) - STOPPED
+   • Data: /mnt/apps/apps/n8n/postgres (23M) - DATA EXISTS
+   • Config: Still points to /mnt/.ix-apps/app_mounts/n8n/postgres_data
+   • Action: Update TrueNAS config to use new path
+
+6. ⚠️ n8n-redis (ix-n8n-redis-1) - STOPPED
+   • Config: Using docker volume /mnt/.ix-apps/docker/volumes/ix-n8n_redis-data/
+   • Action: Update TrueNAS config to use bind mount
+
+7. ⚠️ vaultwarden (ix-vaultwarden-vaultwarden-1) - STOPPED
+   • Data: /mnt/apps/apps/vaultwarden/data (544K) - DATA EXISTS
+   • Config: Still points to /mnt/.ix-apps/app_mounts/vaultwarden/data
+   • Action: Update TrueNAS config to use new path
+
+8. ⚠️ vaultwarden-postgres (ix-vaultwarden-postgres-1) - STOPPED
+   • Data: /mnt/apps/apps/vaultwarden/postgres (15M) - DATA EXISTS
+   • Config: Still points to /mnt/.ix-apps/app_mounts/vaultwarden/postgres_data
+   • Action: Update TrueNAS config to use new path
+
+9. ⚠️ spottarr (dmz-spottarr) - RUNNING
+   • Config: Using /mnt/.ix-apps/app_mounts/spottarr/data
+   • Action: Stop app, migrate data, update config, restart
+
+--------------------------------------------------------------------------------
+OLD CONTAINERS TO REMOVE
+--------------------------------------------------------------------------------
+• ix-tdarr-tdarr-1 (replaced by rendered-tdarr-1)
+• ix-n8n-permissions-1 (upgrade container)
+• ix-n8n-postgres_upgrade-1 (upgrade container)
+• ix-vaultwarden-permissions-1 (upgrade container)
+• ix-vaultwarden-postgres_upgrade-1 (upgrade container)
+• atuin_db_dumper (old volumes can be cleaned)
+
+--------------------------------------------------------------------------------
+ROOT CAUSE ANALYSIS
+--------------------------------------------------------------------------------
+Issue: Phase 27 apps have data copied but TrueNAS configs not updated
+Reason: Apps are managed via TrueNAS UI, not docker-compose
+Impact: Apps are stopped and will use old paths when started
+Fix Required: Update each app's configuration in TrueNAS web UI
+
+--------------------------------------------------------------------------------
+IMMEDIATE ACTION REQUIRED
+--------------------------------------------------------------------------------
+For each of the 9 apps still using ix-apps:
+1. Access TrueNAS web UI
+2. Edit app configuration
+3. Update all mount paths from /mnt/.ix-apps/app_mounts/[app]/ to /mnt/apps/apps/[app]/
+4. Convert docker volumes to bind mounts where applicable
+5. Save configuration
+6. Start the app
+7. Verify it's using the new path
+
+Priority Order:
+1. vaultwarden (password manager - critical security)
+2. n8n stack (automation - business critical)
+3. calibre/calibre-web (library management)
+4. syncthing (file sync)
+5. spottarr (media automation)
+
+--------------------------------------------------------------------------------
+VERIFICATION COMMANDS
+--------------------------------------------------------------------------------
+# Re-run verification after fixes:
+ssh waterbug.lan "sudo docker ps -a --format '{{.Names}}' | while read container; do
+  has_ix_apps=\$(sudo docker inspect \$container --format '{{range .Mounts}}{{.Source}}{{println}}{{end}}' | grep -c '/mnt/.ix-apps/' || true)
+  if [ \"\$has_ix_apps\" -gt 0 ]; then
+    echo \"⚠️  \$container\"
+  fi
+done"
+
+# Should return ZERO results when 100% complete
+
+================================================================================

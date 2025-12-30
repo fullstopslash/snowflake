@@ -15,7 +15,7 @@ let
   });
 in
 {
-  description = "OBS Studio with virtual camera";
+  # OBS Studio with virtual camera
   config = {
     programs.obs-studio = {
       enable = true;

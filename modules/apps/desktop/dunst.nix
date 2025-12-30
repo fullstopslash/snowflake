@@ -6,7 +6,7 @@
 # Usage: myModules.apps.desktop.dunst.enable = true;
 { pkgs, ... }:
 {
-  description = "Dunst - Notification daemon";
+  # Dunst - Notification daemon
   config = {
     environment.systemPackages = [ pkgs.dunst ];
   };

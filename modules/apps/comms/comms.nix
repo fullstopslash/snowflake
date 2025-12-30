@@ -5,7 +5,7 @@
 # Usage: modules.apps.comms = [ "comms" ]
 { pkgs, ... }:
 {
-  description = "Communication apps (Discord, Slack, Signal)";
+  # Communication apps (Discord, Slack, Signal)
   config = {
     environment.systemPackages = with pkgs; [
       discord

@@ -1,7 +1,7 @@
 # Secrets role
 { pkgs, ... }:
 {
-  description = "secrets management tools";
+  # secrets management tools
   config = {
     # Secrets packages
     environment.systemPackages = with pkgs; [

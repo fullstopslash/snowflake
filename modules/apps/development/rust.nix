@@ -4,7 +4,7 @@
 # FIXME: Requires starship-jj flake input - disabled until added
 { pkgs, ... }:
 {
-  description = "Rust development tools";
+  # Rust development tools
   config = {
     # Disabled: starship-jj flake input not available
     # environment.systemPackages = [

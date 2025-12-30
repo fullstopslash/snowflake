@@ -6,7 +6,7 @@
   ...
 }:
 {
-  description = "Mullvad VPN";
+  # Mullvad VPN
 
   config = {
     services.mullvad-vpn = {

@@ -13,7 +13,7 @@ let
   operatorUser = if normalUsers != [ ] then builtins.head normalUsers else "root";
 in
 {
-  description = "Tailscale VPN";
+  # Tailscale VPN
 
   config = {
     # SOPS secrets for Tailscale OAuth

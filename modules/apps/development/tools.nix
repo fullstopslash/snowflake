@@ -6,7 +6,7 @@
 #   myModules.apps.development.tools.enable = true;
 { pkgs, ... }:
 {
-  description = "Development tools";
+  # Development tools
   config = {
     programs.direnv = {
       enable = true;

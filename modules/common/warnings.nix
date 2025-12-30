@@ -1,7 +1,6 @@
 { config, lib, ... }:
 {
-  description = "Validates configuration and filters silenceable warnings";
-
+  # Validates configuration and filters silenceable warnings
   # mostly copied from https://git.uninsane.org/colin/nix-files/src/branch/master/modules/warnings.nix
   options = with lib; {
     configOptions.silencedWarnings = mkOption {

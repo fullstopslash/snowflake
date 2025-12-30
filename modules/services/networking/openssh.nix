@@ -14,7 +14,7 @@ let
   hasOptinPersistence = false;
 in
 {
-  description = "OpenSSH server";
+  # OpenSSH server
 
   config = {
     services.openssh = {

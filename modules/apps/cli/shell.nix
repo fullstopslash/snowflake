@@ -1,7 +1,7 @@
 # Shell configuration role
 { pkgs, ... }:
 {
-  description = "Shell configuration and tools";
+  # Shell configuration and tools
   config = {
     # Shell packages
     environment.systemPackages = with pkgs; [

@@ -1,7 +1,7 @@
 # Fonts configuration
 { pkgs, ... }:
 {
-  description = "System-wide font packages - monospace, nerd fonts, emoji, and CJK support";
+  # System-wide font packages - monospace, nerd fonts, emoji, and CJK support
 
   config = {
     # Fonts

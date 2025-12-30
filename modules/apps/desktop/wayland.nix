@@ -1,7 +1,7 @@
 # Wayland support module
 { pkgs, ... }:
 {
-  description = "Wayland support and utilities";
+  # Wayland support and utilities
   config = {
     # general packages related to wayland
     environment.systemPackages = [

@@ -7,7 +7,7 @@
   ...
 }:
 {
-  description = "Simple Btrfs filesystem layout";
+  # Simple Btrfs filesystem layout
 
   config = {
     disko.devices = {
