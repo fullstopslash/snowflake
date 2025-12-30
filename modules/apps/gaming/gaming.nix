@@ -3,7 +3,7 @@
 # Gaming platforms, tools, and utilities.
 #
 # Usage: modules.apps.gaming = [ "gaming" ]
-{ pkgs, ... }:
+{ pkgs, config, ... }:
 {
   description = "Gaming apps and utilities";
   config = {
@@ -41,7 +41,7 @@
           setSocketVariable = true;
         };
         daemon.settings = {
-          data-root = "/home/rain/docker/images/";
+          data-root = "${config.identity.home}/docker/images/";
         };
       };
     };

@@ -67,10 +67,10 @@ in
           serviceConfig = {
             Type = "oneshot";
             ExecStart = "${pkgs.home-assistant-cli}/bin/hass-cli service call media_player.turn_off --arguments entity_id=media_player.abysmal";
-            User = "rain";
+            User = config.identity.primaryUsername;
             Environment = [
-              "HOME=/home/rain"
-              "XDG_RUNTIME_DIR=/run/user/1000"
+              "HOME=${config.identity.home}"
+              "XDG_RUNTIME_DIR=/run/user/${toString config.users.users.${config.identity.primaryUsername}.uid}"
             ];
             EnvironmentFile = [
               config.sops.templates."post-sleep-samsung.env".path

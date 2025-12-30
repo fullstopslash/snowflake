@@ -11,7 +11,7 @@ in
         enable = true;
         vad.enable = false;
         name = "Sattelite";
-        user = "rain";
+        user = config.identity.primaryUsername;
         extraArgs = [
           "--wake-word-name=ok_nabu"
           "--wake-uri=tcp://127.0.0.1:${toString openwakewordCfg.port}"
@@ -22,7 +22,7 @@ in
           noiseSuppression = 2;
         };
         sounds = {
-          awake = "/home/rain/958__anton__groter.wav";
+          awake = "${config.identity.home}/958__anton__groter.wav";
         };
       };
       wyoming.openwakeword = {

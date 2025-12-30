@@ -158,7 +158,6 @@ in
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${pkgs.feh}/bin/feh --bg-scale ${cfg.wallpaper}";
-        User = "rain";
       };
     };
   };

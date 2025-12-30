@@ -1,8 +1,8 @@
 # PipeWire audio server configuration
 # Base configuration with AirPlay support and resume fix
 {
-  lib,
   pkgs,
+  config,
   ...
 }:
 {
@@ -51,7 +51,7 @@
       ];
       serviceConfig = {
         Type = "oneshot";
-        User = "rain";
+        User = config.identity.primaryUsername;
         ExecStart = "${pkgs.writeShellScript "hypr-audio-resume" ''
           #!/usr/bin/env sh
           set -eu
