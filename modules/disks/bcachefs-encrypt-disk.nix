@@ -20,57 +20,61 @@
   ...
 }:
 {
-  disko.devices = {
-    disk = {
-      disk0 = {
-        type = "disk";
-        device = disk;
-        content = {
-          type = "gpt";
-          partitions = {
-            ESP = {
-              priority = 1;
-              name = "ESP";
-              start = "1M";
-              end = "512M";
-              type = "EF00";
-              content = {
-                type = "filesystem";
-                format = "vfat";
-                mountpoint = "/boot";
-                mountOptions = [ "defaults" ];
+  description = "Bcachefs with native encryption";
+
+  config = {
+    disko.devices = {
+      disk = {
+        disk0 = {
+          type = "disk";
+          device = disk;
+          content = {
+            type = "gpt";
+            partitions = {
+              ESP = {
+                priority = 1;
+                name = "ESP";
+                start = "1M";
+                end = "512M";
+                type = "EF00";
+                content = {
+                  type = "filesystem";
+                  format = "vfat";
+                  mountpoint = "/boot";
+                  mountOptions = [ "defaults" ];
+                };
               };
-            };
-            root = {
-              size = "100%";
-              content = {
-                type = "bcachefs";
-                label = "root"; # Filesystem label for disko
-                # Reference to filesystem defined in bcachefs_filesystems
-                filesystem = "encrypted_root";
+              root = {
+                size = "100%";
+                content = {
+                  type = "bcachefs";
+                  label = "root"; # Filesystem label for disko
+                  # Reference to filesystem defined in bcachefs_filesystems
+                  filesystem = "encrypted_root";
+                };
               };
             };
           };
         };
       };
-    };
 
-    # Bcachefs filesystem with encryption
-    bcachefs_filesystems = {
-      encrypted_root = {
-        type = "bcachefs_filesystem";
-        # Enable native ChaCha20/Poly1305 encryption
-        passwordFile = "/tmp/disko-password";
-        extraFormatArgs = [
-          # --encrypted is automatically added by disko when passwordFile is set
-          "--compression=lz4"
-          "--background_compression=lz4"
-        ];
-        mountpoint = "/";
-        mountOptions = [
-          "compression=lz4"
-          "noatime"
-        ];
+      # Bcachefs filesystem with encryption
+      bcachefs_filesystems = {
+        encrypted_root = {
+          type = "bcachefs_filesystem";
+          # Enable native ChaCha20/Poly1305 encryption
+          passwordFile = "/tmp/disko-password";
+          extraFormatArgs = [
+            # --encrypted is automatically added by disko when passwordFile is set
+            "--compression=lz4"
+            "--background_compression=lz4"
+          ];
+          mountpoint = "/";
+          mountOptions = [
+            "compression=lz4"
+            "noatime"
+          ];
+        };
       };
     };
   };

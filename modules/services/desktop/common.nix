@@ -40,16 +40,6 @@ in
 
     systemd = {
       services = {
-        # post-sleep = {
-        #   description = "Post-sleep script";
-        #   after = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
-        #   wantedBy = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
-        #   serviceConfig = {
-        #     Type = "oneshot";
-        #     ExecStart = "${pkgs.curl}/bin/curl https://ntfy.chimera-micro.ts.net/waterbug-alerts -d 'Resumed: \"post sleep\"' -H 'Tags: skull' ";
-        #     User = "rain";
-        #   };
-        # };
         post-sleep-samsung = lib.mkIf (config.sops.categories.desktop or false) {
           description = "Post-sleep script";
           after = [

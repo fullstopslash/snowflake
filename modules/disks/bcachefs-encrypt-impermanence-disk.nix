@@ -25,79 +25,83 @@
   ...
 }:
 {
-  disko.devices = {
-    disk = {
-      disk0 = {
-        type = "disk";
-        device = disk;
-        content = {
-          type = "gpt";
-          partitions = {
-            ESP = {
-              priority = 1;
-              name = "ESP";
-              start = "1M";
-              end = "512M";
-              type = "EF00";
-              content = {
-                type = "filesystem";
-                format = "vfat";
-                mountpoint = "/boot";
-                mountOptions = [ "defaults" ];
+  description = "Bcachefs with native encryption and impermanence";
+
+  config = {
+    disko.devices = {
+      disk = {
+        disk0 = {
+          type = "disk";
+          device = disk;
+          content = {
+            type = "gpt";
+            partitions = {
+              ESP = {
+                priority = 1;
+                name = "ESP";
+                start = "1M";
+                end = "512M";
+                type = "EF00";
+                content = {
+                  type = "filesystem";
+                  format = "vfat";
+                  mountpoint = "/boot";
+                  mountOptions = [ "defaults" ];
+                };
               };
-            };
-            persist = {
-              size = "25G"; # Allocate 25GB to persistent data
-              content = {
-                type = "bcachefs";
-                label = "persist"; # Filesystem label for disko
-                # Reference to encrypted filesystem
-                filesystem = "encrypted_persist";
+              persist = {
+                size = "25G"; # Allocate 25GB to persistent data
+                content = {
+                  type = "bcachefs";
+                  label = "persist"; # Filesystem label for disko
+                  # Reference to encrypted filesystem
+                  filesystem = "encrypted_persist";
+                };
               };
-            };
-            root = {
-              size = "100%"; # Remaining space (25GB) for ephemeral root
-              content = {
-                type = "bcachefs";
-                label = "root"; # Filesystem label for disko
-                # Reference to encrypted filesystem
-                filesystem = "encrypted_root";
+              root = {
+                size = "100%"; # Remaining space (25GB) for ephemeral root
+                content = {
+                  type = "bcachefs";
+                  label = "root"; # Filesystem label for disko
+                  # Reference to encrypted filesystem
+                  filesystem = "encrypted_root";
+                };
               };
             };
           };
         };
       };
-    };
 
-    # Bcachefs filesystems with native encryption
-    bcachefs_filesystems = {
-      encrypted_persist = {
-        type = "bcachefs_filesystem";
-        passwordFile = "/tmp/disko-password";
-        extraFormatArgs = [
-          # --encrypted is automatically added by disko when passwordFile is set
-          "--compression=lz4"
-          "--background_compression=lz4"
-        ];
-        mountpoint = persistFolder;
-        mountOptions = [
-          "compression=lz4"
-          "noatime"
-        ];
-      };
-      encrypted_root = {
-        type = "bcachefs_filesystem";
-        passwordFile = "/tmp/disko-password";
-        extraFormatArgs = [
-          # --encrypted is automatically added by disko when passwordFile is set
-          "--compression=lz4"
-          "--background_compression=lz4"
-        ];
-        mountpoint = "/";
-        mountOptions = [
-          "compression=lz4"
-          "noatime"
-        ];
+      # Bcachefs filesystems with native encryption
+      bcachefs_filesystems = {
+        encrypted_persist = {
+          type = "bcachefs_filesystem";
+          passwordFile = "/tmp/disko-password";
+          extraFormatArgs = [
+            # --encrypted is automatically added by disko when passwordFile is set
+            "--compression=lz4"
+            "--background_compression=lz4"
+          ];
+          mountpoint = persistFolder;
+          mountOptions = [
+            "compression=lz4"
+            "noatime"
+          ];
+        };
+        encrypted_root = {
+          type = "bcachefs_filesystem";
+          passwordFile = "/tmp/disko-password";
+          extraFormatArgs = [
+            # --encrypted is automatically added by disko when passwordFile is set
+            "--compression=lz4"
+            "--background_compression=lz4"
+          ];
+          mountpoint = "/";
+          mountOptions = [
+            "compression=lz4"
+            "noatime"
+          ];
+        };
       };
     };
   };
