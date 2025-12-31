@@ -2,31 +2,33 @@
 #
 # Provides automatic system updates with:
 # - Remote flake upgrade (pulls from GitHub)
-# - Local clone sync (git pull + rebuild)
+# - Local clone sync (jj-first VCS operations)
 # - Configurable schedule and retention
 # - Safety checks (only upgrade if newer)
 # - Pre-update hooks (custom commands before pull)
 # - Build validation (prevents broken deploys)
+# - Datever-style commit messages (YYYY.MM.DD.HH.MM)
 #
 # Integration with chezmoi-sync (Phase 15-03a):
-# - chezmoi-pre-update.service runs before auto-upgrade
+# - chezmoi-pre-update.service runs BEFORE auto-upgrade
 # - Captures local dotfile changes before config pull
 # - Ensures dotfiles and config stay synchronized
+# - CRITICAL: Chezmoi commits FIRST, then main repo commits
 #
 # Modes:
 #   remote: Uses system.autoUpgrade to pull from remote flake URL
-#   local:  Git pulls local clone then rebuilds (requires nixConfigRepo)
+#   local:  Jujutsu-first sync + rebuild (requires nixConfigRepo)
+#
+# VCS Strategy:
+# - Prefers jujutsu (jj) for conflict-free auto-merging
+# - Initializes jj co-located repos automatically
+# - Handles parallel commits gracefully (no manual merge needed)
+# - Falls back to git if jj is not available
 #
 # IMPORTANT: Local mode runs as primaryUsername (not root) because `nh os`
 # refuses to run as root. The user must have passwordless sudo configured:
 #   security.sudo.wheelNeedsPassword = false;
 # This is already configured in the "test" role.
-#
-# Test: Auto-upgrade service verification - 2025-12-16
-# Test 2: Verify auto-upgrade works after out-link fix
-# Test 3: Verify auto-upgrade works after sudo elevation fix (final test!)
-# Test 4: Verify complete end-to-end auto-upgrade success!
-# Test 5: Concurrent auto-upgrade test - verify multiple VMs can upgrade simultaneously
 #
 {
   config,
@@ -195,30 +197,40 @@ in
           );
         };
 
-        # Local mode: git pull + nh rebuild
+        # Local mode: jj-first sync + nh rebuild
         systemd.services.nix-local-upgrade = lib.mkIf (cfg.mode == "local") {
-          description = "Pull nix-config and rebuild system";
-          after = [ "network-online.target" ];
+          description = "Pull nix-config and rebuild system (jj-first)";
+          after = [
+            "network-online.target"
+            "chezmoi-pre-update.service"
+          ];
           wants = [ "network-online.target" ];
           startAt = cfg.schedule;
           path = with pkgs; [
+            jujutsu
             git
             openssh
             nh
             nix
             sudo
+            chezmoi
+            coreutils
+            nettools
           ];
           environment.PATH = lib.mkForce "/run/wrappers/bin:${
             lib.makeBinPath (
               with pkgs;
               [
+                jujutsu
                 git
                 openssh
                 nh
                 nix
                 sudo
+                chezmoi
                 coreutils
                 systemd
+                nettools
               ]
             )
           }";
@@ -245,9 +257,14 @@ in
               rollbackAction = ''
                 case "${cfg.onValidationFailure}" in
                   rollback)
-                    echo "Rolling back git changes..."
-                    git -C "$CONFIG_DIR" reset --hard "$old_commit"
-                    [ -n "''${old_secrets_commit:-}" ] && git -C "$SECRETS_DIR" reset --hard "$old_secrets_commit" || true
+                    echo "Rolling back VCS changes..."
+                    if [ "$VCS_TYPE" = "jj" ]; then
+                      jj -R "$CONFIG_DIR" edit "$old_commit" 2>/dev/null || true
+                      [ -n "''${old_secrets_commit:-}" ] && jj -R "$SECRETS_DIR" edit "$old_secrets_commit" 2>/dev/null || true
+                    else
+                      git -C "$CONFIG_DIR" reset --hard "$old_commit"
+                      [ -n "''${old_secrets_commit:-}" ] && git -C "$SECRETS_DIR" reset --hard "$old_secrets_commit" || true
+                    fi
                     exit 1
                     ;;
                   notify)
@@ -264,38 +281,130 @@ in
               set -eu
               CONFIG_DIR="${home}/nix-config"
               SECRETS_DIR="${home}/nix-secrets"
+              CHEZMOI_DIR="${home}/.local/share/chezmoi"
+              DATEVER=$(date +%Y.%m.%d.%H.%M)
+              HOSTNAME=$(hostname)
               validation_failed=0
 
               echo "=== Nix Local Upgrade: $(date) ==="
+              echo "Using datever: $DATEVER"
+
+              # Detect VCS type (prefer jj)
+              if command -v jj &>/dev/null && [ -d "$CONFIG_DIR/.jj" ]; then
+                VCS_TYPE="jj"
+                echo "Using jujutsu for version control"
+              elif command -v git &>/dev/null && [ -d "$CONFIG_DIR/.git" ]; then
+                VCS_TYPE="git"
+                echo "Using git for version control"
+              else
+                echo "Error: No VCS found in $CONFIG_DIR"
+                exit 1
+              fi
+
+              # Helper: Get current commit ID
+              get_commit() {
+                local dir="$1"
+                if [ "$VCS_TYPE" = "jj" ]; then
+                  jj -R "$dir" log -r @ --no-graph -T 'commit_id' 2>/dev/null || echo ""
+                else
+                  git -C "$dir" rev-parse HEAD 2>/dev/null || echo ""
+                fi
+              }
+
+              # Helper: Sync repo with upstream (jj-first with auto-merge)
+              sync_repo() {
+                local dir="$1"
+                local name="$2"
+
+                echo "Syncing $name..."
+                cd "$dir"
+
+                if [ "$VCS_TYPE" = "jj" ]; then
+                  # Initialize jj if needed (co-located with git)
+                  if [ ! -d .jj ]; then
+                    echo "Initializing jj co-located repo in $name..."
+                    jj git init --colocate || return 1
+                  fi
+
+                  # Fetch upstream
+                  echo "Fetching upstream changes..."
+                  if ! jj git fetch 2>&1; then
+                    echo "Warning: Could not fetch $name (network issue?)"
+                    return 1
+                  fi
+
+                  # Get trunk branch (dev, main, or master)
+                  TRUNK_BRANCH="dev"
+                  for branch in dev main master; do
+                    if jj log -r "''${branch}@origin" --no-graph -T 'change_id' 2>/dev/null | grep -q .; then
+                      TRUNK_BRANCH="$branch"
+                      break
+                    fi
+                  done
+
+                  # Try simple rebase first
+                  if ! jj rebase -d "''${TRUNK_BRANCH}@origin" 2>&1; then
+                    echo "Rebase had issues, attempting auto-merge..."
+
+                    # Create merge commit (jj handles conflicts automatically)
+                    if ! jj new "@-" "''${TRUNK_BRANCH}@origin" -m "merge: auto-merge with upstream $DATEVER" 2>&1; then
+                      echo "Error: Could not create merge commit for $name"
+                      return 1
+                    fi
+
+                    # Check for conflicts
+                    if jj log -r @ --no-graph -T 'if(conflict, "CONFLICT")' 2>/dev/null | grep -q "CONFLICT"; then
+                      echo "Error: $name has file conflicts that need manual resolution"
+                      jj resolve --list 2>/dev/null | head -20
+                      return 1
+                    fi
+
+                    echo "Auto-merge successful (no conflicts)"
+                  else
+                    echo "Rebased cleanly onto upstream"
+                  fi
+                else
+                  # Fallback to git
+                  if ! git fetch --all --prune 2>&1; then
+                    echo "Warning: Could not fetch $name"
+                    return 1
+                  fi
+
+                  if ! git pull --ff-only 2>&1; then
+                    echo "Warning: git pull failed for $name (local changes?)"
+                    return 1
+                  fi
+                fi
+
+                return 0
+              }
+
+              # =================================================================
+              # CRITICAL ORDER: Chezmoi changes were already committed by
+              # chezmoi-pre-update.service (which runs BEFORE this service)
+              # =================================================================
 
               # Save current commits for rollback
-              old_commit=""
+              old_commit=$(get_commit "$CONFIG_DIR")
+              echo "Current nix-config commit: ''${old_commit:0:12}"
+
               old_secrets_commit=""
-              if [ -d "$CONFIG_DIR/.git" ]; then
-                old_commit=$(git -C "$CONFIG_DIR" rev-parse HEAD)
-                echo "Current nix-config commit: $old_commit"
+              if [ -d "$SECRETS_DIR" ]; then
+                old_secrets_commit=$(get_commit "$SECRETS_DIR")
+                echo "Current nix-secrets commit: ''${old_secrets_commit:0:12}"
               fi
 
-              # Pull nix-config
-              if [ -d "$CONFIG_DIR/.git" ]; then
-                echo "Pulling nix-config..."
-                git -C "$CONFIG_DIR" fetch --all --prune
-                git -C "$CONFIG_DIR" pull --ff-only || {
-                  echo "Warning: git pull failed (local changes?), continuing anyway"
-                }
-              else
-                echo "Warning: $CONFIG_DIR is not a git repo"
+              # Sync nix-config (AFTER chezmoi has already committed)
+              if ! sync_repo "$CONFIG_DIR" "nix-config"; then
+                echo "Error: Failed to sync nix-config"
+                exit 1
               fi
 
-              # Pull nix-secrets
-              if [ -d "$SECRETS_DIR/.git" ]; then
-                old_secrets_commit=$(git -C "$SECRETS_DIR" rev-parse HEAD)
-                echo "Current nix-secrets commit: $old_secrets_commit"
-                echo "Pulling nix-secrets..."
-                git -C "$SECRETS_DIR" fetch --all --prune
-                git -C "$SECRETS_DIR" pull --ff-only || {
-                  echo "Warning: git pull failed for secrets, continuing anyway"
-                }
+              # Sync nix-secrets
+              if [ -d "$SECRETS_DIR" ]; then
+                if ! sync_repo "$SECRETS_DIR" "nix-secrets"; then
+                  echo "Warning: Failed to sync nix-secrets, continuing anyway"
+                fi
               fi
 
               ${
@@ -305,9 +414,7 @@ in
                     echo "Building new configuration..."
                     if ! nh os build "$CONFIG_DIR" --no-nom --out-link "$CONFIG_DIR/result"; then
                       echo "❌ Build failed, rolling back"
-                      git -C "$CONFIG_DIR" reset --hard "$old_commit"
-                      [ -n "''${old_secrets_commit:-}" ] && git -C "$SECRETS_DIR" reset --hard "$old_secrets_commit" || true
-                      exit 1
+                      ${rollbackAction}
                     fi
 
                     ${validationScript}

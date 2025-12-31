@@ -94,10 +94,16 @@ let
       ${pkgs.chezmoi}/bin/chezmoi re-add
     ''}
 
-    # Step 4: Update working copy description (commit message)
+    # Step 4: Check if there are actual changes to commit
     ${lib.optionalString cfg.autoCommit ''
-      log "Updating commit description..."
-      ${pkgs.jujutsu}/bin/jj describe -m "chore($HOSTNAME): sync dotfiles - $(${pkgs.coreutils}/bin/date -Iseconds)"
+      if ${pkgs.jujutsu}/bin/jj diff --quiet 2>/dev/null; then
+        log "No dotfile changes to commit"
+      else
+        # Update working copy description with datever format
+        DATEVER=$(${pkgs.coreutils}/bin/date +%Y.%m.%d.%H.%M)
+        log "Updating commit description with datever: $DATEVER"
+        ${pkgs.jujutsu}/bin/jj describe -m "chore(dotfiles): automated sync $DATEVER"
+      fi
     ''}
 
     # Step 5: Push to git remote
@@ -252,8 +258,8 @@ in
       documentation = [ "Captures local dotfile changes and syncs with remote" ];
 
       # Run before auto-upgrade (if it exists)
-      before = lib.optional (config.myModules.services.system.autoUpgrade.enable or false
-      ) "auto-upgrade.service";
+      before = lib.optional (config.myModules.services.autoUpgrade.enable or false
+      ) "nix-local-upgrade.service";
 
       serviceConfig = {
         Type = "oneshot";

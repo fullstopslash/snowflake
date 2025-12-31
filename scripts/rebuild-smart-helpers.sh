@@ -546,11 +546,13 @@ rebuild_smart_sync_upstream() {
 }
 
 # ==============================================================================
-# Phase 3: Dotfiles Sync
+# Phase 3: Dotfiles Sync (CRITICAL: Must run BEFORE main repo commits)
 # ==============================================================================
 
 # Sync chezmoi dotfiles with remote
-# Uses the chezmoi-sync systemd service or direct command
+# CRITICAL ORDER: This phase captures dotfile changes BEFORE the main repo
+# commits or pulls upstream changes. If main repo pulls first, it deploys
+# and overwrites dotfile changes!
 rebuild_smart_sync_dotfiles() {
 	# Skip if offline
 	if [[ "$OFFLINE_MODE" == "true" ]]; then
@@ -577,73 +579,105 @@ rebuild_smart_sync_dotfiles() {
 		return 2
 	fi
 
-	info "Syncing chezmoi dotfiles..."
+	info "Syncing chezmoi dotfiles (BEFORE main repo)..."
 
-	# Try systemd service first (preferred for proper permissions)
-	if systemctl is-active chezmoi-sync-manual.service &>/dev/null; then
-		warn "Chezmoi sync already in progress - skipping"
-		return 2
+	# Detect VCS in chezmoi directory
+	local chezmoi_vcs="git"
+	if [[ -d "$chezmoi_dir/.jj" ]]; then
+		chezmoi_vcs="jj"
 	fi
 
-	if systemctl cat chezmoi-sync-manual.service &>/dev/null; then
-		info "Using systemd service for chezmoi sync..."
-		sudo systemctl start chezmoi-sync-manual.service || {
-			warn "Systemd chezmoi sync failed"
-			return 2
-		}
+	# Direct chezmoi sync with jj-first approach
+	(
+		cd "$chezmoi_dir" || exit 1
 
-		# Wait for completion and check status
-		local timeout=60
-		local elapsed=0
-		while systemctl is-active chezmoi-sync-manual.service &>/dev/null; do
-			sleep 1
-			elapsed=$((elapsed + 1))
-			if [[ $elapsed -ge $timeout ]]; then
-				warn "Chezmoi sync timed out"
-				return 2
+		# Initialize jj if needed
+		if [[ "$chezmoi_vcs" == "jj" ]] || command -v jj &>/dev/null; then
+			if [[ ! -d .jj ]]; then
+				info "Initializing jj co-located repo in chezmoi..."
+				jj git init --colocate || exit 1
+				chezmoi_vcs="jj"
 			fi
-		done
-
-		# Check status file
-		if [[ -f "$CHEZMOI_STATE_FILE" ]]; then
-			local status
-			status=$(cat "$CHEZMOI_STATE_FILE")
-			case "$status" in
-				success*)
-					success "Chezmoi sync complete: $status"
-					;;
-				*)
-					warn "Chezmoi sync status: $status"
-					;;
-			esac
 		fi
-	else
-		# Direct chezmoi commands (fallback)
-		info "Using direct chezmoi commands..."
 
-		# Re-add local changes
+		# Capture current dotfiles with chezmoi re-add
+		info "Capturing current dotfiles..."
 		chezmoi re-add 2>&1 || warn "chezmoi re-add had issues"
 
-		# Push if jj is available in chezmoi dir
-		if [[ -d "$chezmoi_dir/.jj" ]]; then
-			(
-				cd "$chezmoi_dir" || exit 1
-				jj git push 2>&1 || warn "Could not push chezmoi changes"
-			)
+		if [[ "$chezmoi_vcs" == "jj" ]]; then
+			# Check if there are changes to commit
+			if jj diff --quiet 2>/dev/null; then
+				info "No dotfile changes to commit"
+			else
+				# Commit with datever format
+				DATEVER=$(date +%Y.%m.%d.%H.%M)
+				info "Committing dotfiles with datever: $DATEVER"
+				jj describe -m "chore(dotfiles): automated sync $DATEVER" 2>&1 || warn "jj describe failed"
+
+				# Fetch and merge upstream
+				if ! jj git fetch 2>&1; then
+					warn "Could not fetch dotfiles (network issue?)"
+					return 2
+				fi
+
+				# Auto-merge with upstream (jj handles parallel commits)
+				local trunk_branch="main"
+				for branch in dev main master; do
+					if jj log -r "${branch}@origin" --no-graph -T 'change_id' 2>/dev/null | grep -q .; then
+						trunk_branch="$branch"
+						break
+					fi
+				done
+
+				# Try rebase first
+				if ! jj rebase -d "${trunk_branch}@origin" 2>&1; then
+					info "Rebase failed, attempting auto-merge..."
+					if ! jj new "@-" "${trunk_branch}@origin" -m "merge: auto-merge dotfiles with upstream $DATEVER" 2>&1; then
+						warn "Could not create merge commit for dotfiles"
+						return 2
+					fi
+
+					# Check for conflicts
+					if jj log -r @ --no-graph -T 'if(conflict, "CONFLICT")' 2>/dev/null | grep -q "CONFLICT"; then
+						error "Dotfiles have file conflicts - skipping push"
+						return 2
+					fi
+				fi
+
+				# Push
+				if ! jj git push 2>&1; then
+					warn "Could not push dotfiles (will retry later)"
+					return 2
+				fi
+
+				success "Dotfiles committed and pushed with datever: $DATEVER"
+			fi
+		else
+			# Fallback to git
+			if git diff --quiet 2>/dev/null; then
+				info "No dotfile changes to commit"
+			else
+				DATEVER=$(date +%Y.%m.%d.%H.%M)
+				git add -A 2>&1 || true
+				git commit -m "chore(dotfiles): automated sync $DATEVER" 2>&1 || warn "git commit failed"
+				git push 2>&1 || warn "Could not push dotfiles"
+			fi
 		fi
+	) || {
+		warn "Chezmoi sync had issues, continuing anyway"
+		return 2
+	}
 
-		success "Chezmoi sync complete (direct)"
-	fi
-
+	success "Chezmoi sync complete"
 	return 0
 }
 
 # ==============================================================================
-# Phase 4: Nix-Secrets Update
+# Phase 4: Nix-Secrets Update (jj-first)
 # ==============================================================================
 
 # Update nix-secrets flake input
-# Pulls the nix-secrets repo and updates the flake lock
+# Pulls the nix-secrets repo with jj-first approach and updates the flake lock
 rebuild_smart_update_secrets() {
 	# Skip if offline
 	if [[ "$OFFLINE_MODE" == "true" ]]; then
@@ -651,7 +685,7 @@ rebuild_smart_update_secrets() {
 		return 2
 	fi
 
-	local nix_secrets_dir="../nix-secrets"
+	local nix_secrets_dir="$HOME/nix-secrets"
 
 	# Check if nix-secrets directory exists
 	if [[ ! -d "$nix_secrets_dir" ]]; then
@@ -659,21 +693,70 @@ rebuild_smart_update_secrets() {
 		return 2
 	fi
 
-	info "Updating nix-secrets..."
+	info "Updating nix-secrets (jj-first)..."
 
-	# Pull nix-secrets repo
+	# Pull nix-secrets repo with jj-first approach
 	(
 		cd "$nix_secrets_dir" || exit 1
 
-		# Source vcs-helpers for pull
-		if [[ -f "../nix-config/scripts/vcs-helpers.sh" ]]; then
-			# shellcheck source=./vcs-helpers.sh
-			source "../nix-config/scripts/vcs-helpers.sh"
-			vcs_pull 2>&1 || warn "Could not pull nix-secrets"
-		else
-			git pull 2>&1 || warn "Could not pull nix-secrets"
+		# Detect VCS type (prefer jj)
+		local secrets_vcs="git"
+		if command -v jj &>/dev/null && [[ -d ".jj" ]]; then
+			secrets_vcs="jj"
+		elif command -v git &>/dev/null && [[ -d ".git" ]]; then
+			secrets_vcs="git"
 		fi
-	) || warn "nix-secrets pull had issues"
+
+		# Initialize jj if needed
+		if command -v jj &>/dev/null && [[ ! -d ".jj" ]] && [[ -d ".git" ]]; then
+			info "Initializing jj co-located repo in nix-secrets..."
+			jj git init --colocate || exit 1
+			secrets_vcs="jj"
+		fi
+
+		if [[ "$secrets_vcs" == "jj" ]]; then
+			# Fetch with jj
+			if ! jj git fetch 2>&1; then
+				warn "Could not fetch nix-secrets"
+				exit 1
+			fi
+
+			# Get trunk branch
+			local trunk_branch="main"
+			for branch in dev main master; do
+				if jj log -r "${branch}@origin" --no-graph -T 'change_id' 2>/dev/null | grep -q .; then
+					trunk_branch="$branch"
+					break
+				fi
+			done
+
+			# Try rebase first
+			if ! jj rebase -d "${trunk_branch}@origin" 2>&1; then
+				info "Rebase failed, attempting auto-merge..."
+				local datever
+				datever=$(date +%Y.%m.%d.%H.%M)
+				if ! jj new "@-" "${trunk_branch}@origin" -m "merge: auto-merge nix-secrets with upstream $datever" 2>&1; then
+					warn "Could not create merge commit for nix-secrets"
+					exit 1
+				fi
+
+				# Check for conflicts
+				if jj log -r @ --no-graph -T 'if(conflict, "CONFLICT")' 2>/dev/null | grep -q "CONFLICT"; then
+					error "nix-secrets has file conflicts"
+					exit 1
+				fi
+			fi
+		else
+			# Fallback to git
+			if ! git pull --ff-only 2>&1; then
+				warn "Could not pull nix-secrets"
+				exit 1
+			fi
+		fi
+	) || {
+		warn "nix-secrets pull had issues, continuing anyway"
+		return 2
+	}
 
 	# Update flake input with timeout
 	info "Updating nix-secrets flake input..."
@@ -712,15 +795,18 @@ rebuild_smart_flake_update() {
 		return 1
 	fi
 
-	# Stage flake.lock changes
+	# Stage flake.lock changes with datever format
+	local datever
+	datever=$(date +%Y.%m.%d.%H.%M)
+
 	if [[ "$VCS_TYPE" == "jj" ]]; then
-		# jj auto-tracks, but describe the change
-		jj describe -m "chore: update flake inputs" 2>&1 || true
+		# jj auto-tracks, but describe the change with datever
+		jj describe -m "chore(flake): update inputs $datever" 2>&1 || true
 	else
 		git add flake.lock 2>&1 || true
 	fi
 
-	success "Flake inputs updated"
+	success "Flake inputs updated with datever: $datever"
 	return 0
 }
 
@@ -846,10 +932,12 @@ rebuild_smart_post_checks() {
 }
 
 # ==============================================================================
-# Phase 8: Commit & Push
+# Phase 8: Commit & Push (Main Repo Only - Dotfiles Already Committed in Phase 3)
 # ==============================================================================
 
 # Auto-commit and push successful builds
+# NOTE: Dotfiles were already committed in Phase 3 (BEFORE upstream sync)
+# This phase only commits main repo changes
 rebuild_smart_commit_push() {
 	# Skip if offline
 	if [[ "$OFFLINE_MODE" == "true" ]]; then
@@ -857,28 +945,36 @@ rebuild_smart_commit_push() {
 		# Still commit locally
 	fi
 
-	info "Committing successful build..."
+	info "Committing successful build (main repo only)..."
 
 	local hostname
 	hostname=$(hostname)
-	local timestamp
-	timestamp=$(date -Iseconds)
-	local commit_msg="chore($hostname): successful rebuild - $timestamp"
+	local datever
+	datever=$(date +%Y.%m.%d.%H.%M)
+	local commit_msg="chore(system): automated update $datever"
 
 	if [[ "$VCS_TYPE" == "jj" ]]; then
-		# jj: describe current change and commit
-		jj describe -m "$commit_msg" 2>&1 || true
+		# Check if there are changes to commit
+		if jj diff --quiet 2>/dev/null; then
+			info "No changes to commit in main repo"
+		else
+			# jj: describe current change with datever format
+			info "Committing with datever: $datever"
+			jj describe -m "$commit_msg" 2>&1 || true
 
-		# Create new empty change for future work
-		jj new 2>&1 || true
+			# Create new empty change for future work
+			jj new 2>&1 || true
 
-		# Push if online
-		if [[ "$OFFLINE_MODE" != "true" ]]; then
-			info "Pushing changes..."
-			if ! jj git push 2>&1; then
-				warn "Could not push to remote (will retry next sync)"
+			# Push if online
+			if [[ "$OFFLINE_MODE" != "true" ]]; then
+				info "Pushing changes..."
+				if ! jj git push 2>&1; then
+					warn "Could not push to remote (will retry next sync)"
+				else
+					success "Changes pushed to remote with datever: $datever"
+				fi
 			else
-				success "Changes pushed to remote"
+				success "Changes committed locally with datever: $datever"
 			fi
 		fi
 	else
@@ -887,18 +983,21 @@ rebuild_smart_commit_push() {
 
 		# Check if there are changes to commit
 		if git diff --cached --quiet 2>/dev/null; then
-			info "No changes to commit"
+			info "No changes to commit in main repo"
 		else
+			info "Committing with datever: $datever"
 			git commit -m "$commit_msg" 2>&1 || warn "Commit failed"
-		fi
 
-		# Push if online
-		if [[ "$OFFLINE_MODE" != "true" ]]; then
-			info "Pushing changes..."
-			if ! git push 2>&1; then
-				warn "Could not push to remote (will retry next sync)"
+			# Push if online
+			if [[ "$OFFLINE_MODE" != "true" ]]; then
+				info "Pushing changes..."
+				if ! git push 2>&1; then
+					warn "Could not push to remote (will retry next sync)"
+				else
+					success "Changes pushed to remote with datever: $datever"
+				fi
 			else
-				success "Changes pushed to remote"
+				success "Changes committed locally with datever: $datever"
 			fi
 		fi
 	fi
