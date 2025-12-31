@@ -239,6 +239,8 @@ in
             User = config.identity.primaryUsername;
             Environment = "HOME=${home}";
             WorkingDirectory = home;
+            # Accept environment variables for flag passing from `just rebuild`
+            PassEnvironment = "SKIP_UPSTREAM SKIP_DOTFILES SKIP_UPDATE DRY_RUN OFFLINE";
           };
           script =
             let
@@ -286,8 +288,40 @@ in
               HOSTNAME=$(hostname)
               validation_failed=0
 
+              # Parse flag environment variables (for `just rebuild` integration)
+              # Supports: SKIP_UPSTREAM, SKIP_DOTFILES, SKIP_UPDATE, DRY_RUN, OFFLINE
+              SKIP_UPSTREAM=''${SKIP_UPSTREAM:-false}
+              SKIP_DOTFILES=''${SKIP_DOTFILES:-false}
+              SKIP_UPDATE=''${SKIP_UPDATE:-true}
+              DRY_RUN=''${DRY_RUN:-false}
+              OFFLINE=''${OFFLINE:-false}
+
+              # Offline mode sets both skip flags
+              if [ "$OFFLINE" = "true" ]; then
+                SKIP_UPSTREAM=true
+                SKIP_DOTFILES=true
+              fi
+
+              # Dry-run helper
+              maybe_run() {
+                if [ "$DRY_RUN" = "true" ]; then
+                  echo "[DRY-RUN] $*"
+                else
+                  "$@"
+                fi
+              }
+
               echo "=== Nix Local Upgrade: $(date) ==="
               echo "Using datever: $DATEVER"
+
+              # Show active flags
+              flags=""
+              [ "$SKIP_UPSTREAM" = "true" ] && flags="$flags skip-upstream"
+              [ "$SKIP_DOTFILES" = "true" ] && flags="$flags skip-dotfiles"
+              [ "$SKIP_UPDATE" = "true" ] && flags="$flags skip-update"
+              [ "$DRY_RUN" = "true" ] && flags="$flags dry-run"
+              [ "$OFFLINE" = "true" ] && flags="$flags offline"
+              [ -n "$flags" ] && echo "Flags:$flags"
 
               # Detect VCS type (prefer jj)
               if command -v jj &>/dev/null && [ -d "$CONFIG_DIR/.jj" ]; then
@@ -380,9 +414,54 @@ in
               }
 
               # =================================================================
-              # CRITICAL ORDER: Chezmoi changes were already committed by
-              # chezmoi-pre-update.service (which runs BEFORE this service)
+              # CRITICAL ORDER: Chezmoi FIRST, then main repo
+              # This ensures dotfiles are committed before nix-config pulls,
+              # preventing dotfile overwrites from chezmoi managed files
               # =================================================================
+
+              # Sync chezmoi dotfiles (FIRST, before nix-config)
+              if [ "$SKIP_DOTFILES" = "false" ]; then
+                if [ -d "$CHEZMOI_DIR" ]; then
+                  echo "Syncing chezmoi dotfiles..."
+                  cd "$CHEZMOI_DIR"
+
+                  # Initialize jj if needed
+                  if [ "$VCS_TYPE" = "jj" ] && [ ! -d .jj ]; then
+                    echo "Initializing jj co-located repo in chezmoi..."
+                    maybe_run jj git init --colocate || true
+                  fi
+
+                  # Re-add dotfiles (capture current state)
+                  if command -v chezmoi &>/dev/null; then
+                    maybe_run chezmoi re-add
+                  fi
+
+                  # Commit if changes exist
+                  if [ "$VCS_TYPE" = "jj" ]; then
+                    if ! jj diff --quiet 2>/dev/null; then
+                      echo "Committing chezmoi changes with datever..."
+                      maybe_run jj describe -m "chore(dotfiles): automated sync $DATEVER"
+                    fi
+
+                    # Fetch and auto-merge
+                    if ! maybe_run jj git fetch 2>&1; then
+                      echo "Warning: Could not fetch chezmoi repo (network issue?)"
+                    else
+                      # Try rebase, fallback to merge
+                      if ! maybe_run jj rebase -d 'latest(remote_bookmarks())' 2>&1; then
+                        maybe_run jj new @ 'latest(remote_bookmarks())' -m "merge: auto-merge dotfiles $DATEVER" || true
+                      fi
+                    fi
+
+                    # Push changes
+                    maybe_run jj git push || echo "Warning: Could not push chezmoi changes"
+                  fi
+                else
+                  echo "Chezmoi directory not found at $CHEZMOI_DIR, skipping"
+                fi
+              else
+                echo "Skipping chezmoi sync (SKIP_DOTFILES=true)"
+              fi
 
               # Save current commits for rollback
               old_commit=$(get_commit "$CONFIG_DIR")
@@ -395,16 +474,31 @@ in
               fi
 
               # Sync nix-config (AFTER chezmoi has already committed)
-              if ! sync_repo "$CONFIG_DIR" "nix-config"; then
-                echo "Error: Failed to sync nix-config"
-                exit 1
+              if [ "$SKIP_UPSTREAM" = "false" ]; then
+                if ! maybe_run sync_repo "$CONFIG_DIR" "nix-config"; then
+                  echo "Error: Failed to sync nix-config"
+                  [ "$DRY_RUN" = "false" ] && exit 1
+                fi
+              else
+                echo "Skipping upstream sync (SKIP_UPSTREAM=true)"
               fi
 
               # Sync nix-secrets
-              if [ -d "$SECRETS_DIR" ]; then
-                if ! sync_repo "$SECRETS_DIR" "nix-secrets"; then
+              if [ "$SKIP_UPSTREAM" = "false" ] && [ -d "$SECRETS_DIR" ]; then
+                if ! maybe_run sync_repo "$SECRETS_DIR" "nix-secrets"; then
                   echo "Warning: Failed to sync nix-secrets, continuing anyway"
                 fi
+              fi
+
+              # Flake update (if requested via --update flag)
+              if [ "$SKIP_UPDATE" = "false" ]; then
+                echo "Updating flake inputs..."
+                cd "$CONFIG_DIR"
+                if ! maybe_run nix flake update; then
+                  echo "Warning: Flake update failed, continuing with current lock"
+                fi
+              else
+                echo "Skipping flake update (SKIP_UPDATE=true)"
               fi
 
               ${
@@ -412,27 +506,27 @@ in
                   ''
                     # Build first (don't switch yet)
                     echo "Building new configuration..."
-                    if ! nh os build "$CONFIG_DIR" --no-nom --out-link "$CONFIG_DIR/result"; then
+                    if ! maybe_run nh os build "$CONFIG_DIR" --no-nom --out-link "$CONFIG_DIR/result"; then
                       echo "❌ Build failed, rolling back"
-                      ${rollbackAction}
+                      [ "$DRY_RUN" = "false" ] && ${rollbackAction}
                     fi
 
                     ${validationScript}
 
                     # Check if validation failed
                     if [ "$validation_failed" -eq 1 ]; then
-                      ${rollbackAction}
+                      [ "$DRY_RUN" = "false" ] && ${rollbackAction}
                     fi
 
                     # All checks passed, now switch
                     echo "✅ Build and validation passed, switching to new configuration..."
-                    nh os switch "$CONFIG_DIR" --no-nom --elevation-program sudo
+                    maybe_run nh os switch "$CONFIG_DIR" --no-nom --elevation-program sudo
                   ''
                 else
                   ''
                     # Skip build-before-switch, go straight to switch
                     echo "Rebuilding system (buildBeforeSwitch=false)..."
-                    nh os switch "$CONFIG_DIR" --no-nom --elevation-program sudo
+                    maybe_run nh os switch "$CONFIG_DIR" --no-nom --elevation-program sudo
                   ''
               }
 

@@ -29,10 +29,76 @@ check ARGS="":
 	cd nixos-installer && NIXPKGS_ALLOW_UNFREE=1 REPO_PATH=$(pwd) nix flake check --impure --keep-going --show-trace {{ARGS}}
 
 # Rebuild the system with full sync workflow (upstream + dotfiles + rebuild)
+# Triggers systemd service with flag support: --skip-upstream, --skip-dotfiles, --skip-update, --update, --dry-run, --offline
 rebuild *FLAGS:
   #!/usr/bin/env bash
   set -euo pipefail
-  scripts/rebuild-smart.sh {{FLAGS}}
+
+  # Parse flags and convert to environment variables
+  export SKIP_UPSTREAM=false
+  export SKIP_DOTFILES=false
+  export SKIP_UPDATE=true
+  export DRY_RUN=false
+  export OFFLINE=false
+
+  for flag in {{FLAGS}}; do
+    case "$flag" in
+      --skip-upstream)
+        export SKIP_UPSTREAM=true
+        ;;
+      --skip-dotfiles)
+        export SKIP_DOTFILES=true
+        ;;
+      --skip-update)
+        export SKIP_UPDATE=true
+        ;;
+      --update)
+        export SKIP_UPDATE=false
+        ;;
+      --dry-run)
+        export DRY_RUN=true
+        ;;
+      --offline)
+        export OFFLINE=true
+        export SKIP_UPSTREAM=true
+        export SKIP_DOTFILES=true
+        ;;
+      *)
+        echo "Unknown flag: $flag"
+        echo "Supported flags: --skip-upstream, --skip-dotfiles, --skip-update, --update, --dry-run, --offline"
+        exit 1
+        ;;
+    esac
+  done
+
+  # Show active flags
+  echo "Rebuild flags:"
+  echo "  SKIP_UPSTREAM=$SKIP_UPSTREAM"
+  echo "  SKIP_DOTFILES=$SKIP_DOTFILES"
+  echo "  SKIP_UPDATE=$SKIP_UPDATE"
+  echo "  DRY_RUN=$DRY_RUN"
+  echo "  OFFLINE=$OFFLINE"
+  echo ""
+
+  # Set environment for systemd manager (so service can inherit)
+  sudo systemctl set-environment \
+    SKIP_UPSTREAM=$SKIP_UPSTREAM \
+    SKIP_DOTFILES=$SKIP_DOTFILES \
+    SKIP_UPDATE=$SKIP_UPDATE \
+    DRY_RUN=$DRY_RUN \
+    OFFLINE=$OFFLINE
+
+  # Trigger systemd service
+  echo "Starting nix-local-upgrade.service..."
+  sudo systemctl start nix-local-upgrade.service
+
+  # Follow logs in real-time
+  echo ""
+  echo "Following logs (Ctrl+C to exit):"
+  journalctl -fu nix-local-upgrade.service --since "1 minute ago"
+
+  # Clean up environment variables
+  sudo systemctl unset-environment SKIP_UPSTREAM SKIP_DOTFILES SKIP_UPDATE DRY_RUN OFFLINE
 
 # Rebuild with flake update
 rebuild-update:
