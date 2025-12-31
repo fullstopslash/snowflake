@@ -549,3 +549,4 @@ Target outcome:
 | 20. Bcachefs Native Encryption | 3/3 | Complete | 2025-12-17 |
 | 21. TPM Unlock | 0/1 | Planning | - |
 | 22. Home Manager Cleanup | 0/1 | Planning | - |
+| 29. Auto-Upgrade Remediation | 6/6 | Complete | 2025-12-31 |
