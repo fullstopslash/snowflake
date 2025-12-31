@@ -289,7 +289,7 @@ in
 
     # SOPS secrets for dotfiles (if hasSecrets is enabled)
     sops.secrets =
-      lib.mkIf (config.sops.defaultSopsFile or null) != null {
+      lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
         "dotfiles/acoustid_api" = {
           sopsFile = "${sopsFolder}/shared.yaml";
           owner = primaryUser.name;

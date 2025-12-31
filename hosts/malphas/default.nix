@@ -7,6 +7,14 @@
   imports = [
     ./hardware-configuration.nix
     ./audio-tuning.nix
+    # SOPS configuration module
+    (
+      { inputs, ... }:
+      {
+        # Use shared secrets file for most secrets
+        sops.defaultSopsFile = builtins.toString inputs.nix-secrets + "/sops/shared.yaml";
+      }
+    )
   ];
 
   # Roles: minimal VM + test settings
