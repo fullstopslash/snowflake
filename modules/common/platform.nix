@@ -9,6 +9,7 @@
 # - system.useCustomPkgs: Whether to use alternate nixpkgs (computed)
 # - system.isDarwin: Platform detection flag
 #
+    # CONCURRENT TEST: Change from griefling at 2025-12-31 12:58:00
 {
   config,
   lib,
