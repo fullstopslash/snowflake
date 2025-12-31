@@ -28,45 +28,45 @@ check ARGS="":
 	NIXPKGS_ALLOW_UNFREE=1 REPO_PATH=$(pwd) nix flake check --impure --keep-going --show-trace {{ARGS}}
 	cd nixos-installer && NIXPKGS_ALLOW_UNFREE=1 REPO_PATH=$(pwd) nix flake check --impure --keep-going --show-trace {{ARGS}}
 
-# Rebuild the system
-rebuild: rebuild-pre && rebuild-post
+# Rebuild the system with full sync workflow (upstream + dotfiles + rebuild)
+rebuild *FLAGS:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  scripts/rebuild-smart.sh {{FLAGS}}
+
+# Rebuild with flake update
+rebuild-update:
+  @just rebuild --update
+
+# Offline rebuild (skip upstream/dotfiles sync)
+rebuild-offline:
+  @just rebuild --offline
+
+# Dry run to see what would be done
+rebuild-dry:
+  @just rebuild --dry-run
+
+# Local-only rebuild (fast, no sync, for quick iterations)
+rebuild-local: rebuild-pre && rebuild-post
   # NOTE: Add --option eval-cache false if you end up caching a failure you can't get around
   scripts/rebuild.sh
 
-# Rebuild the system and run a flake check
-rebuild-full: rebuild-pre && rebuild-post
+# Local rebuild with flake update
+rebuild-local-update: update rebuild-local
+
+# Local rebuild with full flake check
+rebuild-local-full: rebuild-pre && rebuild-post
   scripts/rebuild.sh
   just check
 
-# Rebuild the system and run a flake check
-rebuild-trace: rebuild-pre && rebuild-post
+# Local rebuild with trace output
+rebuild-local-trace: rebuild-pre && rebuild-post
   scripts/rebuild.sh trace
   just check
 
 # Update the flake
 update:
   nix flake update
-
-# Update and then rebuild
-rebuild-update: update rebuild
-
-# Smart rebuild: sync upstream + dotfiles + rebuild in one command
-rebuild-smart *FLAGS:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  scripts/rebuild-smart.sh {{FLAGS}}
-
-# Smart rebuild with flake update
-rebuild-smart-update:
-  @just rebuild-smart --update
-
-# Offline rebuild (skip upstream/dotfiles sync)
-rebuild-smart-offline:
-  @just rebuild-smart --offline
-
-# Dry run to see what would be done
-rebuild-smart-dry:
-  @just rebuild-smart --dry-run
 
 # Git diff there entire repo expcept for flake.lock
 diff:

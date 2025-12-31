@@ -315,11 +315,147 @@ rebuild_smart_prepare() {
 }
 
 # ==============================================================================
-# Phase 2: Upstream Sync
+# Phase 2: Upstream Sync (jj-first with automatic merge)
 # ==============================================================================
 
-# Fetch and rebase upstream changes using jujutsu
-# Uses conflict-free merging (conflicts become parallel commits)
+# Helper: Get the main tracking branch name
+# Returns: branch name (e.g., "dev" or "main")
+jj_get_trunk_branch() {
+	# Check common trunk branch names in order of preference
+	local branches=("dev" "main" "master")
+	for branch in "${branches[@]}"; do
+		if jj log -r "${branch}@origin" --no-graph -T 'change_id' 2>/dev/null | grep -q .; then
+			echo "$branch"
+			return 0
+		fi
+	done
+	# Fallback: try to get from revset
+	echo "main"
+}
+
+# Helper: Check if we have parallel commits (divergence from upstream)
+# Returns: 0 if parallel commits exist, 1 if no divergence
+jj_has_parallel_commits() {
+	local trunk_branch
+	trunk_branch=$(jj_get_trunk_branch)
+	local remote_ref="${trunk_branch}@origin"
+
+	# Get the remote commit
+	local remote_commit
+	remote_commit=$(jj log -r "$remote_ref" --no-graph -T 'commit_id' 2>/dev/null || echo "")
+
+	if [[ -z "$remote_commit" ]]; then
+		# No remote tracking - no divergence possible
+		return 1
+	fi
+
+	# Get the current working copy's parent (the actual committed work)
+	local local_parent
+	local_parent=$(jj log -r '@-' --no-graph -T 'commit_id' 2>/dev/null || echo "")
+
+	# Check if remote is an ancestor of our work
+	if jj log -r "ancestors(@) & $remote_ref" --no-graph -T 'commit_id' 2>/dev/null | grep -q "$remote_commit"; then
+		# Remote is already in our history - no divergence
+		return 1
+	fi
+
+	# Check if our parent is an ancestor of remote (we're behind)
+	if jj log -r "ancestors($remote_ref) & @-" --no-graph -T 'commit_id' 2>/dev/null | grep -q "$local_parent"; then
+		# We're just behind, simple fast-forward case
+		return 1
+	fi
+
+	# If neither is ancestor of the other, we have divergence (parallel commits)
+	return 0
+}
+
+# Helper: Check if current working copy has actual file conflicts
+# Returns: 0 if conflicts exist, 1 if no conflicts
+jj_has_conflicts() {
+	# Check if working copy or any parent has conflict markers
+	if jj log -r @ --no-graph 2>/dev/null | grep -q "conflict"; then
+		return 0
+	fi
+	# Double-check with explicit conflicts flag
+	local conflict_output
+	conflict_output=$(jj log -r @ --no-graph -T 'if(conflict, "CONFLICT")' 2>/dev/null || echo "")
+	if [[ "$conflict_output" == "CONFLICT" ]]; then
+		return 0
+	fi
+	return 1
+}
+
+# Helper: Show conflict details for user resolution
+jj_show_conflicts() {
+	info "Conflict details:"
+	echo ""
+	# Show files with conflicts
+	jj diff --summary 2>/dev/null | grep -E "^[CM]" | while read -r line; do
+		echo "  $line"
+	done
+	echo ""
+	# Show conflict markers location
+	jj resolve --list 2>/dev/null | head -20 | while read -r line; do
+		echo "  $line"
+	done
+}
+
+# Helper: Perform automatic merge of parallel commits
+# Returns: 0 on success (no conflicts), 1 on conflicts needing resolution
+jj_auto_merge_parallel() {
+	local trunk_branch
+	trunk_branch=$(jj_get_trunk_branch)
+	local remote_ref="${trunk_branch}@origin"
+
+	info "Detected parallel commits - attempting automatic merge..."
+
+	# Get change IDs for the merge
+	# We need to merge our current work with the remote
+	local local_change
+	local_change=$(jj log -r '@-' --no-graph -T 'change_id.short()' 2>/dev/null || echo "")
+	local remote_change
+	remote_change=$(jj log -r "$remote_ref" --no-graph -T 'change_id.short()' 2>/dev/null || echo "")
+
+	if [[ -z "$local_change" ]] || [[ -z "$remote_change" ]]; then
+		warn "Could not determine change IDs for merge"
+		return 1
+	fi
+
+	info "Merging local ($local_change) with upstream ($remote_change)..."
+
+	# Create a new merge commit with both parents
+	# jj new with multiple revisions creates a merge
+	if ! jj new "@-" "$remote_ref" -m "merge: auto-merge with upstream" 2>&1; then
+		warn "Could not create merge commit"
+		return 1
+	fi
+
+	# Check if the merge resulted in conflicts
+	if jj_has_conflicts; then
+		error "Merge has file conflicts that need manual resolution"
+		echo ""
+		jj_show_conflicts
+		echo ""
+		echo "To resolve:"
+		echo "  1. Edit conflicted files (look for <<<<<<< markers)"
+		echo "  2. Run: jj resolve (or manually edit)"
+		echo "  3. Run: jj describe -m 'merge: resolved conflicts from upstream'"
+		echo "  4. Run: just rebuild"
+		echo ""
+		return 1
+	fi
+
+	# No conflicts - merge succeeded!
+	success "Automatic merge successful (no conflicts)"
+
+	# Update the merge commit message
+	jj describe -m "merge: auto-merge parallel commits from upstream (no conflicts)" 2>/dev/null || true
+
+	return 0
+}
+
+# Fetch and sync upstream changes using jujutsu
+# Leverages jj's superior merge capabilities for conflict-free parallel commits
 rebuild_smart_sync_upstream() {
 	# Skip if offline
 	if [[ "$OFFLINE_MODE" == "true" ]]; then
@@ -348,18 +484,38 @@ rebuild_smart_sync_upstream() {
 			warn "Could not fetch upstream (network issue?)"
 			return 2  # Non-fatal, continue with local state
 		fi
+		info "Fetched upstream changes"
 
-		# Rebase working copy on latest remote
-		# jj automatically handles conflicts by creating separate commits
-		info "Rebasing local changes on upstream..."
-		if ! jj rebase -d 'trunk()' 2>&1; then
-			warn "Rebase had issues - changes preserved as parallel commits"
+		# Check for parallel commits (divergence)
+		if jj_has_parallel_commits; then
+			# We have divergence - use jj's automatic merge
+			if ! jj_auto_merge_parallel; then
+				# Conflicts detected - stop for manual resolution
+				return 1
+			fi
+			# Merge succeeded without conflicts
+		else
+			# No divergence - simple rebase onto trunk
+			info "No divergence detected - rebasing onto trunk..."
+			local trunk_branch
+			trunk_branch=$(jj_get_trunk_branch)
+
+			if ! jj rebase -d "${trunk_branch}@origin" 2>&1; then
+				# Rebase failed - could be conflicts, try the merge approach
+				warn "Simple rebase failed, attempting merge approach..."
+				if ! jj_auto_merge_parallel; then
+					return 1
+				fi
+			else
+				success "Rebased cleanly onto upstream"
+			fi
 		fi
 
-		# Check for conflicts (informational only)
-		if jj log --conflicts -r @ --no-graph 2>/dev/null | grep -q .; then
-			warn "Conflicts detected - preserved as separate commits (jj handles this)"
-			warn "Review with: jj log --conflicts"
+		# Final conflict check (safety)
+		if jj_has_conflicts; then
+			error "Unexpected conflicts after sync"
+			jj_show_conflicts
+			return 1
 		fi
 
 		success "Upstream sync complete (jj)"
