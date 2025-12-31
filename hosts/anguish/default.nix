@@ -9,7 +9,17 @@
 # This VM validates the nixpkgs bcachefs.nix patterns for TPM unlock
 { lib, ... }:
 {
-  imports = [ ./hardware-configuration.nix ];
+  imports = [
+    ./hardware-configuration.nix
+    # SOPS configuration module
+    (
+      { inputs, ... }:
+      {
+        # Use shared secrets file for most secrets
+        sops.defaultSopsFile = builtins.toString inputs.nix-secrets + "/sops/shared.yaml";
+      }
+    )
+  ];
 
   # Disk configuration via modules/disks
   # Using bcachefs native encryption (NOT LUKS)

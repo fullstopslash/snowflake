@@ -8,7 +8,17 @@
 # IMPORTANT: This is a disposable test VM. Do not use for production.
 { ... }:
 {
-  imports = [ ./hardware-configuration.nix ];
+  imports = [
+    ./hardware-configuration.nix
+    # SOPS configuration module
+    (
+      { inputs, ... }:
+      {
+        # Use shared secrets file for most secrets
+        sops.defaultSopsFile = builtins.toString inputs.nix-secrets + "/sops/shared.yaml";
+      }
+    )
+  ];
 
   # Disk configuration with LUKS for Phase 17 testing
   disks = {
