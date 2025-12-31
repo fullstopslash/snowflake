@@ -215,6 +215,7 @@ in
             sudo
             chezmoi
             coreutils
+            gnugrep
             nettools
           ];
           environment.PATH = lib.mkForce "/run/wrappers/bin:${
@@ -229,6 +230,7 @@ in
                 sudo
                 chezmoi
                 coreutils
+                gnugrep
                 systemd
                 nettools
               ]

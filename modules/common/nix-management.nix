@@ -206,6 +206,8 @@ in
 
             if [ -d "$dir" ]; then
               echo "$name already exists at $dir"
+              # Ensure existing repo uses SSH remote
+              git -C "$dir" remote set-url origin "$ssh_url" 2>/dev/null || true
               return 0
             fi
 
@@ -222,7 +224,10 @@ in
             # Fall back to HTTPS (read-only but works without auth)
             if git clone --branch "$branch" "$https_url" "$dir"; then
               echo "$name cloned via HTTPS successfully"
-              echo "Note: To enable push, run: git -C $dir remote set-url origin $ssh_url"
+              # IMPORTANT: Always set remote to SSH after clone for future fetch/push operations
+              # This allows auto-upgrade to use SSH keys instead of interactive HTTPS auth
+              git -C "$dir" remote set-url origin "$ssh_url"
+              echo "Remote set to SSH: $ssh_url"
               return 0
             fi
 
