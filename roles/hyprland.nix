@@ -7,25 +7,56 @@
 }: let
   hypridleConf = pkgs.writeText "hypridle.conf" ''
     general {
-      before_sleep_cmd = ${pkgs.hyprlock}/bin/hyprlock
+      lock_cmd = pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock
+      before_sleep_cmd = loginctl lock-session
       after_sleep_cmd = ${pkgs.hyprland}/bin/hyprctl dispatch dpms on
+    }
+
+    # Dim screen after 4 minutes
+    listener {
+      timeout = 240
+      on-timeout = ${pkgs.brightnessctl}/bin/brightnessctl -s set 10%
+      on-resume = ${pkgs.brightnessctl}/bin/brightnessctl -r
+    }
+
+    # Lock screen after 5 minutes
+    listener {
+      timeout = 300
+      on-timeout = loginctl lock-session
+    }
+
+    # Turn off screen after 6 minutes
+    listener {
+      timeout = 360
+      on-timeout = ${pkgs.hyprland}/bin/hyprctl dispatch dpms off
+      on-resume = ${pkgs.hyprland}/bin/hyprctl dispatch dpms on
+    }
+
+    # Suspend after 10 minutes
+    listener {
+      timeout = 600
+      on-timeout = systemctl suspend
     }
   '';
 in {
   programs = {
     hyprland = {
       enable = true;
-      package = pkgs.hyprland;
+      package = inputs.hyprland.packages.${pkgs.system}.hyprland;
       # portalPackage = pkgs.xdg-desktop-portal-hyprland;
       xwayland.enable = true; # Required for X11 apps like LM Studio
     };
     hyprlock.enable = true;
   };
 
-  services.hypridle.enable = true;
+  # hypridle is configured via systemd.user.services.hypridle below
+  # services.hypridle.enable = true; # Disabled to avoid conflict with custom service
 
   # Display manager is handled by greetd.nix role
   services.displayManager.defaultSession = "hyprland";
+
+  # Place hypridle config in /etc/hypr/ so hypridle can find it
+  environment.etc."hypr/hypridle.conf".source = hypridleConf;
 
   # Environment for Hyprland
   environment.sessionVariables = {
@@ -67,11 +98,12 @@ in {
   # '';
 
   # xdg-desktop-portal configuration
+  # Note: xdg-desktop-portal-hyprland is automatically managed by programs.hyprland
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [
-      xdg-desktop-portal-hyprland
-      # xdg-desktop-portal-gtk
+      # xdg-desktop-portal-hyprland is managed by programs.hyprland
+      xdg-desktop-portal-gtk
       # kdePackages.xdg-desktop-portal-kde
     ];
     # Common fallback so behavior is sane even if desktop detection differs
@@ -87,12 +119,12 @@ in {
   };
 
   environment.systemPackages = with pkgs; [
-    # Hyprland utilities
+    # Hyprland utilities (use hyprpaper from hyprpaper flake for version compatibility)
     hyprlock
     hyprpicker
     hypridle
     hyprls
-    hyprpaper
+    inputs.hyprpaper.packages.${pkgs.system}.hyprpaper  # Use 0.8.0+ from hyprpaper flake
     hyprutils
     hyprlang
     kdePackages.kwallet
@@ -126,7 +158,6 @@ in {
     noto-fonts-color-emoji
     # Additional scaling support
     xdg-utils
-    xdg-desktop-portal-hyprland
     # X11 utilities for Xwayland DPI configuration
     xorg.xrdb
     # Tray/dbusmenu helpers for Waybar
@@ -215,17 +246,40 @@ in {
       partOf = ["hyprland-session.target"];
       after = ["hyprland-session.target" "dbus.service"];
     };
+    # Create symlink to hypridle config in user's home directory
+    # This is needed because hypridle has a bug and doesn't find config in /etc/hypr/
+    hypridle-config-setup = {
+      description = "Setup hypridle config symlink";
+      wantedBy = ["hyprland-session.target"];
+      partOf = ["hyprland-session.target"];
+      before = ["hypridle.service"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = pkgs.writeShellScript "setup-hypridle-config" ''
+          #!/usr/bin/env sh
+          mkdir -p ~/.config/hypr
+          ln -sf /etc/hypr/hypridle.conf ~/.config/hypr/hypridle.conf
+        '';
+      };
+    };
+
     hypridle = {
       description = "Hypridle lock handler";
       wantedBy = ["hyprland-session.target"];
       partOf = ["hyprland-session.target"];
-      after = ["hyprland-session.target"];
+      after = ["hyprland-session.target" "hypridle-config-setup.service"];
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${pkgs.hypridle}/bin/hypridle -c ${hypridleConf}";
+        # Clear the default ExecStart first, then set our custom one
+        # Config is linked from /etc/hypr/hypridle.conf to ~/.config/hypr/hypridle.conf
+        ExecStart = [
+          "" # Clear the ExecStart from the base service
+          "${pkgs.hypridle}/bin/hypridle"
+        ];
         Restart = "on-failure";
         RestartSec = 1;
-        Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.hyprland pkgs.hyprlock pkgs.coreutils]}";
+        Environment = "PATH=${pkgs.lib.makeBinPath [pkgs.hyprland pkgs.hyprlock pkgs.brightnessctl pkgs.systemd pkgs.coreutils]}";
       };
     };
     # Wait for Hyprland compositor and export environment
@@ -234,7 +288,7 @@ in {
       description = "Wait for Hyprland compositor and export environment";
       wantedBy = ["hyprland-session.target"];
       partOf = ["hyprland-session.target"];
-      before = ["xdg-desktop-portal.service" "xdg-desktop-portal-hyprland.service"];
+      before = ["xdg-desktop-portal.service"];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
@@ -265,7 +319,7 @@ in {
       partOf = ["hyprland-session.target"];
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${pkgs.hyprpaper}/bin/hyprpaper";
+        ExecStart = "${inputs.hyprpaper.packages.${pkgs.system}.hyprpaper}/bin/hyprpaper";
         Restart = "on-failure";
         RestartSec = 1;
         # Add delay to ensure Wayland is ready
