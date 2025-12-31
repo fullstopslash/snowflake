@@ -1,7 +1,14 @@
 # Atuin shell history sync service
 #
+# Compatible with Atuin 18.10.0+
+#
 # Provides socket-activated daemon, auto-login, and maintenance services for Atuin.
 # Includes sops secrets for credentials - enabled when module is enabled.
+#
+# Key Management Strategy:
+# - This module uses sops-nix to manage the encryption key (stored as a secret)
+# - Alternative approach: Let Atuin auto-generate the key on first login (see Atuin 18.10+ docs)
+# - The sops approach allows key sharing across machines and backup/recovery
 #
 # Services:
 # - atuin-autologin: Logs in and syncs on startup/rebuild
@@ -9,8 +16,9 @@
 # - atuin-daemon (user): Socket-activated background daemon
 #
 # Shell integration:
-# - Adds `eval "$(atuin init zsh)"` to /etc/zshrc for all interactive shells
+# - Adds `eval "$(atuin init zsh)"` to /etc/zshrc for all shells (including non-interactive)
 # - Works even when home-manager's zsh is disabled (e.g., chezmoi-managed dotfiles)
+# - Note: shellInit runs for ALL shells; use interactiveShellInit if you only want interactive shells
 #
 # Usage:
 #   myModules.services.atuin.enable = true;
@@ -54,7 +62,11 @@ in
         owner = primaryUser;
         mode = "0400";
       };
-      # Encryption key - stored in user's data dir since atuin reads it from there
+      # Encryption key - managed via sops for backup/recovery and multi-machine sync
+      # Atuin 18.10+ can auto-generate keys, but sops management allows:
+      #   - Key backup and recovery
+      #   - Consistent key across multiple machines (same encrypted history)
+      #   - Explicit key management instead of implicit generation
       "atuin/key" = {
         sopsFile = "${sopsFolder}/shared.yaml";
         owner = primaryUser;
@@ -69,9 +81,10 @@ in
       };
     };
 
-    # System-level shell integration for zsh
+    # System-level shell integration for zsh (Atuin 18.10.0+ compatible)
     # Uses shellInit (not interactiveShellInit) so it runs for ALL shells including SSH commands
     # This adds to /etc/zshrc, works even when HM's zsh is disabled (chezmoi users)
+    # Note: If you only want interactive shells, change to programs.zsh.interactiveShellInit
     programs.zsh.shellInit = ''
       eval "$(${pkgs.atuin}/bin/atuin init zsh)"
     '';
@@ -209,6 +222,8 @@ in
         KEY=$(cat "$KEY_FILE")
 
         echo "Logging in as $USERNAME..."
+        # Atuin 18.10.0+ login syntax (no --server flag, uses sync_address from config.toml)
+        # The -k flag provides the encryption key (managed via sops in this setup)
         if "$ATUIN_BIN" login -u "$USERNAME" -p "$PASSWORD" -k "$KEY"; then
           echo "Login successful!"
           "$ATUIN_BIN" sync
@@ -279,8 +294,11 @@ in
       };
     };
 
-    # Socket-activated Atuin daemon
+    # Socket-activated Atuin daemon (Atuin 18.10.0+ compatible)
     # Note: socket path must match config.toml's daemon.socket_path (chezmoi dotfiles)
+    # Default Atuin path is %t/atuin.sock, but this uses .socket for consistency
+    # Ensure your config.toml has: daemon.socket_path = "~/.local/share/atuin/atuin.socket"
+    # or relies on systemd socket activation with daemon.systemd_socket = true
     systemd.user.sockets."atuin-daemon" = {
       wantedBy = [ "sockets.target" ];
       socketConfig = {
