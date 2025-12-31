@@ -46,6 +46,13 @@
   extraModules.services.security = [ "bitwarden" ];
 
   # ========================================
+  # BUILD CACHE (Attic binary cache)
+  # ========================================
+  # Enable binary cache for faster builds
+  myModules.services.buildCache.enable = true;
+  # enableBuilder and enablePush default to false (not the build machine)
+
+  # ========================================
   # AUTO-UPGRADE & GOLDEN GENERATION
   # ========================================
   # Configured via task-test.nix role

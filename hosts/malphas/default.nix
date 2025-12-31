@@ -37,6 +37,16 @@
   };
 
   # ========================================
+  # BUILD CACHE (Attic binary cache)
+  # ========================================
+  # Malphas is the main build machine - pushes to cache
+  myModules.services.buildCache = {
+    enable = true;
+    enableBuilder = true;
+    enablePush = true;
+  };
+
+  # ========================================
   # STATE VERSION (explicit for physical hosts)
   # ========================================
   # Malphas will be deployed with NixOS 25.11

@@ -3,5 +3,7 @@
 
 { lib, ... }:
 {
-  imports = lib.custom.scanPaths ./.;
+  imports = lib.custom.scanPaths ./. ++ [
+    ./build-cache.nix # Explicitly include build-cache for debugging
+  ];
 }
