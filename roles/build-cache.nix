@@ -112,6 +112,7 @@ in {
       description = "Watch and push to Attic cache";
       wantedBy = ["multi-user.target"];
       after = ["attic-netrc-setup.service" "network-online.target"];
+      wants = ["network-online.target"];
       requires = ["attic-netrc-setup.service"];
       serviceConfig = {
         Type = "simple";
