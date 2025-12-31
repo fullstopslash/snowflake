@@ -16,6 +16,10 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nix-secrets = {
+      url = "path:/home/rain/nix-secrets";
+      flake = true;
+    };
     nixos-generators = {
       url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";

@@ -1059,6 +1059,18 @@
         "type": "github"
       }
     },
+    "nix-secrets": {
+      "locked": {
+        "lastModified": 1767220897,
+        "narHash": "sha256-NaGbIq0Q1wp+uHcSXe1KML4GaYxjmA0UIGqZv73vGO8=",
+        "path": "/home/rain/nix-secrets",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/rain/nix-secrets",
+        "type": "path"
+      }
+    },
     "nix-vm-test": {
       "inputs": {
         "nixpkgs": [
@@ -1337,6 +1349,7 @@
         "mcp-hub": "mcp-hub",
         "mcphub-nvim": "mcphub-nvim",
         "nix-ai-tools": "nix-ai-tools",
+        "nix-secrets": "nix-secrets",
         "nixos-anywhere": "nixos-anywhere",
         "nixos-generators": "nixos-generators",
         "nixpkgs": "nixpkgs_4",

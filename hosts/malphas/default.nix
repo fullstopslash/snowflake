@@ -19,6 +19,7 @@
     ../../modules/sops.nix
     # ../../modules/hdr.nix
     # ../../roles/cachix.nix
+    ../../roles/build-cache.nix
     ../../roles/desktop.nix
     # ../../roles/plasma.nix  # Temporarily disabled due to GCC15 ICE in xwayland dependency
     ../../roles/hyprland.nix
@@ -117,5 +118,12 @@
     enable = true;
     enableAutoLogin = true;
     syncInterval = 30;
+  };
+
+  # Build cache configuration
+  roles.buildCache = {
+    enable = true;
+    enableBuilder = true; # This is the main build machine
+    enablePush = true; # Automatically push built packages to cache
   };
 }

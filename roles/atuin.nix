@@ -28,25 +28,17 @@
     script = ''
       mkdir -p "$HOME/.config/atuin" "$HOME/.local/share/atuin"
       ATUIN_BIN="$(command -v atuin)" || exit 0
-      KEY_FILE="$HOME/.local/share/atuin/key"
       USERNAME_FILE="$HOME/.config/atuin/.username"
       PASSWORD_FILE="$HOME/.config/atuin/.password"
       SESSION_FILE="$HOME/.local/share/atuin/session"
 
-      # Generate a key if missing
-      if [ ! -f "$KEY_FILE" ]; then
-        if "$ATUIN_BIN" key generate > "$KEY_FILE" 2>/dev/null; then
-          chmod 600 "$KEY_FILE"
-        fi
-      fi
-
-      if [ -f "$KEY_FILE" ] && [ -f "$USERNAME_FILE" ] && [ -f "$PASSWORD_FILE" ] && [ ! -f "$SESSION_FILE" ]; then
+      # If not logged in and credentials exist, attempt login
+      # In Atuin 18.10+, the encryption key is auto-generated on first login
+      # Server is configured in ~/.config/atuin/config.toml
+      if [ ! -f "$SESSION_FILE" ] && [ -f "$USERNAME_FILE" ] && [ -f "$PASSWORD_FILE" ]; then
         USERNAME=$(cat "$USERNAME_FILE")
         PASSWORD=$(cat "$PASSWORD_FILE")
-        # Use the LAN server; keep in sync with your infra
-        "$ATUIN_BIN" login \
-          --server "http://waterbug.lan:3333" \
-          -u "$USERNAME" -p "$PASSWORD" -k "$(cat "$KEY_FILE")" || true
+        "$ATUIN_BIN" login -u "$USERNAME" -p "$PASSWORD" || true
         "$ATUIN_BIN" sync || true
       fi
     '';
