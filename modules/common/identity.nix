@@ -81,6 +81,7 @@
     };
   };
 
+  # CONCURRENT TEST: Change from malphas at 2025-12-31 12:57:48
   # Set networking.hostName from identity.hostName
   config.networking.hostName = config.identity.hostName;
 }
