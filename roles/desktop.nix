@@ -217,7 +217,7 @@
     xorg.libXcursor
 
     # File management
-    xfce.thunar
+    thunar
 
     inkscape
     stable.calibre
