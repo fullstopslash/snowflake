@@ -155,8 +155,7 @@ in
                 "create": {
                   "reusable": false,
                   "ephemeral": false,
-                  "preauthorized": true,
-                  "tags": ["tag:nixos"]
+                  "preauthorized": true
                 }
               }
             }
