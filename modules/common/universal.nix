@@ -226,9 +226,9 @@
     settings = {
       experimental-features = ["nix-command" "flakes"];
       auto-optimise-store = false;
-      max-jobs = 4;
+      max-jobs = 12;  # Parallel derivation builds
       download-buffer-size = 524288000;
-      cores = 4;
+      cores = 0;  # 0 = use all available cores per build
       http-connections = 50;
       connect-timeout = 5;
       timeout = 0;
