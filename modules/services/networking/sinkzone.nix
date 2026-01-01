@@ -5,10 +5,10 @@
   config,
   lib,
   pkgs,
+  cfg,
   ...
 }:
 let
-  cfg = config.myModules.services.networking.sinkzone;
   sinkzonePkg = pkgs.callPackage ../pkgs/sinkzone/default.nix { };
 
   # Generate allowlist content from configuration
@@ -21,8 +21,9 @@ let
   '';
 in
 {
-  options.myModules.services.networking.sinkzone = {
-    enable = lib.mkEnableOption "Sinkzone DNS blocking service";
+  description = "Sinkzone DNS blocking service";
+
+  options = {
     package = lib.mkOption {
       type = lib.types.package;
       default = sinkzonePkg;
@@ -82,7 +83,7 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = {
     # Add sinkzone and focus-mode script to system packages
     environment.systemPackages = [
       cfg.package

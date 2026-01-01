@@ -6,20 +6,23 @@
 # - SSH key deployment from SOPS
 #
 # Note: This module is NixOS-only (programs.ssh doesn't exist on Darwin)
+#
+# Usage: modules.services.networking = [ "ssh" ]
 {
   inputs,
   config,
   lib,
   pkgs,
+  cfg,
   ...
 }:
 let
-  cfg = config.myModules.services.networking.ssh;
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 in
 {
-  options.myModules.services.networking.ssh = {
-    enable = lib.mkEnableOption "SSH client configuration";
+  description = "SSH client configuration";
+
+  options = {
     deployUserKey = lib.mkOption {
       type = lib.types.bool;
       default = !config.myModules.services.security.yubikey.enable or false;
@@ -32,7 +35,7 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
+  config = lib.mkIf pkgs.stdenv.isLinux {
     # Deploy SSH key from SOPS for non-Yubikey hosts
     # The key is symlinked to ~/.ssh/id_ed25519 by chezmoi dotfiles
     sops.secrets = lib.mkIf (cfg.deployUserKey && (config.sops.defaultSopsFile or null) != null) {

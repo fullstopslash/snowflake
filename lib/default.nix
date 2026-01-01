@@ -143,9 +143,6 @@ rec {
       ...
     }@args:
     let
-      # Import the simple module and call it with args
-      simpleModule = import modulePath args;
-
       # Convert kebab-case to camelCase for option names
       kebabToCamel =
         str:
@@ -165,8 +162,12 @@ rec {
         (kebabToCamel name)
       ];
 
-      # Get the config at this option path
+      # Get the config at this option path (lazy evaluation - safe to define before import)
       cfg = lib.attrsets.getAttrFromPath optionPath config;
+
+      # Import the simple module and call it with args + cfg
+      # This allows modules to reference their own config without hardcoding paths
+      simpleModule = import modulePath (args // { inherit cfg; });
 
       # Extract description and config from simple module
       description = simpleModule.description or "${name} module";

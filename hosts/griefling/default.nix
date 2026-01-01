@@ -49,8 +49,11 @@
   # BUILD CACHE (Attic binary cache)
   # ========================================
   # Enable binary cache for faster builds
-  myModules.services.buildCache.enable = true;
-  # enableBuilder and enablePush default to false (not the build machine)
+  myModules.services.buildCache = {
+    enable = true;
+    enablePush = true; # All hosts push to cache
+  };
+  # enableBuilder defaults to false (only malphas is the build machine)
 
   # ========================================
   # AUTO-UPGRADE & GOLDEN GENERATION

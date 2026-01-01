@@ -173,15 +173,11 @@ in
         # Watch the nix store and push new paths automatically
         ExecStart = "${pkgs.attic-client}/bin/attic watch-store ${cfg.cacheName}";
 
-        # Security hardening
+        # Security hardening (relaxed to allow nix daemon access)
         PrivateTmp = true;
-        ProtectSystem = "strict";
+        ProtectSystem = "full";
         ProtectHome = true;
         NoNewPrivileges = true;
-
-        # Allow access to nix store
-        ReadOnlyPaths = [ "/nix/store" ];
-        ReadWritePaths = [ "/root/.config/attic" ];
       };
     };
 
