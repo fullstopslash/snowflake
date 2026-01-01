@@ -23,8 +23,9 @@
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
   ];
 
-  # Disable SOPS enforcement - ISO doesn't use secrets
+  # Disable SOPS - ISO doesn't use secrets
   myModules.security.sops-enforcement.enable = lib.mkForce false;
+  sops.defaultSopsFile = lib.mkForce null; # Explicitly disable SOPS for ISO
 
   # Minimal host config - just what's needed for SSH keys
   # ISO is for recovery/install - secrets bootstrapped post-install on target system
