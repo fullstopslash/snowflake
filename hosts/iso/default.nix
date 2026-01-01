@@ -28,7 +28,7 @@
   identity = {
     hostName = "mitosis"; # Discoverable via mitosis.local
     primaryUsername = "nixos"; # Standard installer username
-    hasSecrets = lib.mkForce false; # ISO doesn't have secrets
+    # ISO doesn't use SOPS secrets - bootstrapped post-install on target system
     inherit (inputs.nix-secrets) networking;
   };
 
