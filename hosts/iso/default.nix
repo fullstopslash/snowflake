@@ -27,6 +27,9 @@
   myModules.security.sops-enforcement.enable = lib.mkForce false;
   sops.defaultSopsFile = lib.mkForce /dev/null; # Placeholder path - ISO doesn't use secrets
 
+  # Enable build cache - ISO should use Attic during installation
+  myModules.services.buildCache.enable = true;
+
   # Minimal host config - just what's needed for SSH keys
   # ISO is for recovery/install - secrets bootstrapped post-install on target system
   identity = {
