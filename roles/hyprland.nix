@@ -42,7 +42,7 @@ in {
   programs = {
     hyprland = {
       enable = true;
-      package = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+      package = pkgs.hyprland;
       # portalPackage = pkgs.xdg-desktop-portal-hyprland;
       xwayland.enable = true; # Required for X11 apps like LM Studio
     };
@@ -124,7 +124,7 @@ in {
     hyprpicker
     hypridle
     hyprls
-    inputs.hyprpaper.packages.${pkgs.stdenv.hostPlatform.system}.hyprpaper  # Use 0.8.0+ from hyprpaper flake
+    hyprpaper
     hyprutils
     hyprlang
     kdePackages.kwallet
@@ -319,7 +319,7 @@ in {
       partOf = ["hyprland-session.target"];
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${inputs.hyprpaper.packages.${pkgs.stdenv.hostPlatform.system}.hyprpaper}/bin/hyprpaper";
+        ExecStart = "${pkgs.hyprpaper}/bin/hyprpaper";
         Restart = "on-failure";
         RestartSec = 1;
         # Add delay to ensure Wayland is ready
