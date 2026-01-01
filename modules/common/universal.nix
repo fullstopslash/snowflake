@@ -226,9 +226,9 @@
     settings = {
       experimental-features = ["nix-command" "flakes"];
       auto-optimise-store = false;
-      max-jobs = 1;
+      max-jobs = 4;
       download-buffer-size = 524288000;
-      cores = 1;
+      cores = 4;
       http-connections = 50;
       connect-timeout = 5;
       timeout = 0;
