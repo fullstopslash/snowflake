@@ -25,7 +25,7 @@
 
   # Disable SOPS - ISO doesn't use secrets
   myModules.security.sops-enforcement.enable = lib.mkForce false;
-  sops.defaultSopsFile = lib.mkForce null; # Explicitly disable SOPS for ISO
+  sops.defaultSopsFile = lib.mkForce /dev/null; # Placeholder path - ISO doesn't use secrets
 
   # Minimal host config - just what's needed for SSH keys
   # ISO is for recovery/install - secrets bootstrapped post-install on target system
