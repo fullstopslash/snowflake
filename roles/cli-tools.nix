@@ -115,7 +115,7 @@
 
     # Communication and news
     neomutt
-    procmail
+    # procmail  # Fails to build with modern GCC
     newsboat
     weechat
 
