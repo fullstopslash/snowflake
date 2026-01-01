@@ -574,11 +574,11 @@
         "xdph": "xdph"
       },
       "locked": {
-        "lastModified": 1767201430,
-        "narHash": "sha256-4BUM06GqP5YAVnWvxkdeYuweMF6n+oKdxJI5S9TmA1E=",
+        "lastModified": 1767282503,
+        "narHash": "sha256-AkfIH9C46l2NA5SR5zT8UJ545mh+yszzzsWWBvi6aRQ=",
         "ref": "refs/heads/main",
-        "rev": "48a024e0322bbd7c4c88126498ec478444ec4cb2",
-        "revCount": 6763,
+        "rev": "9b93d621b1019e8378b8a902edb7ba8dd8baf204",
+        "revCount": 6765,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/hyprwm/Hyprland"
@@ -733,11 +733,11 @@
         "systems": "systems_3"
       },
       "locked": {
-        "lastModified": 1767024047,
-        "narHash": "sha256-5h8HbO71r+QD94WZ/Xm3K0X706+x5c+/96daRpL/0zo=",
+        "lastModified": 1767276059,
+        "narHash": "sha256-chRjDBP2P59E7TRui9roUqiZTwlIuid9BLwnGfEHtu0=",
         "owner": "hyprwm",
         "repo": "hyprpaper",
-        "rev": "c6657e7793c81127d9a3924eb871b32a45822e5e",
+        "rev": "e4413583bc8d1b6f7646512e6ef23405e6882f8c",
         "type": "github"
       },
       "original": {
@@ -1046,11 +1046,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1767235954,
-        "narHash": "sha256-kCuYVnPnRc24DkwgTMlD3tQ0PF7DerJ2VwxNi5uznyM=",
+        "lastModified": 1767277901,
+        "narHash": "sha256-kUWSkMykZRX7xcftXbeqBEEPh4YlDqHVryIi9mkyWI4=",
         "owner": "numtide",
         "repo": "nix-ai-tools",
-        "rev": "0ba0b581fcc90fa7e9ff3c7574983c5c7f0011c2",
+        "rev": "35296d7ed78e9a051e1bbae3ec717e454b263001",
         "type": "github"
       },
       "original": {
@@ -1261,11 +1261,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1766902085,
-        "narHash": "sha256-coBu0ONtFzlwwVBzmjacUQwj3G+lybcZ1oeNSQkgC0M=",
+        "lastModified": 1767116409,
+        "narHash": "sha256-5vKw92l1GyTnjoLzEagJy5V5mDFck72LiQWZSOnSicw=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "c0b0e0fddf73fd517c3471e546c0df87a42d53f4",
+        "rev": "cad22e7d996aea55ecab064e84834289143e44a0",
         "type": "github"
       },
       "original": {

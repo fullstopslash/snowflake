@@ -87,7 +87,6 @@
     # Helper function to create host configuration
     mkHost = hostname:
       nixpkgs.lib.nixosSystem {
-        inherit system;
         specialArgs = {inherit inputs self;};
         modules = [
           # Expose a stable package set under `pkgs.stable` for easy use in roles
