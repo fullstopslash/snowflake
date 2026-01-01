@@ -1,8 +1,8 @@
 # SOPS configuration module
-_: {
+{inputs, ...}: {
   # SOPS configuration
   sops = {
-    defaultSopsFile = ../secrets.yaml;
+    defaultSopsFile = inputs.nix-secrets.outPath + "/sops/shared.yaml";
 
     age = {
       keyFile = "/var/lib/sops-nix/key.txt";

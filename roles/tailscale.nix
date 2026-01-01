@@ -18,12 +18,12 @@ in {
       neededForUsers = true;
     };
     tailscale-oauth-client-id = {
-      key = "tailscale_oauth_client_id";
+      key = "tailscale/oauth_client_id";
       owner = "root";
       neededForUsers = true;
     };
     tailscale-oauth-client-secret = {
-      key = "tailscale_oauth_client_secret";
+      key = "tailscale/oauth_client_secret";
       owner = "root";
       neededForUsers = true;
     };

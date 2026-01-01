@@ -3,8 +3,9 @@
   pkgs,
   ...
 }: {
-  # Provide Atuin credentials via SOPS (paths match this repo's secrets.yaml)
+  # Provide Atuin credentials via SOPS (paths match nix-secrets shared.yaml)
   sops.secrets."atuin/username" = {
+    key = "atuin/username";
     # Write into the user's config directory
     path = "/home/rain/.config/atuin/.username";
     owner = "rain";
@@ -13,6 +14,7 @@
   };
 
   sops.secrets."atuin/password" = {
+    key = "atuin/password";
     path = "/home/rain/.config/atuin/.password";
     owner = "rain";
     group = "rain";

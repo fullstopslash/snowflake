@@ -163,22 +163,22 @@ in {
     # SOPS secrets for Bitwarden automation
     sops.secrets = {
       bitwarden-server = {
-        key = "bitwarden_server";
+        key = "bitwarden/server";
         owner = "root";
         neededForUsers = true;
       };
       bitwarden-user-email = {
-        key = "bitwarden_user_email";
+        key = "bitwarden/user_email";
         owner = "root";
         neededForUsers = true;
       };
       bitwarden-oauth-client-id = {
-        key = "bitwarden_oauth_client_id";
+        key = "bitwarden/oauth_client_id";
         owner = "root";
         neededForUsers = true;
       };
       bitwarden-oauth-client-secret = {
-        key = "bitwarden_oauth_client_secret";
+        key = "bitwarden/oauth_client_secret";
         owner = "root";
         neededForUsers = true;
       };

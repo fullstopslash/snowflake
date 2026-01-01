@@ -165,8 +165,8 @@
   };
 
   sops.secrets = {
-    env_hass_server = {key = "env_hass_server";};
-    env_hass_token = {key = "env_hass_token";};
+    env_hass_server = {key = "hass/server";};
+    env_hass_token = {key = "hass/token";};
   };
 
   sops.templates."post-sleep-samsung.env" = {

@@ -5,7 +5,7 @@
     wireguard-tools
     ethtool
     networkd-dispatcher
-    wol
+    stable.wol
     wakeonlan
     nyx
     tor

@@ -133,7 +133,7 @@
   # SOPS secrets configuration
   sops.secrets = {
     rain-password = {
-      key = "rain-password";
+      key = "passwords/rain";
       owner = "root";
       neededForUsers = true;
     };
