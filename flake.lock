@@ -446,13 +446,13 @@
         "rev": "d52ff0a23823c69015d72441051bc899cc4a6daf",
         "shallow": true,
         "type": "git",
-        "url": "https://github.com/fullstopslash/snowflake-secrets.git"
+        "url": "ssh://git@github.com/fullstopslash/snowflake-secrets.git"
       },
       "original": {
         "ref": "simple",
         "shallow": true,
         "type": "git",
-        "url": "https://github.com/fullstopslash/snowflake-secrets.git"
+        "url": "ssh://git@github.com/fullstopslash/snowflake-secrets.git"
       }
     },
     "nixpkgs": {
