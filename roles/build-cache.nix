@@ -111,13 +111,15 @@ in {
     systemd.services.attic-watch = lib.mkIf cfg.enablePush {
       description = "Watch and push to Attic cache";
       wantedBy = ["multi-user.target"];
-      after = ["attic-netrc-setup.service" "network-online.target"];
-      wants = ["network-online.target"];
-      requires = ["attic-netrc-setup.service"];
+      after = ["attic-netrc-setup.service" "network-online.target" "nss-lookup.target"];
+      wants = ["network-online.target" "attic-netrc-setup.service"];
       serviceConfig = {
         Type = "simple";
         Restart = "on-failure";
-        RestartSec = "10s";
+        RestartSec = "60s";
+        # Limit restart attempts to avoid log spam when cache is unavailable
+        StartLimitIntervalSec = "300s";
+        StartLimitBurst = 3;
         # Watch the nix store and push new paths to attic
         # This watches for new store paths and pushes them automatically
         ExecStart = "${pkgs.attic-client}/bin/attic watch-store ${atticCacheName}";
