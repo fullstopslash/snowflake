@@ -6,7 +6,7 @@
   ...
 }: {
   environment.systemPackages = with pkgs; [
-    mcp-nixos
+    # mcp-nixos
     lmstudio
 
     # Development AI tools

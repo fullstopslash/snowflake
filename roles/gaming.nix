@@ -85,7 +85,7 @@
     vulkan-tools
 
     # Game development
-    godot # Fails to build with modern GCC (embree template errors)
+    godot
     SDL2
     SDL2_image
     SDL2_mixer
