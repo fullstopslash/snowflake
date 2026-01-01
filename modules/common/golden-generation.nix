@@ -387,7 +387,6 @@ in
       wants = [ "network-online.target" ];
       after = [
         "network-online.target"
-        "multi-user.target"
         "golden-boot-init.service"
       ];
 
