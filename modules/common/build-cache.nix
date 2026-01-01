@@ -84,6 +84,11 @@ in
         cfg.cacheUrl
       ];
 
+      # Add Attic cache public key to trusted keys
+      trusted-public-keys = [
+        "system:oio0pk/Mlb/DR3s1b78tHHmOclp82OkQrYOTRlaqays="
+      ];
+
       # Allow build machines to use substituters when building for other machines
       builders-use-substitutes = true;
 
