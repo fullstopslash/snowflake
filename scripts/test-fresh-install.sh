@@ -381,9 +381,17 @@ EOF
 
 	# Note: Cache configuration is now handled by:
 	# 1. For installed system: cache-resolver service (uses override file above)
-	# 2. For kexec installer: nix.conf in extra-files (created above)
+	# 2. For nixos-anywhere builds: --option flags (below)
+
+	# Configure cache for nixos-anywhere build phase
+	if [[ $CACHE_AVAILABLE == true ]]; then
+		info "Configuring nixos-anywhere to use Attic cache"
+		export NIX_CONFIG="extra-substituters = http://waterbug.lan:9999/system
+extra-trusted-public-keys = system:oio0pk/Mlb/DR3s1b78tHHmOclp82OkQrYOTRlaqays="
+	fi
 
 	nix run github:nix-community/nixos-anywhere -- \
+		--no-substitute-on-destination \
 		"${ANYWHERE_ARGS[@]}" \
 		root@127.0.0.1
 

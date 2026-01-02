@@ -280,9 +280,131 @@ install HOST:
     cd - >/dev/null
 
     echo ""
+    echo "✅ nixos-anywhere installation complete! Setting up persisted repos..."
+    sleep 10
+
+    # Wait for SSH
+    for i in {1..30}; do
+        if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 root@{{HOST}}.local 'echo ready' >/dev/null 2>&1; then
+            break
+        fi
+        sleep 2
+    done
+
+    # Step 8: Setup deploy keys (same as vm-fresh)
+    echo "🔑 Setting up deploy keys..."
+    DEPLOY_KEY_EXISTS=$(cd ../nix-secrets && sops -d sops/{{HOST}}.yaml 2>/dev/null | grep -c "deploy-key:" || echo "0")
+    if [ "$DEPLOY_KEY_EXISTS" -eq "0" ]; then
+        TEMP_DIR=$(mktemp -d)
+        ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-config-deploy" -N "" -C "{{HOST}}-nix-config-deploy" -q
+        ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-secrets-deploy" -N "" -C "{{HOST}}-nix-secrets-deploy" -q
+        echo "📋 Add these keys to GitHub:"
+        echo "1. nix-config: $(cat $TEMP_DIR/nix-config-deploy.pub)"
+        echo "2. nix-secrets: $(cat $TEMP_DIR/nix-secrets-deploy.pub)"
+        read -p "Press Enter after adding..."
+        cd ../nix-secrets && TEMP_JSON=$(mktemp) && \
+        yq -n '.["deploy-keys"]["nix-config"] = load_str(env(NIX_CONFIG_KEY)) | .["deploy-keys"]["nix-secrets"] = load_str(env(NIX_SECRETS_KEY))' \
+          NIX_CONFIG_KEY="$TEMP_DIR/nix-config-deploy" NIX_SECRETS_KEY="$TEMP_DIR/nix-secrets-deploy" -o=json > "$TEMP_JSON" && \
+        sops --set "$(cat $TEMP_JSON)" sops/{{HOST}}.yaml && rm -rf "$TEMP_DIR" "$TEMP_JSON"
+        cd {{justfile_directory()}}
+    fi
+
+    TEMP_KEY=$(mktemp) && TEMP_KEY_SECRETS=$(mktemp) && trap "rm -f $TEMP_KEY $TEMP_KEY_SECRETS" EXIT
+    cd ../nix-secrets && sops -d --extract '["deploy-keys"]["nix-config"]' sops/{{HOST}}.yaml > "$TEMP_KEY" 2>/dev/null && \
+    sops -d --extract '["deploy-keys"]["nix-secrets"]' sops/{{HOST}}.yaml > "$TEMP_KEY_SECRETS" 2>/dev/null
+    cd {{justfile_directory()}}
+
+    # Deploy keys
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TEMP_KEY" root@{{HOST}}.local:/root/.ssh/nix-config-deploy
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TEMP_KEY_SECRETS" root@{{HOST}}.local:/root/.ssh/nix-secrets-deploy
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@{{HOST}}.local \
+        "chmod 600 ~/.ssh/*-deploy && \
+         echo 'Host github.com-nix-config' > ~/.ssh/config && \
+         echo '    HostName github.com' >> ~/.ssh/config && \
+         echo '    User git' >> ~/.ssh/config && \
+         echo '    IdentityFile ~/.ssh/nix-config-deploy' >> ~/.ssh/config && \
+         echo '    StrictHostKeyChecking no' >> ~/.ssh/config && \
+         echo '' >> ~/.ssh/config && \
+         echo 'Host github.com-nix-secrets' >> ~/.ssh/config && \
+         echo '    HostName github.com' >> ~/.ssh/config && \
+         echo '    User git' >> ~/.ssh/config && \
+         echo '    IdentityFile ~/.ssh/nix-secrets-deploy' >> ~/.ssh/config && \
+         echo '    StrictHostKeyChecking no' >> ~/.ssh/config && \
+         chmod 600 ~/.ssh/config"
+
+    # Get primary user
+    PRIMARY_USER=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.primaryUsername 2>/dev/null || echo "rain")
+
+    # Deploy keys to primary user as well
+    echo "🔑 Setting up deploy keys for user $PRIMARY_USER..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@{{HOST}}.local \
+        "if [ -d /persist ]; then \
+             USER_HOME=/persist/home/$PRIMARY_USER; \
+         else \
+             USER_HOME=/home/$PRIMARY_USER; \
+         fi && \
+         mkdir -p \$USER_HOME/.ssh && \
+         cp /root/.ssh/nix-config-deploy \$USER_HOME/.ssh/ && \
+         cp /root/.ssh/nix-secrets-deploy \$USER_HOME/.ssh/ && \
+         cat > \$USER_HOME/.ssh/config <<'EOF'
+Host github.com-nix-config
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/nix-config-deploy
+    StrictHostKeyChecking no
+
+Host github.com-nix-secrets
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/nix-secrets-deploy
+    StrictHostKeyChecking no
+EOF
+         chmod 600 \$USER_HOME/.ssh/nix-config-deploy \$USER_HOME/.ssh/nix-secrets-deploy \$USER_HOME/.ssh/config && \
+         chown -R $PRIMARY_USER:users \$USER_HOME/.ssh && \
+         echo '✅ Deploy keys configured for $PRIMARY_USER'"
+
+    # Clone ALL repos to user's home directory (detect /persist for encrypted hosts)
+    echo "📥 Cloning all repos..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@{{HOST}}.local \
+        "set -e && \
+         if [ -d /persist ]; then \
+             USER_HOME=/persist/home/$PRIMARY_USER && \
+             echo '→ Encrypted host detected, using /persist/home/$PRIMARY_USER'; \
+         else \
+             USER_HOME=/home/$PRIMARY_USER && \
+             echo '→ Regular host, using /home/$PRIMARY_USER'; \
+         fi && \
+         mkdir -p \$USER_HOME && \
+         cd \$USER_HOME && \
+         rm -rf nix-config nix-secrets .local/share/chezmoi && \
+         echo '→ Cloning nix-config...' && \
+         git clone git@github.com-nix-config:fullstopslash/snowflake.git nix-config && \
+         echo '→ Cloning nix-secrets...' && \
+         git clone git@github.com-nix-secrets:fullstopslash/snowflake-secrets.git nix-secrets && \
+         echo '→ Cloning dotfiles...' && \
+         mkdir -p .local/share && \
+         git clone git@github.com-nix-config:fullstopslash/dotfiles.git .local/share/chezmoi && \
+         chown -R \$(id -u $PRIMARY_USER 2>/dev/null || echo 1000):\$(id -g $PRIMARY_USER 2>/dev/null || echo 1000) \$USER_HOME && \
+         echo '✅ All repos cloned successfully to '\$USER_HOME"
+
+    # Rebuild
+    echo "🔧 Running system rebuild..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@{{HOST}}.local \
+        "if [ -d /persist ]; then \
+             USER_HOME=/persist/home/$PRIMARY_USER; \
+         else \
+             USER_HOME=/home/$PRIMARY_USER; \
+         fi && \
+         cd \$USER_HOME/nix-config && nixos-rebuild boot --flake .#{{HOST}}"
+
+    echo ""
     echo "✅ Installation complete!"
-    echo "   {{HOST}} is now installed and will reboot."
-    echo "   After reboot, SSH with: ssh root@{{HOST}}.local (if mDNS) or by IP"
+    echo "   📁 Repos installed in /home/$PRIMARY_USER:"
+    echo "      - nix-config"
+    echo "      - nix-secrets"
+    echo "      - .local/share/chezmoi"
+    echo "   🔑 SSH: ssh root@{{HOST}}.local"
+    echo "   ⚠️  Reboot to enable initrd SSH: ssh root@{{HOST}}.local reboot"
     echo ""
 
 # ============================================================================
@@ -538,34 +660,88 @@ vm-fresh HOST=DEFAULT_VM_HOST:
         chmod 600 /root/.ssh/config
     "
 
-    echo "   ✅ Deploy keys deployed to {{HOST}}"
+    echo "   ✅ Deploy keys deployed to root"
 
-    # Step 10: Clone nix-config and nix-secrets to target using per-host deploy keys
-    echo "📥 Cloning nix-config and nix-secrets to target..."
+    # Get primary user
+    PRIMARY_USER=$(just _get-vm-primary-user {{HOST}} 2>/dev/null || echo "rain")
+
+    # Deploy keys to primary user as well
+    echo "🔑 Setting up deploy keys for user $PRIMARY_USER..."
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
-        'cd /root && \
-         rm -rf nix-config nix-secrets && \
+        "if [ -d /persist ]; then \
+             USER_HOME=/persist/home/$PRIMARY_USER; \
+         else \
+             USER_HOME=/home/$PRIMARY_USER; \
+         fi && \
+         mkdir -p \$USER_HOME/.ssh && \
+         cp /root/.ssh/nix-config-deploy \$USER_HOME/.ssh/ && \
+         cp /root/.ssh/nix-secrets-deploy \$USER_HOME/.ssh/ && \
+         cat > \$USER_HOME/.ssh/config <<'EOF'
+Host github.com-nix-config
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/nix-config-deploy
+    StrictHostKeyChecking no
+
+Host github.com-nix-secrets
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/nix-secrets-deploy
+    StrictHostKeyChecking no
+EOF
+         chmod 600 \$USER_HOME/.ssh/nix-config-deploy \$USER_HOME/.ssh/nix-secrets-deploy \$USER_HOME/.ssh/config && \
+         chown -R $PRIMARY_USER:users \$USER_HOME/.ssh && \
+         echo '✅ Deploy keys configured for $PRIMARY_USER'"
+
+    # Step 10: Clone ALL repos to user's home directory (detect /persist for encrypted hosts)
+    echo "📥 Cloning all repos..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
+        "set -e && \
+         if [ -d /persist ]; then \
+             USER_HOME=/persist/home/$PRIMARY_USER && \
+             echo '→ Encrypted host detected, using /persist/home/$PRIMARY_USER'; \
+         else \
+             USER_HOME=/home/$PRIMARY_USER && \
+             echo '→ Regular host, using /home/$PRIMARY_USER'; \
+         fi && \
+         mkdir -p \$USER_HOME && \
+         cd \$USER_HOME && \
+         rm -rf nix-config nix-secrets .local/share/chezmoi && \
+         echo '→ Cloning nix-config...' && \
          git clone git@github.com-nix-config:fullstopslash/snowflake.git nix-config && \
-         cd nix-config && \
-         git clone git@github.com-nix-secrets:fullstopslash/snowflake-secrets.git ../nix-secrets && \
-         echo "✅ Repositories cloned successfully"'
+         echo '→ Cloning nix-secrets...' && \
+         git clone git@github.com-nix-secrets:fullstopslash/snowflake-secrets.git nix-secrets && \
+         echo '→ Cloning dotfiles...' && \
+         mkdir -p .local/share && \
+         git clone git@github.com-nix-config:fullstopslash/dotfiles.git .local/share/chezmoi && \
+         chown -R \$(id -u $PRIMARY_USER 2>/dev/null || echo 1000):\$(id -g $PRIMARY_USER 2>/dev/null || echo 1000) \$USER_HOME && \
+         echo '✅ All repos cloned successfully to '\$USER_HOME"
 
-    # Step 11: Ensure SSH keys are in /persist and rebuild to enable initrd SSH
-    echo "🔧 Copying SSH keys to /persist and rebuilding for initrd SSH..."
+    # Step 11: Ensure SSH keys are in /persist (only for encrypted hosts) and rebuild for initrd SSH
+    echo "🔧 Setting up SSH keys and running rebuild..."
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
-        'mkdir -p /persist/etc/ssh && \
-         cp /etc/ssh/ssh_host_ed25519_key* /persist/etc/ssh/ && \
-         cd /root/nix-config && \
-         nixos-rebuild boot --flake .#{{HOST}}'
+        "if [ -d /persist ]; then \
+             mkdir -p /persist/etc/ssh && \
+             cp /etc/ssh/ssh_host_ed25519_key* /persist/etc/ssh/ && \
+             USER_HOME=/persist/home/$PRIMARY_USER; \
+         else \
+             USER_HOME=/home/$PRIMARY_USER; \
+         fi && \
+         cd \$USER_HOME/nix-config && \
+         nixos-rebuild boot --flake .#{{HOST}}"
 
     echo ""
-    echo "✅ Fresh install complete with initrd SSH enabled!"
-    echo "   System will have remote unlock capability on next boot"
-    echo "   Repositories:"
-    echo "     - /root/nix-config (cloned from GitHub)"
-    echo "     - /root/nix-secrets (cloned from GitHub)"
-    echo "   SSH: ssh -p $SSH_PORT root@127.0.0.1"
-    echo "   Display: just vm-start (SDL with GPU acceleration)"
+    echo "✅ Fresh install complete!"
+    echo ""
+    echo "   📁 Repos installed in /home/$PRIMARY_USER:"
+    echo "      - nix-config"
+    echo "      - nix-secrets"
+    echo "      - .local/share/chezmoi"
+    echo ""
+    echo "   🔑 Access:"
+    echo "      SSH (root):  ssh -p $SSH_PORT root@127.0.0.1"
+    echo "      SSH (user):  ssh -p $SSH_PORT $PRIMARY_USER@127.0.0.1"
+    echo "      Display:     just vm-start (SDL with GPU acceleration)"
     echo ""
     echo "   To test remote unlock: just vm-stop {{HOST}} && just vm-start {{HOST}}"
 
