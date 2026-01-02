@@ -474,23 +474,17 @@ vm-fresh HOST=DEFAULT_VM_HOST:
         echo "   Storing deploy keys in sops/{{HOST}}.yaml..."
         cd ../nix-secrets
 
-        # Create temporary file with new keys section
-        TEMP_YAML=$(mktemp)
-        NIX_CONFIG_KEY=$(cat "$TEMP_DIR/nix-config-deploy" | sed 's/^/        /')
-        NIX_SECRETS_KEY=$(cat "$TEMP_DIR/nix-secrets-deploy" | sed 's/^/        /')
-        cat > "$TEMP_YAML" <<EOF
-deploy-keys:
-    nix-config: |
-$NIX_CONFIG_KEY
-    nix-secrets: |
-$NIX_SECRETS_KEY
-EOF
+        # Create deploy-keys structure using yq (avoids just pipe syntax issues)
+        TEMP_JSON=$(mktemp)
+        yq -n '.["deploy-keys"]["nix-config"] = load_str(env(NIX_CONFIG_KEY)) | .["deploy-keys"]["nix-secrets"] = load_str(env(NIX_SECRETS_KEY))' \
+          NIX_CONFIG_KEY="$TEMP_DIR/nix-config-deploy" \
+          NIX_SECRETS_KEY="$TEMP_DIR/nix-secrets-deploy" \
+          -o=json > "$TEMP_JSON"
 
         # Add to SOPS file (will be encrypted)
-        TEMP_JSON=$(cat "$TEMP_YAML" | yq -o=json)
-        sops --set "$TEMP_JSON" sops/{{HOST}}.yaml
+        sops --set "$(cat "$TEMP_JSON")" sops/{{HOST}}.yaml
 
-        rm -rf "$TEMP_DIR" "$TEMP_YAML"
+        rm -rf "$TEMP_DIR" "$TEMP_JSON"
         cd {{justfile_directory()}}
 
         echo "   ✅ Deploy keys stored in sops/{{HOST}}.yaml"
