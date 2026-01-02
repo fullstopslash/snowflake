@@ -1,19 +1,24 @@
 {
   config,
   pkgs,
+  lib,
   ...
 }:
+let
+  sopsFolder = "${config.home.homeDirectory}/../nix-secrets/sops";
+in
 {
   # Install chezmoi
   home.packages = [ pkgs.chezmoi ];
 
-  # Chezmoi config - using default copy mode (not symlink)
-  # Changes are captured via 'chezmoi re-add' and committed via chezmoi-sync service
-  home.file.".config/chezmoi/chezmoi.toml".text = ''
-    # Default mode: chezmoi copies files from source to target
-    # Use 'chezmoi re-add' to capture changes back to source
-    # Auto-sync is handled by chezmoi-sync.nix module
-  '';
+  # Chezmoi config managed via SOPS
+  # Configuration includes template variables (email, name, etc.) and is deployed from nix-secrets
+  sops.secrets."chezmoi-config" = lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
+    sopsFile = "${sopsFolder}/chezmoi.yaml";
+    format = "yaml";
+    path = "${config.home.homeDirectory}/.config/chezmoi/chezmoi.yaml";
+    mode = "0400";
+  };
 
   # Ensure .ssh directory exists with correct permissions
   home.file.".ssh/.keep".text = "";
