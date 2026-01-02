@@ -354,10 +354,15 @@ vm-fresh HOST=DEFAULT_VM_HOST:
 
     # Rekey all secrets
     echo "   Rekeying secrets..."
-    cd ../nix-secrets && for file in sops/*.yaml; do
-        echo "     Rekeying $file..."
-        sops updatekeys -y "$file"
+    # Rekey all files except chezmoi.yaml (handled separately below)
+    cd ../nix-secrets && for file in sops/anguish.yaml sops/griefling.yaml sops/guppy.yaml sops/malphas.yaml sops/shared.yaml sops/sorrow.yaml sops/test-keys.yaml sops/torment.yaml; do \
+        echo "     Rekeying $file..."; \
+        sops updatekeys -y "$file"; \
     done
+    # Rekey chezmoi.yaml with user age key (extracted from shared.yaml)
+    echo "     Rekeying sops/chezmoi.yaml (with user age key)..."
+    USER_KEY=$(sops -d sops/shared.yaml | yq -r '.["user-keys"]["rain-age-key"]') && \
+    echo "$USER_KEY" | SOPS_AGE_KEY_FILE=/dev/stdin sops updatekeys -y sops/chezmoi.yaml
     cd "{{justfile_directory()}}"
 
     # Step 3.5: Stage public key and SOPS-encrypted secrets for commit
