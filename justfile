@@ -511,28 +511,22 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P "$SSH_PORT" \
         "$TEMP_KEY_SECRETS" root@127.0.0.1:/root/.ssh/nix-secrets-deploy
 
-    # Create SSH config file locally and copy it
-    TEMP_SSH_CONFIG=$(mktemp)
-    cat > "$TEMP_SSH_CONFIG" << 'SSHCONFIG'
-Host github.com-nix-config
-    HostName github.com
-    User git
-    IdentityFile ~/.ssh/nix-config-deploy
-    StrictHostKeyChecking no
-
-Host github.com-nix-secrets
-    HostName github.com
-    User git
-    IdentityFile ~/.ssh/nix-secrets-deploy
-    StrictHostKeyChecking no
-SSHCONFIG
-
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P "$SSH_PORT" \
-        "$TEMP_SSH_CONFIG" root@127.0.0.1:/root/.ssh/config
-    rm "$TEMP_SSH_CONFIG"
-
-    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
-        "chmod 600 /root/.ssh/nix-config-deploy /root/.ssh/nix-secrets-deploy /root/.ssh/config"
+    # Create SSH config on remote using echo (avoids just heredoc parsing)
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 "
+        chmod 600 /root/.ssh/nix-config-deploy /root/.ssh/nix-secrets-deploy
+        echo 'Host github.com-nix-config' > /root/.ssh/config
+        echo '    HostName github.com' >> /root/.ssh/config
+        echo '    User git' >> /root/.ssh/config
+        echo '    IdentityFile ~/.ssh/nix-config-deploy' >> /root/.ssh/config
+        echo '    StrictHostKeyChecking no' >> /root/.ssh/config
+        echo '' >> /root/.ssh/config
+        echo 'Host github.com-nix-secrets' >> /root/.ssh/config
+        echo '    HostName github.com' >> /root/.ssh/config
+        echo '    User git' >> /root/.ssh/config
+        echo '    IdentityFile ~/.ssh/nix-secrets-deploy' >> /root/.ssh/config
+        echo '    StrictHostKeyChecking no' >> /root/.ssh/config
+        chmod 600 /root/.ssh/config
+    "
 
     echo "   ✅ Deploy keys deployed to {{HOST}}"
 
