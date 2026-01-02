@@ -28,6 +28,7 @@ Transform two existing Nix repos into a unified multi-host flake with role-based
 - [x] **Phase 20: Bcachefs Native Encryption** - ChaCha20/Poly1305 encryption, boot unlock automation
 - [ ] **Phase 21: TPM Unlock** - TPM2 automatic unlock for bcachefs with Clevis, manual fallback **[BLOCKED]**
 - [ ] **Phase 22: Home Manager Cleanup** - Separate installation from configuration, move desktop/browsers to modules/apps
+- [ ] **Phase 30: Dynamic Cache Resolution** - Runtime waterbug.lan discovery with graceful fallback
 
 ## Phase Details
 
@@ -550,3 +551,24 @@ Target outcome:
 | 21. TPM Unlock | 0/1 | Planning | - |
 | 22. Home Manager Cleanup | 0/1 | Planning | - |
 | 29. Auto-Upgrade Remediation | 6/6 | Complete | 2025-12-31 |
+| 30. Dynamic Cache Resolution | 0/1 | Planning | - |
+
+### Phase 30: Dynamic Cache Resolution
+**Goal**: Fix ISO installer cache access with runtime waterbug.lan discovery and graceful fallback
+**Depends on**: Nothing (infrastructure improvement)
+**Plans**: 1 plan
+
+**Problem**: ISO installer fails to use local Attic cache (waterbug.lan:9999) because:
+- mDNS resolution doesn't work in QEMU user-mode networking
+- waterbug IP may change over time
+- Cache may not be available on all networks
+
+**Solution**: Runtime cache resolver service that:
+- Dynamically discovers waterbug via mDNS/DNS/broadcast
+- Tests connectivity before use
+- Generates runtime nix.conf with appropriate substituters
+- Gracefully falls back to cache.nixos.org when waterbug unavailable
+- Zero user configuration needed
+
+Plans:
+- [ ] 30-01: Runtime cache resolver, build-cache integration, VM test fixes (3 tasks: resolver service, module refactor, VM script fix)
