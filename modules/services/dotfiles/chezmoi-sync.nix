@@ -301,7 +301,7 @@ in
         "chezmoi-config" = {
           sopsFile = "${sopsFolder}/chezmoi.yaml";
           format = "yaml";
-          path = "${primaryUser.homeDir}/.config/chezmoi/chezmoi.yaml";
+          path = "${primaryUser.home}/.config/chezmoi/chezmoi.yaml";
           owner = primaryUser.name;
           mode = "0400";
           # Deploys entire chezmoi.yaml config with template variables
