@@ -476,16 +476,19 @@ vm-fresh HOST=DEFAULT_VM_HOST:
 
         # Create temporary file with new keys section
         TEMP_YAML=$(mktemp)
+        NIX_CONFIG_KEY=$(cat "$TEMP_DIR/nix-config-deploy" | sed 's/^/        /')
+        NIX_SECRETS_KEY=$(cat "$TEMP_DIR/nix-secrets-deploy" | sed 's/^/        /')
         cat > "$TEMP_YAML" <<EOF
 deploy-keys:
     nix-config: |
-$(cat "$TEMP_DIR/nix-config-deploy" | sed 's/^/        /')
+$NIX_CONFIG_KEY
     nix-secrets: |
-$(cat "$TEMP_DIR/nix-secrets-deploy" | sed 's/^/        /')
+$NIX_SECRETS_KEY
 EOF
 
         # Add to SOPS file (will be encrypted)
-        sops --set "$(cat "$TEMP_YAML" | yq -o=json)" sops/{{HOST}}.yaml
+        TEMP_JSON=$(cat "$TEMP_YAML" | yq -o=json)
+        sops --set "$TEMP_JSON" sops/{{HOST}}.yaml
 
         rm -rf "$TEMP_DIR" "$TEMP_YAML"
         cd {{justfile_directory()}}
