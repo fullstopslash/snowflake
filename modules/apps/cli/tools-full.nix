@@ -24,7 +24,6 @@
       tree
 
       # File management
-      yazi
       chezmoi
       gnupg
       gopass

@@ -12,6 +12,7 @@
       tree
 
       # File management
+      yazi
       ripgrep
 
       # Compression
