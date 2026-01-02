@@ -346,7 +346,17 @@ if [[ $USE_ANYWHERE == true ]]; then
 		info "Creating cache-resolver override (10.0.2.2 for VM proxy access)..."
 		mkdir -p "$TEMP_EXTRA_FILES/etc/cache-resolver"
 		echo "10.0.2.2" > "$TEMP_EXTRA_FILES/etc/cache-resolver/waterbug-override"
-		success "Cache override configured: VM will use 10.0.2.2:9999 -> $CACHE_HOST_IP:9999"
+
+		# Configure nix.conf for kexec installer to use Attic cache during build
+		info "Creating nix.conf for kexec installer to use Attic cache..."
+		mkdir -p "$TEMP_EXTRA_FILES/etc/nix"
+		cat > "$TEMP_EXTRA_FILES/etc/nix/nix.conf" <<EOF
+# Attic cache configuration for nixos-anywhere kexec environment
+extra-substituters = http://10.0.2.2:9999/system
+extra-trusted-public-keys = system:oio0pk/Mlb/DR3s1b78tHHmOclp82OkQrYOTRlaqays=
+extra-trusted-substituters = http://10.0.2.2:9999/system
+EOF
+		success "Cache configured: kexec will use 10.0.2.2:9999 -> $CACHE_HOST_IP:9999"
 	else
 		info "Cache not available, no override needed (will use cache.nixos.org fallback)"
 	fi
@@ -369,9 +379,9 @@ if [[ $USE_ANYWHERE == true ]]; then
 		ANYWHERE_ARGS+=(--phases "$ANYWHERE_PHASES")
 	fi
 
-	# Note: Cache configuration is now handled by cache-resolver service
-	# which runs dynamically at boot. The override file we created above
-	# tells it to use 10.0.2.2:9999 (our socat proxy) instead of DNS lookup.
+	# Note: Cache configuration is now handled by:
+	# 1. For installed system: cache-resolver service (uses override file above)
+	# 2. For kexec installer: nix.conf in extra-files (created above)
 
 	nix run github:nix-community/nixos-anywhere -- \
 		"${ANYWHERE_ARGS[@]}" \
