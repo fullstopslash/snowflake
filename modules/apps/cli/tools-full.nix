@@ -112,7 +112,6 @@
       # developer utilities
       difftastic
       delta
-      eza
       fastfetch
       git-lfs
       gitFull

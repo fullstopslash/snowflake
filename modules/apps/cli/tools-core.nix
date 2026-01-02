@@ -13,6 +13,7 @@
 
       # File management
       yazi
+      eza
       ripgrep
 
       # Compression

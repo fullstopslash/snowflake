@@ -611,10 +611,16 @@ vm-register-age HOST=DEFAULT_VM_HOST:
 
     # Rekey all secrets to include the new host
     echo "   Rekeying secrets..."
-    cd ../nix-secrets && for file in sops/*.yaml; do \
+    # Rekey all files except chezmoi.yaml
+    cd ../nix-secrets && for file in sops/anguish.yaml sops/griefling.yaml sops/guppy.yaml sops/malphas.yaml sops/shared.yaml sops/sorrow.yaml sops/test-keys.yaml sops/torment.yaml; do \
         echo "     Rekeying $file..."; \
         sops updatekeys -y "$file"; \
     done
+    # Rekey chezmoi.yaml with user age key
+    echo "     Rekeying sops/chezmoi.yaml (with user age key)..."
+    cd ../nix-secrets && \
+        USER_KEY=$(sops -d sops/shared.yaml | yq -r '.["user-keys"]["rain-age-key"]') && \
+        echo "$USER_KEY" | SOPS_AGE_KEY_FILE=/dev/stdin sops updatekeys -y sops/chezmoi.yaml
 
     # Commit and push changes
     echo "   Committing changes..."
