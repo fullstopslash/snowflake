@@ -111,18 +111,7 @@ EOF
 
 in
 {
-  options.myModules.services.buildCache.dynamicResolution = lib.mkOption {
-    type = lib.types.bool;
-    default = true;
-    description = ''
-      Enable dynamic runtime resolution of waterbug.lan cache server.
-      When enabled, the cache-resolver service runs at boot to discover
-      the cache server and configure nix substituters dynamically.
-
-      When disabled, uses static serverUrl configuration (for advanced users).
-    '';
-  };
-
+  # Note: dynamicResolution option is declared in build-cache.nix to avoid duplication
   config = lib.mkIf (cfg.enable && cfg.dynamicResolution) {
     # Runtime cache resolver service
     systemd.services.cache-resolver = {

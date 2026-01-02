@@ -249,7 +249,7 @@ if [[ $USE_ANYWHERE == true ]]; then
 			# Start transparent socat proxy: 10.0.2.2:9999 -> waterbug:9999
 			# This allows VM to access cache via QEMU gateway IP
 			info "Starting socat proxy for VM cache access (10.0.2.2:9999 -> $CACHE_HOST_IP:9999)..."
-			socat TCP-LISTEN:9999,bind=10.0.2.2,reuseaddr,fork TCP:"$CACHE_HOST_IP":9999 &
+			socat TCP-LISTEN:9999,bind=localhost,reuseaddr,fork TCP:"$CACHE_HOST_IP":9999 &
 			SOCAT_PID=$!
 
 			# Ensure socat cleanup on exit
@@ -410,7 +410,7 @@ if [[ -n $CACHE_HOST_IP ]]; then
 
 		# Start transparent socat proxy: 10.0.2.2:9999 -> waterbug:9999
 		info "Starting socat proxy for VM cache access (10.0.2.2:9999 -> $CACHE_HOST_IP:9999)..."
-		socat TCP-LISTEN:9999,bind=10.0.2.2,reuseaddr,fork TCP:"$CACHE_HOST_IP":9999 &
+		socat TCP-LISTEN:9999,bind=localhost,reuseaddr,fork TCP:"$CACHE_HOST_IP":9999 &
 		SOCAT_PID=$!
 
 		# Ensure socat cleanup on exit
