@@ -94,20 +94,40 @@ function sops_update_age_key() {
 }
 
 # Adds the user and host to the shared.yaml creation rules
+# For test VMs (griefling, sorrow, torment, anguish), only add user key (host key changes on each install)
 function sops_add_shared_creation_rules() {
 	u="\"$1_$2\"" # quoted user_host for yaml
 	h="\"$2\""    # quoted hostname for yaml
+
+	# List of test VMs that get fresh keys on each install
+	test_vms=("griefling" "sorrow" "torment" "anguish")
+	is_test_vm=false
+	for vm in "${test_vms[@]}"; do
+		if [[ "$2" == "$vm" ]]; then
+			is_test_vm=true
+			break
+		fi
+	done
 
 	shared_selector='.creation_rules[] | select(.path_regex == "shared\.yaml$")'
 	if [[ -n $(yq "$shared_selector" "${SOPS_FILE}") ]]; then
 		echo "BEFORE"
 		cat "${SOPS_FILE}"
-		if [[ -z $(yq "$shared_selector.key_groups[].age[] | select(alias == $h)" "${SOPS_FILE}") ]]; then
-			green "Adding $u and $h to shared.yaml rule"
-			# NOTE: Split on purpose to avoid weird file corruption
-			yq -i "($shared_selector).key_groups[].age += [$u, $h]" "$SOPS_FILE"
-			yq -i "($shared_selector).key_groups[].age[-2] alias = $u" "$SOPS_FILE"
-			yq -i "($shared_selector).key_groups[].age[-1] alias = $h" "$SOPS_FILE"
+		if [[ -z $(yq "$shared_selector.key_groups[].age[] | select(alias == $u)" "${SOPS_FILE}") ]]; then
+			if [[ "$is_test_vm" == "true" ]]; then
+				green "Adding $u to shared.yaml rule (test VM - host key excluded)"
+				# Only add user key for test VMs
+				yq -i "($shared_selector).key_groups[].age += [$u]" "$SOPS_FILE"
+				yq -i "($shared_selector).key_groups[].age[-1] alias = $u" "$SOPS_FILE"
+				# Add comment explaining exclusion
+				yq -i "($shared_selector).key_groups[].age[-1] line_comment = \"$h excluded - test VM gets fresh key on each install\"" "$SOPS_FILE"
+			else
+				green "Adding $u and $h to shared.yaml rule"
+				# Add both user and host keys for real hosts
+				yq -i "($shared_selector).key_groups[].age += [$u, $h]" "$SOPS_FILE"
+				yq -i "($shared_selector).key_groups[].age[-2] alias = $u" "$SOPS_FILE"
+				yq -i "($shared_selector).key_groups[].age[-1] alias = $h" "$SOPS_FILE"
+			fi
 
 			# Commit changes
 			source "$(dirname "${BASH_SOURCE[0]}")/vcs-helpers.sh"
@@ -124,6 +144,7 @@ function sops_add_shared_creation_rules() {
 }
 
 # Adds the user and host to the host.yaml creation rules
+# For test VMs (griefling, sorrow, torment, anguish), exclude own host key (changes on each install)
 function sops_add_host_creation_rules() {
 	host="$2"                     # hostname for selector
 	h="\"$2\""                    # quoted hostname for yaml
@@ -131,15 +152,33 @@ function sops_add_host_creation_rules() {
 	w="\"$(whoami)_$(hostname)\"" # quoted whoami_hostname for yaml
 	n="\"$(hostname)\""           # quoted hostname for yaml
 
+	# List of test VMs that get fresh keys on each install
+	test_vms=("griefling" "sorrow" "torment" "anguish")
+	is_test_vm=false
+	for vm in "${test_vms[@]}"; do
+		if [[ "$2" == "$vm" ]]; then
+			is_test_vm=true
+			break
+		fi
+	done
+
 	host_selector=".creation_rules[] | select(.path_regex | contains(\"${host}\.yaml\"))"
 	if [[ -z $(yq "$host_selector" "${SOPS_FILE}") ]]; then
 		green "Adding new host file creation rule"
-		yq -i ".creation_rules += {\"path_regex\": \"${host}\\.yaml$\", \"key_groups\": [{\"age\": [$u, $h]}]}" "$SOPS_FILE"
-		# Add aliases one by one
-		yq -i "($host_selector).key_groups[].age[0] alias = $u" "$SOPS_FILE"
-		yq -i "($host_selector).key_groups[].age[1] alias = $h" "$SOPS_FILE"
-		yq -i "($host_selector).key_groups[].age[2] alias = $w" "$SOPS_FILE"
-		yq -i "($host_selector).key_groups[].age[3] alias = $n" "$SOPS_FILE"
+		if [[ "$is_test_vm" == "true" ]]; then
+			# For test VMs: user key + malphas key (not own host key)
+			yq -i ".creation_rules += {\"path_regex\": \"${host}\\.yaml$\", \"key_groups\": [{\"age\": [$u, $w]}]}" "$SOPS_FILE"
+			yq -i "($host_selector).key_groups[].age[0] alias = $u" "$SOPS_FILE"
+			yq -i "($host_selector).key_groups[].age[0] line_comment = \"$h excluded - test VM gets fresh key on each install\"" "$SOPS_FILE"
+			yq -i "($host_selector).key_groups[].age[1] alias = $w" "$SOPS_FILE"
+		else
+			# For real hosts: user key + host key + malphas keys
+			yq -i ".creation_rules += {\"path_regex\": \"${host}\\.yaml$\", \"key_groups\": [{\"age\": [$u, $h, $w, $n]}]}" "$SOPS_FILE"
+			yq -i "($host_selector).key_groups[].age[0] alias = $u" "$SOPS_FILE"
+			yq -i "($host_selector).key_groups[].age[1] alias = $h" "$SOPS_FILE"
+			yq -i "($host_selector).key_groups[].age[2] alias = $w" "$SOPS_FILE"
+			yq -i "($host_selector).key_groups[].age[3] alias = $n" "$SOPS_FILE"
+		fi
 
 		# Commit changes
 		source "$(dirname "${BASH_SOURCE[0]}")/vcs-helpers.sh"
