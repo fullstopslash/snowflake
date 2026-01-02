@@ -363,8 +363,11 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     done
     # Rekey chezmoi.yaml with user age key (extracted from shared.yaml)
     echo "     Rekeying sops/chezmoi.yaml (with user age key)..."
-    USER_KEY=$(sops -d sops/shared.yaml | yq -r '.["user-keys"]["rain-age-key"]') && \
-    echo "$USER_KEY" | SOPS_AGE_KEY_FILE=/dev/stdin sops updatekeys -y sops/chezmoi.yaml
+    sudo cat /var/lib/sops-nix/key.txt > /tmp/malphas-key.txt
+    chmod 600 /tmp/malphas-key.txt
+    SOPS_AGE_KEY_FILE=/tmp/malphas-key.txt sops -d sops/shared.yaml | yq -r '.["user-keys"]["rain-age-key"]' > /tmp/user-age-key.txt
+    SOPS_AGE_KEY_FILE=/tmp/user-age-key.txt sops updatekeys -y sops/chezmoi.yaml
+    rm -f /tmp/user-age-key.txt /tmp/malphas-key.txt
     cd "{{justfile_directory()}}"
 
     # Step 3.5: Stage public key and SOPS-encrypted secrets for commit

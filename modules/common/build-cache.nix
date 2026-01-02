@@ -13,6 +13,18 @@ in
   options.myModules.services.buildCache = {
     enable = lib.mkEnableOption "binary cache configuration with Attic";
 
+    dynamicResolution = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Enable dynamic runtime resolution of waterbug.lan cache server.
+        When enabled, the cache-resolver service runs at boot to discover
+        the cache server and configure nix substituters dynamically.
+
+        When disabled, uses static serverUrl configuration (for advanced users).
+      '';
+    };
+
     enableBuilder = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -36,7 +48,10 @@ in
     serverUrl = lib.mkOption {
       type = lib.types.str;
       default = "http://waterbug.lan:9999";
-      description = "URL of the Attic server";
+      description = ''
+        URL of the Attic server.
+        Only used when dynamicResolution = false (static mode).
+      '';
     };
 
     cacheName = lib.mkOption {
@@ -48,7 +63,10 @@ in
     cacheUrl = lib.mkOption {
       type = lib.types.str;
       default = "${cfg.serverUrl}/${cfg.cacheName}";
-      description = "Full URL of the Attic binary cache";
+      description = ''
+        Full URL of the Attic binary cache.
+        Only used when dynamicResolution = false (static mode).
+      '';
     };
 
     buildMachineHostname = lib.mkOption {
@@ -72,21 +90,35 @@ in
       mode = "0440";
     };
 
+    # Dynamic mode: include runtime-generated config via extraOptions
+    nix.extraOptions = lib.mkIf cfg.dynamicResolution ''
+      # Include runtime-generated substituters from cache-resolver
+      !include /run/cache-resolver/nix.conf
+    '';
+
     # Configure Nix to use the binary cache
     nix.settings = {
-      # Add attic cache as a substituter (before cache.nixos.org for priority)
-      substituters = lib.mkBefore [
-        cfg.cacheUrl
-      ];
+      # Substituters configuration
+      # - Dynamic mode: runtime config provides waterbug + cache.nixos.org
+      # - Static mode: explicitly add waterbug cache URL before cache.nixos.org
+      substituters =
+        if cfg.dynamicResolution then
+          # Dynamic mode: just ensure cache.nixos.org as fallback (runtime config adds waterbug)
+          lib.mkDefault [ "https://cache.nixos.org" ]
+        else
+          # Static mode: explicitly configure waterbug cache before cache.nixos.org
+          lib.mkBefore [ cfg.cacheUrl ] ++ lib.mkDefault [ "https://cache.nixos.org" ];
 
       # Trust the cache (required for unsigned caches)
-      trusted-substituters = [
+      # Only needed in static mode (dynamic mode gets this from nix.conf)
+      trusted-substituters = lib.mkIf (!cfg.dynamicResolution) [
         cfg.cacheUrl
       ];
 
-      # Add Attic cache public key to trusted keys
+      # Add Attic cache public key to trusted keys (always needed)
       trusted-public-keys = [
         "system:oio0pk/Mlb/DR3s1b78tHHmOclp82OkQrYOTRlaqays="
+        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       ];
 
       # Allow build machines to use substituters when building for other machines

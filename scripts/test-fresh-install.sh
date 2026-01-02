@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#!nix-shell --arg sandbox false -i bash -p qemu coreutils
+#!nix-shell --arg sandbox false -i bash -p qemu coreutils socat netcat
 # shellcheck shell=bash
 
 # Test a fresh NixOS installation in a VM
@@ -233,7 +233,47 @@ success "Using ISO: $(basename "$ISO_PATH")"
 if [[ $USE_ANYWHERE == true ]]; then
 	info "Starting VM for nixos-anywhere deployment..."
 
+	# Determine cache server IP (resolve waterbug.lan on the host)
+	CACHE_HOST_IP=$(getent hosts waterbug.lan 2>/dev/null | awk '{ print $1 }' | head -1)
+	CACHE_AVAILABLE=false
+	SOCAT_PID=""
+
+	if [[ -n $CACHE_HOST_IP ]]; then
+		info "Resolved waterbug.lan -> $CACHE_HOST_IP"
+
+		# Test if cache is actually reachable
+		if timeout 5 nc -z -w 3 "$CACHE_HOST_IP" 9999 2>/dev/null; then
+			info "Cache server is reachable at $CACHE_HOST_IP:9999"
+			CACHE_AVAILABLE=true
+
+			# Start transparent socat proxy: 10.0.2.2:9999 -> waterbug:9999
+			# This allows VM to access cache via QEMU gateway IP
+			info "Starting socat proxy for VM cache access (10.0.2.2:9999 -> $CACHE_HOST_IP:9999)..."
+			socat TCP-LISTEN:9999,bind=10.0.2.2,reuseaddr,fork TCP:"$CACHE_HOST_IP":9999 &
+			SOCAT_PID=$!
+
+			# Ensure socat cleanup on exit
+			trap "kill $SOCAT_PID 2>/dev/null || true" EXIT
+
+			# Give socat a moment to start
+			sleep 1
+
+			# Verify socat is running
+			if ! ps -p "$SOCAT_PID" >/dev/null 2>&1; then
+				warn "Failed to start socat proxy, cache will not be available in VM"
+				CACHE_AVAILABLE=false
+			else
+				success "socat proxy running (PID: $SOCAT_PID)"
+			fi
+		else
+			warn "Cache server at $CACHE_HOST_IP:9999 is not reachable"
+		fi
+	else
+		warn "Could not resolve waterbug.lan, cache will not be available"
+	fi
+
 	# Start VM headless for nixos-anywhere deployment
+	# QEMU user-mode networking will NAT connections to external IPs automatically
 	qemu-system-x86_64 \
 		-name "${HOSTNAME}-fresh-test" \
 		-machine q35,smm=off,vmport=off,accel=kvm \
@@ -296,11 +336,29 @@ if [[ $USE_ANYWHERE == true ]]; then
 		-p "$SSH_PORT"
 	)
 
-	# Add --extra-files if provided (for pre-generated SSH host key + SOPS age key)
-	if [[ -n $EXTRA_FILES ]]; then
-		info "Using extra-files from: $EXTRA_FILES"
-		ANYWHERE_ARGS+=(--extra-files "$EXTRA_FILES")
+	# Create temporary directory for extra files (cache resolver override)
+	TEMP_EXTRA_FILES=$(mktemp -d)
+	trap 'rm -rf "$TEMP_EXTRA_FILES"' EXIT
+
+	# If cache is available via socat proxy, configure cache-resolver override
+	# This tells cache-resolver to use 10.0.2.2 (QEMU gateway) instead of DNS lookup
+	if [[ $CACHE_AVAILABLE == true ]]; then
+		info "Creating cache-resolver override (10.0.2.2 for VM proxy access)..."
+		mkdir -p "$TEMP_EXTRA_FILES/etc/cache-resolver"
+		echo "10.0.2.2" > "$TEMP_EXTRA_FILES/etc/cache-resolver/waterbug-override"
+		success "Cache override configured: VM will use 10.0.2.2:9999 -> $CACHE_HOST_IP:9999"
+	else
+		info "Cache not available, no override needed (will use cache.nixos.org fallback)"
 	fi
+
+	# Merge user-provided extra-files with our temp directory
+	if [[ -n $EXTRA_FILES ]]; then
+		info "Merging user extra-files from: $EXTRA_FILES"
+		cp -r "$EXTRA_FILES"/* "$TEMP_EXTRA_FILES/" 2>/dev/null || true
+	fi
+
+	# Use merged extra-files directory
+	ANYWHERE_ARGS+=(--extra-files "$TEMP_EXTRA_FILES")
 
 	# Deploy FULL config directly from main flake (not nixos-installer)
 	cd "$REPO_ROOT"
@@ -310,6 +368,10 @@ if [[ $USE_ANYWHERE == true ]]; then
 		info "Using custom nixos-anywhere phases: $ANYWHERE_PHASES"
 		ANYWHERE_ARGS+=(--phases "$ANYWHERE_PHASES")
 	fi
+
+	# Note: Cache configuration is now handled by cache-resolver service
+	# which runs dynamically at boot. The override file we created above
+	# tells it to use 10.0.2.2:9999 (our socat proxy) instead of DNS lookup.
 
 	nix run github:nix-community/nixos-anywhere -- \
 		"${ANYWHERE_ARGS[@]}" \
@@ -332,6 +394,44 @@ echo ""
 printf '%s%s=== Starting Fresh Install VM ===%s\n' "${BOLD}" "${GREEN}" "${NC}"
 echo ""
 info "Booting from ISO for manual installation..."
+
+# Determine cache server IP and start socat proxy if available
+CACHE_HOST_IP=$(getent hosts waterbug.lan 2>/dev/null | awk '{ print $1 }' | head -1)
+CACHE_AVAILABLE=false
+SOCAT_PID=""
+
+if [[ -n $CACHE_HOST_IP ]]; then
+	info "Resolved waterbug.lan -> $CACHE_HOST_IP"
+
+	# Test if cache is actually reachable
+	if timeout 5 nc -z -w 3 "$CACHE_HOST_IP" 9999 2>/dev/null; then
+		info "Cache server is reachable at $CACHE_HOST_IP:9999"
+		CACHE_AVAILABLE=true
+
+		# Start transparent socat proxy: 10.0.2.2:9999 -> waterbug:9999
+		info "Starting socat proxy for VM cache access (10.0.2.2:9999 -> $CACHE_HOST_IP:9999)..."
+		socat TCP-LISTEN:9999,bind=10.0.2.2,reuseaddr,fork TCP:"$CACHE_HOST_IP":9999 &
+		SOCAT_PID=$!
+
+		# Ensure socat cleanup on exit
+		trap "kill $SOCAT_PID 2>/dev/null || true" EXIT
+
+		# Give socat a moment to start
+		sleep 1
+
+		# Verify socat is running
+		if ! ps -p "$SOCAT_PID" >/dev/null 2>&1; then
+			warn "Failed to start socat proxy, cache will not be available in VM"
+			CACHE_AVAILABLE=false
+		else
+			success "socat proxy running (PID: $SOCAT_PID)"
+		fi
+	else
+		warn "Cache server at $CACHE_HOST_IP:9999 is not reachable"
+	fi
+else
+	warn "Could not resolve waterbug.lan, cache will not be available"
+fi
 
 # Common QEMU args
 # shellcheck disable=SC2054  # Commas are QEMU option syntax, not array separators
@@ -390,6 +490,15 @@ if [[ $GUI == true ]]; then
 	echo "  Stop: ./scripts/stop-vm.sh $HOSTNAME"
 	echo ""
 
+	if [[ $CACHE_AVAILABLE == true ]]; then
+		echo "  Cache: Available via proxy (socat PID: $SOCAT_PID)"
+		echo "         VM will access cache at 10.0.2.2:9999 -> $CACHE_HOST_IP:9999"
+	else
+		echo "  Cache: Not available (will use cache.nixos.org fallback)"
+	fi
+
+	echo ""
+
 	# Wait a moment for SPICE to be ready
 	sleep 2
 
@@ -407,6 +516,15 @@ else
 	echo ""
 	echo "  SSH: ssh -p $SSH_PORT root@127.0.0.1"
 	echo "  Stop: ./scripts/stop-vm.sh $HOSTNAME"
+	echo ""
+
+	if [[ $CACHE_AVAILABLE == true ]]; then
+		echo "  Cache: Available via proxy (socat PID: $SOCAT_PID)"
+		echo "         VM will access cache at 10.0.2.2:9999 -> $CACHE_HOST_IP:9999"
+	else
+		echo "  Cache: Not available (will use cache.nixos.org fallback)"
+	fi
+
 	echo ""
 	echo "Once SSH is available, you can install NixOS:"
 	echo "  1. Partition disk: sudo parted /dev/vda"
