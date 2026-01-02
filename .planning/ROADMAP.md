@@ -552,6 +552,7 @@ Target outcome:
 | 22. Home Manager Cleanup | 0/1 | Planning | - |
 | 29. Auto-Upgrade Remediation | 6/6 | Complete | 2025-12-31 |
 | 30. Dynamic Cache Resolution | 0/1 | Planning | - |
+| 31. Install Automation Audit | 0/8 | Planning | - |
 
 ### Phase 30: Dynamic Cache Resolution
 **Goal**: Fix ISO installer cache access with runtime waterbug.lan discovery and graceful fallback
@@ -572,3 +573,39 @@ Target outcome:
 
 Plans:
 - [ ] 30-01: Runtime cache resolver, build-cache integration, VM test fixes (3 tasks: resolver service, module refactor, VM script fix)
+
+### Phase 31: Install Automation Audit
+**Goal**: Audit and fix NixOS automated installation system to ensure air-tight, flawless, DRY automation
+**Depends on**: Nothing (comprehensive audit phase)
+**Plans**: 8 plans
+
+Vision: Ensure both `just install` and `just vm-fresh` function identically with zero manual intervention. All core systems (repos, SOPS, services, cache, chezmoi) must provision correctly on fresh installs and persist across reboots. GitOps workflows must create conventional commits with datever for easy audit and rollback.
+
+Core requirements to audit and fix:
+1. **Repository Provisioning**: nix-config, nix-secrets, chezmoi repos cloned with GitHub auth for root AND user
+2. **SOPS Management**: Automated VM key management, break-glass keys, shared vs host-specific secrets
+3. **Core Services**: Atuin, Syncthing, Tailscale OAuth automation
+4. **Chezmoi**: First-install deployment and pre-update workflow (re-add → jj commit → push)
+5. **Attic Cache**: All hosts pull from waterbug.lan:9999 with first-boot reliability
+6. **Install Normalization**: VM and regular install function identically (DRY)
+7. **GitOps Quality**: Conventional commits with datever, only commit when changes exist
+
+Plans:
+- [ ] 31-01: Current State Audit (comprehensive baseline, AUDIT-FINDINGS.md creation)
+- [ ] 31-02: SOPS Key Management Automation (auto-extract VM keys, .sops.yaml updates, rekeying)
+- [ ] 31-03: Install Recipe Normalization (DRY helper extraction, eliminate duplication)
+- [ ] 31-04: Deploy Keys & GitHub Auth (gh CLI automation, root+user access, SSH config)
+- [ ] 31-05: Repository Provisioning & Persistence (/persist detection, reboot testing)
+- [ ] 31-06: Core Services Automation (Atuin, Syncthing, Tailscale verification)
+- [ ] 31-07: Chezmoi & Auto-Update Workflows (first-install, pre-update workflow, conventional commits)
+- [ ] 31-08: Attic Cache & Final Verification (cache-resolver testing, end-to-end validation)
+
+Target outcome:
+- Fresh griefling VM install works end-to-end with zero manual steps
+- All repos cloned, accessible, and persist across reboots
+- SOPS decryption works for shared and host-specific secrets
+- All core services functional without manual configuration
+- Chezmoi deployed with templates working
+- Builds pull from waterbug.lan cache reliably on first boot
+- Automated updates create proper conventional commits (chore(scope): auto-update YYYY-MM-DD-HHMM on HOST)
+- System survives reboot with all repos and services intact
