@@ -217,15 +217,33 @@ install HOST:
     AGE_PUBKEY=$(nix-shell -p ssh-to-age --run "cat $EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age")
     echo "   Age public key: $AGE_PUBKEY"
 
+    # Step 2.5: Generate per-host user age key for granular access control
+    echo "🔐 Generating per-host user age key..."
+    PRIMARY_USER=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.host.primaryUsername 2>/dev/null || echo "rain")
+
+    # Determine user home based on /persist
+    if grep -q "btrfs-luks-impermanence\|bcachefs.*encryption" hosts/{{HOST}}/default.nix 2>/dev/null; then
+        USER_AGE_DIR="$EXTRA_FILES/persist/home/$PRIMARY_USER/.config/sops/age"
+    else
+        USER_AGE_DIR="$EXTRA_FILES/home/$PRIMARY_USER/.config/sops/age"
+    fi
+
+    mkdir -p "$USER_AGE_DIR"
+    nix-shell -p age --run "age-keygen -o $USER_AGE_DIR/keys.txt" 2>/dev/null
+    chmod 600 "$USER_AGE_DIR/keys.txt"
+
+    # Extract public key for .sops.yaml registration
+    USER_AGE_PUBKEY=$(nix-shell -p age --run "age-keygen -y $USER_AGE_DIR/keys.txt")
+    echo "   User age public key: $USER_AGE_PUBKEY"
+
     # Step 3: Register age key in nix-secrets and rekey
     echo "📝 Registering {{HOST}} age key in nix-secrets..."
     just sops-update-host-age-key {{HOST}} "$AGE_PUBKEY"
 
-    # Add user age key (reuse primary rain user key for test VMs/hosts)
-    RAIN_AGE_KEY=$(sed -n '4p' ../nix-secrets/.sops.yaml | awk '{print $3}')
-    just sops-update-user-age-key rain {{HOST}} "$RAIN_AGE_KEY"
+    # Add per-host user age key for granular access control
+    just sops-update-user-age-key $PRIMARY_USER {{HOST}} "$USER_AGE_PUBKEY"
 
-    just sops-add-creation-rules rain {{HOST}}
+    just sops-add-creation-rules $PRIMARY_USER {{HOST}}
 
     # Rekey all secrets
     echo "   Rekeying secrets..."
@@ -353,6 +371,21 @@ EOF
          chown -R $PRIMARY_USER:users \$USER_HOME/.ssh && \
          echo '✅ Deploy keys configured for $PRIMARY_USER'"
 
+    # Fix ownership of per-host user age key
+    echo "🔑 Fixing ownership of user age key..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@{{HOST}}.local \
+        "if [ -d /persist ]; then \
+             USER_HOME=/persist/home/$PRIMARY_USER; \
+         else \
+             USER_HOME=/home/$PRIMARY_USER; \
+         fi && \
+         if [ -d \$USER_HOME/.config/sops/age ]; then \
+             chown -R $PRIMARY_USER:users \$USER_HOME/.config && \
+             echo '✅ User age key ownership fixed'; \
+         else \
+             echo '⚠️  No age key directory found'; \
+         fi"
+
     # Clone ALL repos to user's home directory (detect /persist for encrypted hosts)
     echo "📥 Cloning all repos..."
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@{{HOST}}.local \
@@ -454,15 +487,33 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     AGE_PUBKEY=$(nix-shell -p ssh-to-age --run "cat $EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age")
     echo "   Age public key: $AGE_PUBKEY"
 
+    # Step 2.5: Generate per-host user age key for granular access control
+    echo "🔐 Generating per-host user age key..."
+    PRIMARY_USER=$(just _get-vm-primary-user {{HOST}} 2>/dev/null || echo "rain")
+
+    # Determine user home based on /persist
+    if grep -q "btrfs-luks-impermanence\|bcachefs.*encryption" hosts/{{HOST}}/default.nix 2>/dev/null; then
+        USER_AGE_DIR="$EXTRA_FILES/persist/home/$PRIMARY_USER/.config/sops/age"
+    else
+        USER_AGE_DIR="$EXTRA_FILES/home/$PRIMARY_USER/.config/sops/age"
+    fi
+
+    mkdir -p "$USER_AGE_DIR"
+    nix-shell -p age --run "age-keygen -o $USER_AGE_DIR/keys.txt" 2>/dev/null
+    chmod 600 "$USER_AGE_DIR/keys.txt"
+
+    # Extract public key for .sops.yaml registration
+    USER_AGE_PUBKEY=$(nix-shell -p age --run "age-keygen -y $USER_AGE_DIR/keys.txt")
+    echo "   User age public key: $USER_AGE_PUBKEY"
+
     # Step 3: Register age key in nix-secrets and rekey
     echo "📝 Registering {{HOST}} age key in nix-secrets..."
     just sops-update-host-age-key {{HOST}} "$AGE_PUBKEY"
 
-    # Add user age key (reuse primary rain user key for test VMs/hosts)
-    RAIN_AGE_KEY=$(sed -n '4p' ../nix-secrets/.sops.yaml | awk '{print $3}')
-    just sops-update-user-age-key rain {{HOST}} "$RAIN_AGE_KEY"
+    # Add per-host user age key for granular access control
+    just sops-update-user-age-key $PRIMARY_USER {{HOST}} "$USER_AGE_PUBKEY"
 
-    just sops-add-creation-rules rain {{HOST}}
+    just sops-add-creation-rules $PRIMARY_USER {{HOST}}
 
     # Rekey all secrets
     echo "   Rekeying secrets..."
@@ -671,6 +722,21 @@ EOF
          chmod 600 \$USER_HOME/.ssh/nix-config-deploy \$USER_HOME/.ssh/nix-secrets-deploy \$USER_HOME/.ssh/config && \
          chown -R $PRIMARY_USER:users \$USER_HOME/.ssh && \
          echo '✅ Deploy keys configured for $PRIMARY_USER'"
+
+    # Step 9.5: Fix ownership of per-host user age key
+    echo "🔑 Fixing ownership of user age key..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
+        "if [ -d /persist ]; then \
+             USER_HOME=/persist/home/$PRIMARY_USER; \
+         else \
+             USER_HOME=/home/$PRIMARY_USER; \
+         fi && \
+         if [ -d \$USER_HOME/.config/sops/age ]; then \
+             chown -R $PRIMARY_USER:users \$USER_HOME/.config && \
+             echo '✅ User age key ownership fixed'; \
+         else \
+             echo '⚠️  No age key directory found (this is OK for test VMs)'; \
+         fi"
 
     # Step 10: Clone ALL repos to user's home directory (detect /persist for encrypted hosts)
     echo "📥 Cloning all repos..."
