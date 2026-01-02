@@ -298,14 +298,6 @@ in
           # Deploys to /run/secrets/acoustid_api
         };
 
-        "chezmoi-config" = {
-          sopsFile = "${sopsFolder}/chezmoi.yaml";
-          format = "binary";  # Deploy entire decrypted file as-is
-          path = "${primaryUser.home}/.config/chezmoi/chezmoi.yaml";
-          owner = primaryUser.name;
-          mode = "0400";
-          # Deploys entire decrypted chezmoi.yaml file with template variables
-        };
       };
   };
 }

@@ -54,6 +54,21 @@
         exit 0
       fi
 
+      # Deploy chezmoi config from SOPS
+      CHEZMOI_CONFIG_DIR="${config.home.homeDirectory}/.config/chezmoi"
+      CHEZMOI_CONFIG_FILE="$CHEZMOI_CONFIG_DIR/chezmoi.yaml"
+      SOPS_CHEZMOI_FILE="${config.home.homeDirectory}/../nix-secrets/sops/chezmoi.yaml"
+
+      if [ -f "$SOPS_CHEZMOI_FILE" ]; then
+        echo "Deploying chezmoi config from SOPS..."
+        mkdir -p "$CHEZMOI_CONFIG_DIR"
+        ${pkgs.sops}/bin/sops -d "$SOPS_CHEZMOI_FILE" > "$CHEZMOI_CONFIG_FILE"
+        chmod 600 "$CHEZMOI_CONFIG_FILE"
+        echo "✅ Chezmoi config deployed"
+      else
+        echo "⚠️  SOPS chezmoi config not found at $SOPS_CHEZMOI_FILE"
+      fi
+
       if [ ! -d "$CHEZMOI_SOURCE/.git" ]; then
         echo "Initializing chezmoi from $DOTFILES_REPO"
         if ${pkgs.chezmoi}/bin/chezmoi init --apply --force "$DOTFILES_REPO" 2>&1; then
