@@ -45,6 +45,12 @@
   # Paths mirror filesystem: extraModules.<top>.<category> = [ "<module>" ]
   extraModules.services.security = [ "bitwarden" ];
 
+  # Enable mDNS resolution for .lan domains (resolves waterbug.lan automatically)
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true; # Enable .local and .lan domain resolution via mDNS
+  };
+
   # ========================================
   # BUILD CACHE (Attic binary cache)
   # ========================================

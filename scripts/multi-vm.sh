@@ -123,7 +123,7 @@ start_vm() {
 		-device intel-hda \
 		-device hda-duplex \
 		-drive "if=virtio,file=$disk_path,cache=writethrough,format=qcow2" \
-		-netdev "user,hostname=$vm,hostfwd=tcp::${ssh_port}-:22,id=nic" \
+		-netdev "user,hostname=$vm,hostfwd=tcp::${ssh_port}-:22,restrict=off,id=nic" \
 		-device virtio-net-pci,netdev=nic \
 		-drive "if=pflash,format=raw,unit=0,file=$OVMF_CODE,readonly=on" \
 		-drive "if=pflash,format=raw,unit=1,file=$OVMF_VARS" \

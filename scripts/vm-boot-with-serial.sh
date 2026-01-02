@@ -61,7 +61,7 @@ qemu-system-x86_64 \
     -device virtio-rng-pci,rng=rng0 \
     -object rng-random,id=rng0,filename=/dev/urandom \
     -device virtio-net,netdev=nic \
-    -netdev "user,hostname=${HOST},hostfwd=tcp::22222-:22,id=nic" \
+    -netdev "user,hostname=${HOST},hostfwd=tcp::22222-:22,restrict=off,id=nic" \
     -chardev socket,id=chrtpm,path="$TPM_SOCKET" \
     -tpmdev emulator,id=tpm0,chardev=chrtpm \
     -device tpm-tis,tpmdev=tpm0 \

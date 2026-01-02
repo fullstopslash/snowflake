@@ -15,6 +15,9 @@
     # Auto-sync is handled by chezmoi-sync.nix module
   '';
 
+  # Ensure .ssh directory exists with correct permissions
+  home.file.".ssh/.keep".text = "";
+
   # Symlink SSH key from NixOS sops secret to user SSH directory
   # Required for chezmoi to clone dotfiles repo via git@github.com
   # The secret is deployed by modules/services/networking/ssh.nix to /run/secrets/keys/ssh/ed25519

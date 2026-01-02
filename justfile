@@ -443,16 +443,120 @@ vm-fresh HOST=DEFAULT_VM_HOST:
         sleep 2
     done
 
-    # Step 9: Ensure SSH keys are in /persist and rebuild to enable initrd SSH
+    # Step 9: Generate and deploy per-host GitHub deploy keys
+    echo "🔑 Setting up per-host GitHub deploy keys..."
+
+    # Check if deploy keys already exist in host SOPS file
+    DEPLOY_KEY_EXISTS=$(cd ../nix-secrets && sops -d sops/{{HOST}}.yaml 2>/dev/null | grep -c "deploy-key:" || echo "0")
+
+    if [ "$DEPLOY_KEY_EXISTS" -eq "0" ]; then
+        echo "   Generating new deploy keys for {{HOST}}..."
+
+        # Generate unique deploy keys for this host
+        TEMP_DIR=$(mktemp -d)
+        ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-config-deploy" -N "" -C "{{HOST}}-nix-config-deploy" -q
+        ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-secrets-deploy" -N "" -C "{{HOST}}-nix-secrets-deploy" -q
+
+        echo ""
+        echo "📋 Add these deploy keys to GitHub (read-only):"
+        echo ""
+        echo "1. nix-config repo (fullstopslash/snowflake):"
+        cat "$TEMP_DIR/nix-config-deploy.pub"
+        echo ""
+        echo "2. nix-secrets repo (fullstopslash/snowflake-secrets):"
+        cat "$TEMP_DIR/nix-secrets-deploy.pub"
+        echo ""
+        echo "Go to: Repo Settings → Deploy keys → Add deploy key"
+        echo ""
+        read -p "Press Enter after adding deploy keys to GitHub..."
+
+        # Store private keys in host-specific SOPS file
+        echo "   Storing deploy keys in sops/{{HOST}}.yaml..."
+        cd ../nix-secrets
+
+        # Create temporary file with new keys section
+        TEMP_YAML=$(mktemp)
+        cat > "$TEMP_YAML" <<EOF
+deploy-keys:
+    nix-config: |
+$(cat "$TEMP_DIR/nix-config-deploy" | sed 's/^/        /')
+    nix-secrets: |
+$(cat "$TEMP_DIR/nix-secrets-deploy" | sed 's/^/        /')
+EOF
+
+        # Add to SOPS file (will be encrypted)
+        sops --set "$(cat "$TEMP_YAML" | yq -o=json)" sops/{{HOST}}.yaml
+
+        rm -rf "$TEMP_DIR" "$TEMP_YAML"
+        cd {{justfile_directory()}}
+
+        echo "   ✅ Deploy keys stored in sops/{{HOST}}.yaml"
+    else
+        echo "   Deploy keys already exist in sops/{{HOST}}.yaml"
+    fi
+
+    # Extract deploy keys from host SOPS file
+    TEMP_KEY=$(mktemp)
+    TEMP_KEY_SECRETS=$(mktemp)
+    trap "rm -f $TEMP_KEY $TEMP_KEY_SECRETS" EXIT
+
+    cd ../nix-secrets
+    sops -d --extract '["deploy-keys"]["nix-config"]' sops/{{HOST}}.yaml > "$TEMP_KEY" 2>/dev/null
+    sops -d --extract '["deploy-keys"]["nix-secrets"]' sops/{{HOST}}.yaml > "$TEMP_KEY_SECRETS" 2>/dev/null
+    cd {{justfile_directory()}}
+
+    # Deploy keys to target
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
+        "mkdir -p /root/.ssh && chmod 700 /root/.ssh"
+
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P "$SSH_PORT" \
+        "$TEMP_KEY" root@127.0.0.1:/root/.ssh/nix-config-deploy
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P "$SSH_PORT" \
+        "$TEMP_KEY_SECRETS" root@127.0.0.1:/root/.ssh/nix-secrets-deploy
+
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
+        "chmod 600 /root/.ssh/nix-config-deploy /root/.ssh/nix-secrets-deploy && \
+         cat > /root/.ssh/config <<'EOF'
+Host github.com-nix-config
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/nix-config-deploy
+    StrictHostKeyChecking no
+
+Host github.com-nix-secrets
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/nix-secrets-deploy
+    StrictHostKeyChecking no
+EOF
+         chmod 600 /root/.ssh/config"
+
+    echo "   ✅ Deploy keys deployed to {{HOST}}"
+
+    # Step 10: Clone nix-config and nix-secrets to target using per-host deploy keys
+    echo "📥 Cloning nix-config and nix-secrets to target..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
+        'cd /root && \
+         rm -rf nix-config nix-secrets && \
+         git clone git@github.com-nix-config:fullstopslash/snowflake.git nix-config && \
+         cd nix-config && \
+         git clone git@github.com-nix-secrets:fullstopslash/snowflake-secrets.git ../nix-secrets && \
+         echo "✅ Repositories cloned successfully"'
+
+    # Step 11: Ensure SSH keys are in /persist and rebuild to enable initrd SSH
     echo "🔧 Copying SSH keys to /persist and rebuilding for initrd SSH..."
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
         'mkdir -p /persist/etc/ssh && \
          cp /etc/ssh/ssh_host_ed25519_key* /persist/etc/ssh/ && \
-         nixos-rebuild boot --flake github:fullstopslash/snowflake#{{HOST}}'
+         cd /root/nix-config && \
+         nixos-rebuild boot --flake .#{{HOST}}'
 
     echo ""
     echo "✅ Fresh install complete with initrd SSH enabled!"
     echo "   System will have remote unlock capability on next boot"
+    echo "   Repositories:"
+    echo "     - /root/nix-config (cloned from GitHub)"
+    echo "     - /root/nix-secrets (cloned from GitHub)"
     echo "   SSH: ssh -p $SSH_PORT root@127.0.0.1"
     echo "   Display: just vm-start (SDL with GPU acceleration)"
     echo ""

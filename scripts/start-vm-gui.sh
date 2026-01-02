@@ -93,7 +93,7 @@ exec qemu-system-x86_64 \
     -device intel-hda \
     -device hda-micro,audiodev=audio0 \
     -device virtio-net,netdev=nic \
-    -netdev "user,hostname=${HOSTNAME}-test,hostfwd=tcp::${SSH_PORT}-:22,id=nic" \
+    -netdev "user,hostname=${HOSTNAME}-test,hostfwd=tcp::${SSH_PORT}-:22,restrict=off,id=nic" \
     -global driver=cfi.pflash01,property=secure,value=on \
     -drive "if=pflash,format=raw,unit=0,file=$OVMF_CODE,readonly=on" \
     -drive "if=pflash,format=raw,unit=1,file=$OVMF_VARS" \

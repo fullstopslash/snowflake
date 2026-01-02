@@ -34,6 +34,12 @@
   # Disable GRUB, use systemd-boot (from vmHeadless role)
   boot.loader.grub.enable = lib.mkForce false;
 
+  # Enable mDNS resolution for .lan domains (resolves waterbug.lan automatically)
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true; # Enable .local and .lan domain resolution via mDNS
+  };
+
   # Force disable GUI packages for minimal VM
   programs.kdeconnect.enable = lib.mkForce false;
   services.displayManager.sddm.enable = lib.mkForce false;
