@@ -43,6 +43,7 @@
   # EXTRA MODULES (additive to role defaults)
   # ========================================
   # Paths mirror filesystem: extraModules.<top>.<category> = [ "<module>" ]
+  extraModules.apps.cli = [ "tools-full" ];
   extraModules.services.security = [ "bitwarden" ];
 
   # Enable mDNS resolution for .lan domains (resolves waterbug.lan automatically)
