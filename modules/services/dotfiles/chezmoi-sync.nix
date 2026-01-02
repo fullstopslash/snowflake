@@ -298,6 +298,14 @@ in
           # Deploys to /run/secrets/acoustid_api
         };
 
+        "rain-age-key" = {
+          sopsFile = "${sopsFolder}/shared.yaml";
+          key = "user-keys/rain-age-key";
+          path = "${primaryUser.home}/.config/sops/age/keys.txt";
+          owner = primaryUser.name;
+          mode = "0400";
+          # Deploys user age key for decrypting user-specific secrets
+        };
       };
   };
 }

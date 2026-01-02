@@ -63,9 +63,16 @@
       if [ -f "$SOPS_CHEZMOI_FILE" ]; then
         echo "Deploying chezmoi config from SOPS..."
         mkdir -p "$CHEZMOI_CONFIG_DIR"
-        ${pkgs.sops}/bin/sops -d "$SOPS_CHEZMOI_FILE" > "$CHEZMOI_CONFIG_FILE"
-        chmod 600 "$CHEZMOI_CONFIG_FILE"
-        echo "✅ Chezmoi config deployed"
+        # Use user age key deployed to ~/.config/sops/age/keys.txt
+        export SOPS_AGE_KEY_FILE="${config.home.homeDirectory}/.config/sops/age/keys.txt"
+        if [ -f "$SOPS_AGE_KEY_FILE" ]; then
+          ${pkgs.sops}/bin/sops -d "$SOPS_CHEZMOI_FILE" > "$CHEZMOI_CONFIG_FILE"
+          chmod 600 "$CHEZMOI_CONFIG_FILE"
+          echo "✅ Chezmoi config deployed"
+        else
+          echo "⚠️  Age key not found at $SOPS_AGE_KEY_FILE - skipping chezmoi config deployment"
+          echo "   Age key will be deployed on first system activation"
+        fi
       else
         echo "⚠️  SOPS chezmoi config not found at $SOPS_CHEZMOI_FILE"
       fi
