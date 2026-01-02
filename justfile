@@ -355,7 +355,9 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     # Rekey all secrets
     echo "   Rekeying secrets..."
     # Rekey all files except chezmoi.yaml (handled separately below)
-    cd ../nix-secrets && for file in sops/anguish.yaml sops/griefling.yaml sops/guppy.yaml sops/malphas.yaml sops/shared.yaml sops/sorrow.yaml sops/test-keys.yaml sops/torment.yaml; do \
+    cd ../nix-secrets && for file in sops/*.yaml; do \
+        # Skip chezmoi.yaml (handled separately with user age key)
+        if [[ "$(basename "$file")" == "chezmoi.yaml" ]]; then continue; fi; \
         echo "     Rekeying $file..."; \
         sops updatekeys -y "$file"; \
     done
