@@ -57,7 +57,7 @@
       # Deploy chezmoi config from SOPS
       CHEZMOI_CONFIG_DIR="${config.home.homeDirectory}/.config/chezmoi"
       CHEZMOI_CONFIG_FILE="$CHEZMOI_CONFIG_DIR/chezmoi.yaml"
-      SOPS_CHEZMOI_FILE="${config.home.homeDirectory}/../nix-secrets/sops/chezmoi.yaml"
+      SOPS_CHEZMOI_FILE="/root/nix-secrets/sops/chezmoi.yaml"
 
       if [ -f "$SOPS_CHEZMOI_FILE" ]; then
         echo "Deploying chezmoi config from SOPS..."
