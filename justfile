@@ -298,10 +298,10 @@ install HOST:
         TEMP_DIR=$(mktemp -d)
         ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-config-deploy" -N "" -C "{{HOST}}-nix-config-deploy" -q
         ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-secrets-deploy" -N "" -C "{{HOST}}-nix-secrets-deploy" -q
-        echo "📋 Add these keys to GitHub:"
-        echo "1. nix-config: $(cat $TEMP_DIR/nix-config-deploy.pub)"
-        echo "2. nix-secrets: $(cat $TEMP_DIR/nix-secrets-deploy.pub)"
-        read -p "Press Enter after adding..."
+        echo "   Adding deploy keys to GitHub..."
+        gh repo deploy-key add "$TEMP_DIR/nix-config-deploy.pub" -R fullstopslash/snowflake -t "{{HOST}}-nix-config-deploy"
+        gh repo deploy-key add "$TEMP_DIR/nix-secrets-deploy.pub" -R fullstopslash/snowflake-secrets -t "{{HOST}}-nix-secrets-deploy"
+        echo "   ✅ Deploy keys added to GitHub"
         cd ../nix-secrets && TEMP_JSON=$(mktemp) && \
         yq -n '.["deploy-keys"]["nix-config"] = load_str(env(NIX_CONFIG_KEY)) | .["deploy-keys"]["nix-secrets"] = load_str(env(NIX_SECRETS_KEY))' \
           NIX_CONFIG_KEY="$TEMP_DIR/nix-config-deploy" NIX_SECRETS_KEY="$TEMP_DIR/nix-secrets-deploy" -o=json > "$TEMP_JSON" && \
@@ -319,16 +319,11 @@ install HOST:
     scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$TEMP_KEY_SECRETS" root@{{HOST}}.local:/root/.ssh/nix-secrets-deploy
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@{{HOST}}.local \
         "chmod 600 ~/.ssh/*-deploy && \
-         echo 'Host github.com-nix-config' > ~/.ssh/config && \
-         echo '    HostName github.com' >> ~/.ssh/config && \
-         echo '    User git' >> ~/.ssh/config && \
-         echo '    IdentityFile ~/.ssh/nix-config-deploy' >> ~/.ssh/config && \
-         echo '    StrictHostKeyChecking no' >> ~/.ssh/config && \
-         echo '' >> ~/.ssh/config && \
-         echo 'Host github.com-nix-secrets' >> ~/.ssh/config && \
+         echo 'Host github.com' > ~/.ssh/config && \
          echo '    HostName github.com' >> ~/.ssh/config && \
          echo '    User git' >> ~/.ssh/config && \
          echo '    IdentityFile ~/.ssh/nix-secrets-deploy' >> ~/.ssh/config && \
+         echo '    IdentitiesOnly yes' >> ~/.ssh/config && \
          echo '    StrictHostKeyChecking no' >> ~/.ssh/config && \
          chmod 600 ~/.ssh/config"
 
@@ -347,16 +342,11 @@ install HOST:
          cp /root/.ssh/nix-config-deploy \$USER_HOME/.ssh/ && \
          cp /root/.ssh/nix-secrets-deploy \$USER_HOME/.ssh/ && \
          cat > \$USER_HOME/.ssh/config <<'EOF'
-Host github.com-nix-config
-    HostName github.com
-    User git
-    IdentityFile ~/.ssh/nix-config-deploy
-    StrictHostKeyChecking no
-
-Host github.com-nix-secrets
+Host github.com
     HostName github.com
     User git
     IdentityFile ~/.ssh/nix-secrets-deploy
+    IdentitiesOnly yes
     StrictHostKeyChecking no
 EOF
          chmod 600 \$USER_HOME/.ssh/nix-config-deploy \$USER_HOME/.ssh/nix-secrets-deploy \$USER_HOME/.ssh/config && \
@@ -589,18 +579,17 @@ vm-fresh HOST=DEFAULT_VM_HOST:
         ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-config-deploy" -N "" -C "{{HOST}}-nix-config-deploy" -q
         ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-secrets-deploy" -N "" -C "{{HOST}}-nix-secrets-deploy" -q
 
-        echo ""
-        echo "📋 Add these deploy keys to GitHub (read-only):"
-        echo ""
-        echo "1. nix-config repo (fullstopslash/snowflake):"
-        cat "$TEMP_DIR/nix-config-deploy.pub"
-        echo ""
-        echo "2. nix-secrets repo (fullstopslash/snowflake-secrets):"
-        cat "$TEMP_DIR/nix-secrets-deploy.pub"
-        echo ""
-        echo "Go to: Repo Settings → Deploy keys → Add deploy key"
-        echo ""
-        read -p "Press Enter after adding deploy keys to GitHub..."
+        # Automatically add deploy keys to GitHub using gh CLI
+        echo "   Adding deploy keys to GitHub repositories..."
+        gh repo deploy-key add "$TEMP_DIR/nix-config-deploy.pub" \
+            -R fullstopslash/snowflake \
+            -t "{{HOST}}-nix-config-deploy"
+
+        gh repo deploy-key add "$TEMP_DIR/nix-secrets-deploy.pub" \
+            -R fullstopslash/snowflake-secrets \
+            -t "{{HOST}}-nix-secrets-deploy"
+
+        echo "   ✅ Deploy keys added to GitHub"
 
         # Store private keys in host-specific SOPS file
         echo "   Storing deploy keys in sops/{{HOST}}.yaml..."
@@ -646,16 +635,11 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     # Create SSH config on remote using echo (avoids just heredoc parsing)
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 "
         chmod 600 /root/.ssh/nix-config-deploy /root/.ssh/nix-secrets-deploy
-        echo 'Host github.com-nix-config' > /root/.ssh/config
-        echo '    HostName github.com' >> /root/.ssh/config
-        echo '    User git' >> /root/.ssh/config
-        echo '    IdentityFile ~/.ssh/nix-config-deploy' >> /root/.ssh/config
-        echo '    StrictHostKeyChecking no' >> /root/.ssh/config
-        echo '' >> /root/.ssh/config
-        echo 'Host github.com-nix-secrets' >> /root/.ssh/config
+        echo 'Host github.com' > /root/.ssh/config
         echo '    HostName github.com' >> /root/.ssh/config
         echo '    User git' >> /root/.ssh/config
         echo '    IdentityFile ~/.ssh/nix-secrets-deploy' >> /root/.ssh/config
+        echo '    IdentitiesOnly yes' >> /root/.ssh/config
         echo '    StrictHostKeyChecking no' >> /root/.ssh/config
         chmod 600 /root/.ssh/config
     "
@@ -677,16 +661,11 @@ vm-fresh HOST=DEFAULT_VM_HOST:
          cp /root/.ssh/nix-config-deploy \$USER_HOME/.ssh/ && \
          cp /root/.ssh/nix-secrets-deploy \$USER_HOME/.ssh/ && \
          cat > \$USER_HOME/.ssh/config <<'EOF'
-Host github.com-nix-config
-    HostName github.com
-    User git
-    IdentityFile ~/.ssh/nix-config-deploy
-    StrictHostKeyChecking no
-
-Host github.com-nix-secrets
+Host github.com
     HostName github.com
     User git
     IdentityFile ~/.ssh/nix-secrets-deploy
+    IdentitiesOnly yes
     StrictHostKeyChecking no
 EOF
          chmod 600 \$USER_HOME/.ssh/nix-config-deploy \$USER_HOME/.ssh/nix-secrets-deploy \$USER_HOME/.ssh/config && \
