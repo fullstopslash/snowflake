@@ -300,11 +300,11 @@ in
 
         "chezmoi-config" = {
           sopsFile = "${sopsFolder}/chezmoi.yaml";
-          format = "yaml";
+          format = "binary";  # Deploy entire decrypted file as-is
           path = "${primaryUser.home}/.config/chezmoi/chezmoi.yaml";
           owner = primaryUser.name;
           mode = "0400";
-          # Deploys entire chezmoi.yaml config with template variables
+          # Deploys entire decrypted chezmoi.yaml file with template variables
         };
       };
   };
