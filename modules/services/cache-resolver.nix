@@ -45,13 +45,21 @@ let
     fi
 
     # Method 2: DNS lookup (for networks with proper DNS)
+    # Retry DNS resolution up to 5 times with 2-second delays
     if [ -z "$WATERBUG_IP" ]; then
       log "Attempting DNS resolution for waterbug.lan..."
-      if WATERBUG_IP=$(${pkgs.glibc.bin}/bin/getent hosts waterbug.lan 2>/dev/null | ${pkgs.gawk}/bin/awk '{print $1}' | head -1); then
-        if [ -n "$WATERBUG_IP" ]; then
-          log "DNS resolved waterbug.lan -> $WATERBUG_IP"
+      for attempt in {1..5}; do
+        if WATERBUG_IP=$(${pkgs.glibc.bin}/bin/getent hosts waterbug.lan 2>/dev/null | ${pkgs.gawk}/bin/awk '{print $1}' | head -1); then
+          if [ -n "$WATERBUG_IP" ]; then
+            log "DNS resolved waterbug.lan -> $WATERBUG_IP (attempt $attempt)"
+            break
+          fi
         fi
-      fi
+        if [ $attempt -lt 5 ]; then
+          log "DNS resolution failed, retrying in 2s (attempt $attempt/5)..."
+          sleep 2
+        fi
+      done
     fi
 
     # Method 3: mDNS/Avahi query (fallback to .local)
@@ -125,7 +133,7 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
         ExecStart = "${resolverScript}";
-        TimeoutStartSec = "10s"; # Fast fail if cache unavailable
+        TimeoutStartSec = "30s"; # Allow time for DNS retries
         Restart = "on-failure";
         RestartSec = "5s";
 
