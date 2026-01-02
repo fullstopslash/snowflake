@@ -364,7 +364,7 @@
     # Private secrets repo.  See ./docs/secretsmgmt.md
     # Authenticate via ssh and use shallow clone
     nix-secrets = {
-      url = "git+ssh://git@github.com/fullstopslash/snowflake-secrets.git?ref=simple&shallow=1";
+      url = "git+ssh://git@github.com/fullstopslash/snowflake-secrets.git?ref=main&shallow=1";
       inputs = { };
     };
     nix-assets = {

@@ -5,7 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     disko.url = "github:nix-community/disko"; # Declarative partitioning and formatting
     nix-secrets = {
-      url = "git+https://github.com/fullstopslash/snowflake-secrets.git?ref=simple&shallow=1";
+      url = "git+https://github.com/fullstopslash/snowflake-secrets.git?ref=main&shallow=1";
       inputs = { };
     };
   };
