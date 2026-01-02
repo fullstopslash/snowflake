@@ -1,24 +1,14 @@
 {
   config,
   pkgs,
-  lib,
   ...
 }:
-let
-  sopsFolder = "${config.home.homeDirectory}/../nix-secrets/sops";
-in
 {
   # Install chezmoi
   home.packages = [ pkgs.chezmoi ];
 
-  # Chezmoi config managed via SOPS
-  # Configuration includes template variables (email, name, etc.) and is deployed from nix-secrets
-  sops.secrets."chezmoi-config" = lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
-    sopsFile = "${sopsFolder}/chezmoi.yaml";
-    format = "yaml";
-    path = "${config.home.homeDirectory}/.config/chezmoi/chezmoi.yaml";
-    mode = "0400";
-  };
+  # Chezmoi config managed via SOPS (deployed at NixOS level in chezmoi-sync.nix)
+  # Configuration includes template variables (email, name, etc.)
 
   # Ensure .ssh directory exists with correct permissions
   home.file.".ssh/.keep".text = "";
