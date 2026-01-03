@@ -2,23 +2,16 @@
 #
 # Compatible with Atuin 18.10.0+
 #
-# Provides socket-activated daemon, auto-login, and maintenance services for Atuin.
-# Includes sops secrets for credentials - enabled when module is enabled.
-#
-# Key Management Strategy:
-# - This module uses sops-nix to manage the encryption key (stored as a secret)
-# - Alternative approach: Let Atuin auto-generate the key on first login (see Atuin 18.10+ docs)
-# - The sops approach allows key sharing across machines and backup/recovery
+# Provides socket-activated daemon, auto-login, and shell integration for Atuin.
+# Uses Atuin 18.10+ auto-generated encryption keys (simpler than managing keys via SOPS).
 #
 # Services:
-# - atuin-autologin: Logs in and syncs on startup/rebuild
-# - atuin-maintenance: Daily cleanup tasks (prune, sync, verify)
+# - atuin-autologin (user): Logs in and syncs on user session start
 # - atuin-daemon (user): Socket-activated background daemon
 #
 # Shell integration:
-# - Adds `eval "$(atuin init zsh)"` to /etc/zshrc for all shells (including non-interactive)
-# - Works even when home-manager's zsh is disabled (e.g., chezmoi-managed dotfiles)
-# - Note: shellInit runs for ALL shells; use interactiveShellInit if you only want interactive shells
+# - Adds `eval "$(atuin init zsh --disable-up-arrow)"` to zsh
+# - Binds Down arrow to trigger search
 #
 # Usage:
 #   myModules.services.atuin.enable = true;
@@ -34,14 +27,11 @@ let
   sopsFolder = builtins.toString inputs.nix-secrets + "/sops";
 in
 {
-  # Atuin shell history sync service
-
   config = {
-    # Add atuin to system packages so users can run it from PATH
+    # Add atuin to system packages
     environment.systemPackages = [ pkgs.atuin ];
 
-    # Ensure atuin directories exist with correct ownership before sops-nix creates the key symlink
-    # Without this, sops-nix creates the directory as root and the service can't write to it
+    # Ensure atuin directories exist with correct ownership
     systemd.tmpfiles.rules = [
       "d /home/${primaryUser}/.local 0755 ${primaryUser} users -"
       "d /home/${primaryUser}/.local/share 0755 ${primaryUser} users -"
@@ -50,259 +40,66 @@ in
       "d /home/${primaryUser}/.config/atuin 0755 ${primaryUser} users -"
     ];
 
-    # Sops secrets for atuin credentials
-    sops.secrets = {
-      "atuin/username" = {
-        sopsFile = "${sopsFolder}/shared.yaml";
-        owner = primaryUser;
-        mode = "0400";
-      };
-      "atuin/password" = {
-        sopsFile = "${sopsFolder}/shared.yaml";
-        owner = primaryUser;
-        mode = "0400";
-      };
-      # Encryption key - managed via sops for backup/recovery and multi-machine sync
-      # Atuin 18.10+ can auto-generate keys, but sops management allows:
-      #   - Key backup and recovery
-      #   - Consistent key across multiple machines (same encrypted history)
-      #   - Explicit key management instead of implicit generation
-      "atuin/key" = {
-        sopsFile = "${sopsFolder}/shared.yaml";
-        owner = primaryUser;
-        path = "/home/${primaryUser}/.local/share/atuin/key";
-        mode = "0400";
-      };
-      # Sync server address - used by autologin service
-      "atuin/sync_address" = {
-        sopsFile = "${sopsFolder}/shared.yaml";
-        owner = primaryUser;
-        mode = "0400";
-      };
+    # Sops secrets for atuin credentials - write to user config directory
+    sops.secrets."atuin/username" = {
+      sopsFile = "${sopsFolder}/shared.yaml";
+      path = "/home/${primaryUser}/.config/atuin/.username";
+      owner = primaryUser;
+      group = "users";
+      mode = "0600";
     };
 
-    # System-level shell integration for zsh (Atuin 18.10.0+ compatible)
-    # Uses shellInit (not interactiveShellInit) so it runs for ALL shells including SSH commands
-    # This adds to /etc/zshrc, works even when HM's zsh is disabled (chezmoi users)
-    # Note: If you only want interactive shells, change to programs.zsh.interactiveShellInit
-    programs.zsh.shellInit = ''
-      eval "$(${pkgs.atuin}/bin/atuin init zsh)"
+    sops.secrets."atuin/password" = {
+      sopsFile = "${sopsFolder}/shared.yaml";
+      path = "/home/${primaryUser}/.config/atuin/.password";
+      owner = primaryUser;
+      group = "users";
+      mode = "0600";
+    };
+
+    # Shell integration for zsh (Atuin 18.10.0+ compatible)
+    programs.zsh.interactiveShellInit = ''
+      # Initialize Atuin for zsh and disable stealing the Up arrow
+      if command -v atuin >/dev/null 2>&1; then
+        eval "$(atuin init zsh --disable-up-arrow)"
+        # Bind Down arrow to trigger search (works well with invert)
+        bindkey "$key[Down]" atuin-up-search
+      fi
     '';
 
-    # System service to auto-login to Atuin and sync
-    # Runs at boot, on rebuilds, and periodically via timer for self-healing
-    systemd.services."atuin-autologin" = {
+    # User service to auto-login to Atuin and sync
+    # Runs when user session starts
+    systemd.user.services."atuin-autologin" = {
       description = "Atuin auto-login and initial sync";
-      wantedBy = [ "multi-user.target" ];
-      after = [
-        "network-online.target"
-        "sops-nix.service"
-        "systemd-tmpfiles-setup.service"
-        "tailscaled.service"
-        "nss-lookup.target"
-      ];
-      wants = [
-        "network-online.target"
-        "tailscaled.service"
-        "nss-lookup.target"
-      ];
+      wantedBy = [ "default.target" ];
+      after = [ "network-online.target" ];
       serviceConfig = {
         Type = "oneshot";
-        User = primaryUser;
-        Group = "users";
-        RemainAfterExit = true;
-        # Restart on failure with exponential backoff
-        Restart = "on-failure";
-        RestartSec = "30s";
       };
       script = ''
-        set -eu
-        echo "Starting Atuin auto-login..."
-
-        HOME="/home/${primaryUser}"
-        export HOME
-
-        # Ensure directories exist
         mkdir -p "$HOME/.config/atuin" "$HOME/.local/share/atuin"
-        ATUIN_BIN="${pkgs.atuin}/bin/atuin"
-        KEY_FILE="$HOME/.local/share/atuin/key"
-        CONFIG_FILE="$HOME/.config/atuin/config.toml"
-        # Credentials are in /run/secrets (secure tmpfs)
-        USERNAME_FILE="/run/secrets/atuin/username"
-        PASSWORD_FILE="/run/secrets/atuin/password"
-        SYNC_ADDRESS_FILE="/run/secrets/atuin/sync_address"
+        ATUIN_BIN="$(command -v atuin)" || exit 0
+        USERNAME_FILE="$HOME/.config/atuin/.username"
+        PASSWORD_FILE="$HOME/.config/atuin/.password"
         SESSION_FILE="$HOME/.local/share/atuin/session"
 
-        # Check for required SOPS-provided files
-        if [ ! -f "$USERNAME_FILE" ]; then
-          echo "Username not found at $USERNAME_FILE (SOPS secret not deployed yet)"
-          exit 1  # Exit with error to trigger retry
-        fi
-        if [ ! -f "$PASSWORD_FILE" ]; then
-          echo "Password not found at $PASSWORD_FILE (SOPS secret not deployed yet)"
-          exit 1
-        fi
-        if [ ! -f "$KEY_FILE" ] || [ ! -s "$KEY_FILE" ]; then
-          echo "Key not found or empty at $KEY_FILE (SOPS secret not deployed yet)"
-          exit 1
-        fi
-        if [ ! -f "$SYNC_ADDRESS_FILE" ]; then
-          echo "Sync address not found at $SYNC_ADDRESS_FILE (SOPS secret not deployed yet)"
-          exit 1
-        fi
-
-        # Ensure sync_address is set in config.toml
-        SYNC_ADDRESS=$(cat "$SYNC_ADDRESS_FILE")
-        if [ -f "$CONFIG_FILE" ]; then
-          # Update existing config if sync_address is different
-          if grep -q "^sync_address" "$CONFIG_FILE"; then
-            ${pkgs.gnused}/bin/sed -i "s|^sync_address.*|sync_address = \"$SYNC_ADDRESS\"|" "$CONFIG_FILE"
-          else
-            # Add sync_address after the commented line or at the top
-            if grep -q "# sync_address" "$CONFIG_FILE"; then
-              ${pkgs.gnused}/bin/sed -i "/# sync_address/a sync_address = \"$SYNC_ADDRESS\"" "$CONFIG_FILE"
-            else
-              echo "sync_address = \"$SYNC_ADDRESS\"" >> "$CONFIG_FILE"
-            fi
-          fi
-        else
-          # Create minimal config with sync_address
-          echo "sync_address = \"$SYNC_ADDRESS\"" > "$CONFIG_FILE"
-        fi
-        echo "Configured sync_address: $SYNC_ADDRESS"
-
-        # Extract hostname from sync_address URL for DNS check
-        # URL format: http://hostname:port or https://hostname:port
-        SYNC_HOSTNAME=$(echo "$SYNC_ADDRESS" | ${pkgs.gnused}/bin/sed -E 's|^https?://([^:/]+).*|\1|')
-        echo "Extracted hostname for DNS check: $SYNC_HOSTNAME"
-
-        # Wait for DNS resolution with retries (up to 60 seconds)
-        # This ensures Tailscale DNS or local DNS is fully operational
-        echo "Waiting for DNS resolution of $SYNC_HOSTNAME..."
-        MAX_RETRIES=12
-        RETRY_COUNT=0
-        DNS_RESOLVED=false
-
-        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-          if ${pkgs.getent}/bin/getent hosts "$SYNC_HOSTNAME" >/dev/null 2>&1; then
-            echo "DNS resolution successful for $SYNC_HOSTNAME"
-            DNS_RESOLVED=true
-            break
-          else
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-              echo "DNS resolution failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying in 5 seconds..."
-              sleep 5
-            fi
-          fi
-        done
-
-        if [ "$DNS_RESOLVED" = "false" ]; then
-          echo "ERROR: Failed to resolve $SYNC_HOSTNAME after $MAX_RETRIES attempts" 1>&2
-          echo "This may indicate the Atuin server is offline or DNS is misconfigured" 1>&2
-          echo "Service will retry in 30 seconds (configured RestartSec)" 1>&2
-          exit 1
-        fi
-
-        # Check if already logged in with valid session
-        if [ -f "$SESSION_FILE" ]; then
-          echo "Session file exists, checking if valid..."
-          if "$ATUIN_BIN" status 2>&1 | grep -q "logged in"; then
-            echo "Already logged in, syncing..."
-            "$ATUIN_BIN" sync || true
-            exit 0
-          else
-            echo "Session invalid, removing and re-logging in..."
-            rm -f "$SESSION_FILE"
-          fi
-        fi
-
-        USERNAME=$(cat "$USERNAME_FILE")
-        PASSWORD=$(cat "$PASSWORD_FILE")
-        KEY=$(cat "$KEY_FILE")
-
-        echo "Logging in as $USERNAME..."
-        # Atuin 18.10.0+ login syntax (no --server flag, uses sync_address from config.toml)
-        # The -k flag provides the encryption key (managed via sops in this setup)
-        if "$ATUIN_BIN" login -u "$USERNAME" -p "$PASSWORD" -k "$KEY"; then
-          echo "Login successful!"
-          "$ATUIN_BIN" sync
-          echo "Initial sync complete"
-        else
-          echo "Login failed" 1>&2
-          exit 1
+        # If not logged in and credentials exist, attempt login
+        # In Atuin 18.10+, the encryption key is auto-generated on first login
+        # Server is configured in ~/.config/atuin/config.toml
+        if [ ! -f "$SESSION_FILE" ] && [ -f "$USERNAME_FILE" ] && [ -f "$PASSWORD_FILE" ]; then
+          USERNAME=$(cat "$USERNAME_FILE")
+          PASSWORD=$(cat "$PASSWORD_FILE")
+          "$ATUIN_BIN" login -u "$USERNAME" -p "$PASSWORD" || true
+          "$ATUIN_BIN" sync || true
         fi
       '';
     };
 
-    # Daily maintenance service - prune, sync, verify
-    systemd.services."atuin-maintenance" = {
-      description = "Atuin daily maintenance (prune, sync, verify)";
-      after = [
-        "network-online.target"
-        "atuin-autologin.service"
-      ];
-      wants = [ "network-online.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        User = primaryUser;
-        Group = "users";
-      };
-      script = ''
-        set -eu
-        echo "Starting Atuin maintenance..."
-
-        HOME="/home/${primaryUser}"
-        export HOME
-        ATUIN_BIN="${pkgs.atuin}/bin/atuin"
-        SESSION_FILE="$HOME/.local/share/atuin/session"
-
-        # Only run if logged in
-        if [ ! -f "$SESSION_FILE" ]; then
-          echo "Not logged in, skipping maintenance"
-          exit 0
-        fi
-
-        # Prune history matching exclusion filters
-        echo "Pruning history..."
-        "$ATUIN_BIN" history prune || echo "Prune failed (may have no exclusion filters configured)"
-
-        # Sync after prune
-        echo "Syncing..."
-        "$ATUIN_BIN" sync || echo "Sync failed"
-
-        # Verify store integrity
-        echo "Verifying store..."
-        if "$ATUIN_BIN" store verify; then
-          echo "Store verification OK"
-        else
-          echo "Store verification failed - may need attention" >&2
-        fi
-
-        echo "Maintenance complete"
-      '';
-    };
-
-    # Timer for daily maintenance
-    systemd.timers."atuin-maintenance" = {
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnCalendar = "daily"; # Run once per day
-        Persistent = true; # Run immediately if missed (e.g., machine was off)
-        RandomizedDelaySec = "1h"; # Spread load across machines
-        Unit = "atuin-maintenance.service";
-      };
-    };
-
-    # Socket-activated Atuin daemon (Atuin 18.10.0+ compatible)
-    # Note: socket path must match config.toml's daemon.socket_path (chezmoi dotfiles)
-    # Default Atuin path is %t/atuin.sock, but this uses .socket for consistency
-    # Ensure your config.toml has: daemon.socket_path = "~/.local/share/atuin/atuin.socket"
-    # or relies on systemd socket activation with daemon.systemd_socket = true
+    # Socket-activated Atuin daemon (default socket: %t/atuin.sock)
     systemd.user.sockets."atuin-daemon" = {
       wantedBy = [ "sockets.target" ];
       socketConfig = {
-        ListenStream = "%t/atuin.socket";
+        ListenStream = "%t/atuin.sock";
         SocketMode = "0600";
       };
     };
