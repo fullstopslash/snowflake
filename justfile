@@ -469,9 +469,10 @@ _setup-deploy-keys HOST SSH_TARGET PRIMARY_USER:
         yq eval -i ".deploy-keys.nix-secrets = \"$NIX_SECRETS_KEY\"" $TMP_YAML
         yq eval -i ".deploy-keys.chezmoi = \"$CHEZMOI_KEY\"" $TMP_YAML
 
-        # Encrypt and save (use exact target path so SOPS can match creation rules)
-        mv $TMP_YAML sops/{{HOST}}.yaml
-        sops -e -i sops/{{HOST}}.yaml
+        # Encrypt and save (encrypt in root dir then move to sops/ for creation rule matching)
+        mv $TMP_YAML {{HOST}}.yaml
+        sops -e -i {{HOST}}.yaml
+        mv {{HOST}}.yaml sops/{{HOST}}.yaml
 
         # Commit the changes
         source {{justfile_directory()}}/scripts/vcs-helpers.sh
