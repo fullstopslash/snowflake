@@ -207,7 +207,7 @@ _configure-ssh-github HOST SSH_TARGET PRIMARY_USER:
 _clone-repos HOST SSH_TARGET PRIMARY_USER:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "📥 Cloning all repos to {{HOST}}..."
+    echo "📥 Ensuring all repos present on {{HOST}}..."
 
     # Use robust /persist detection
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{SSH_TARGET}} \
@@ -222,24 +222,31 @@ _clone-repos HOST SSH_TARGET PRIMARY_USER:
          fi && \
          mkdir -p \$USER_HOME && \
          cd \$USER_HOME && \
-         rm -rf nix-config nix-secrets .local/share/chezmoi && \
-         echo '→ Cloning nix-config...' && \
-         git clone git@github.com-nix-config:fullstopslash/snowflake.git nix-config && \
-         [ -d nix-config/.git ] || (echo '❌ Failed to clone nix-config' && exit 1) && \
-         echo '→ Cloning nix-secrets...' && \
-         git clone git@github.com-nix-secrets:fullstopslash/snowflake-secrets.git nix-secrets && \
-         [ -d nix-secrets/.git ] || (echo '❌ Failed to clone nix-secrets' && exit 1) && \
-         echo '→ Cloning dotfiles...' && \
-         mkdir -p .local/share && \
-         git clone git@github.com-chezmoi:fullstopslash/dotfiles.git .local/share/chezmoi && \
-         [ -d .local/share/chezmoi/.git ] || (echo '❌ Failed to clone chezmoi' && exit 1) && \
+         \
+         # Check if repos already exist (deployed via EXTRA_FILES) \
+         if [ -d nix-config/.git ] && [ -d nix-secrets/.git ] && [ -d .local/share/chezmoi/.git ]; then \
+             echo '✅ All repos already present (deployed via EXTRA_FILES)'; \
+             echo '   Verified: nix-config/.git exists'; \
+             echo '   Verified: nix-secrets/.git exists'; \
+             echo '   Verified: .local/share/chezmoi/.git exists'; \
+         else \
+             echo '→ Repos not found, cloning from GitHub...'; \
+             rm -rf nix-config nix-secrets .local/share/chezmoi && \
+             echo '→ Cloning nix-config...' && \
+             git clone git@github.com-nix-config:fullstopslash/snowflake.git nix-config && \
+             [ -d nix-config/.git ] || (echo '❌ Failed to clone nix-config' && exit 1) && \
+             echo '→ Cloning nix-secrets...' && \
+             git clone git@github.com-nix-secrets:fullstopslash/snowflake-secrets.git nix-secrets && \
+             [ -d nix-secrets/.git ] || (echo '❌ Failed to clone nix-secrets' && exit 1) && \
+             echo '→ Cloning dotfiles...' && \
+             mkdir -p .local/share && \
+             git clone git@github.com-chezmoi:fullstopslash/dotfiles.git .local/share/chezmoi && \
+             [ -d .local/share/chezmoi/.git ] || (echo '❌ Failed to clone chezmoi' && exit 1) && \
+             echo '✅ All repos cloned successfully to '\$USER_HOME; \
+         fi && \
          USER_ID=\$(id -u {{PRIMARY_USER}} 2>/dev/null || echo 1000) && \
          GROUP_ID=\$(id -g {{PRIMARY_USER}} 2>/dev/null || echo 100) && \
-         chown -R \$USER_ID:\$GROUP_ID \$USER_HOME && \
-         echo '✅ All repos cloned successfully to '\$USER_HOME && \
-         echo '   Verified: nix-config/.git exists' && \
-         echo '   Verified: nix-secrets/.git exists' && \
-         echo '   Verified: .local/share/chezmoi/.git exists'"
+         chown -R \$USER_ID:\$GROUP_ID \$USER_HOME"
 
 # Helper: Setup SOPS keys (auto-extract, update .sops.yaml, rekey)
 _setup-sops-keys HOST AGE_PUBKEY USER_AGE_PUBKEY PRIMARY_USER:
@@ -362,34 +369,43 @@ Host github.com-chezmoi
 SSHEOF
     chmod 600 "$ROOT_SSH/config"
 
-    # Step 3: Clone repos to user home
-    echo "   Cloning repos to deployment directory..."
+    # Step 3: Copy repos to user home (if available locally)
+    echo "   Copying repos to deployment directory (if available)..."
     mkdir -p "$USER_HOME"
 
-    # Clone from local repos if they exist, otherwise from GitHub
+    REPOS_COPIED=0
+
+    # Copy from local repos if they exist
     if [ -d "$HOME/nix-config/.git" ]; then
         cp -r "$HOME/nix-config" "$USER_HOME/nix-config"
+        echo "   ✓ Copied nix-config"
+        REPOS_COPIED=$((REPOS_COPIED + 1))
     else
-        echo "❌ nix-config repo not found at $HOME/nix-config"
-        exit 1
+        echo "   ⚠ nix-config repo not found locally at $HOME/nix-config (will clone via SSH)"
     fi
 
     if [ -d "$HOME/nix-secrets/.git" ]; then
         cp -r "$HOME/nix-secrets" "$USER_HOME/nix-secrets"
+        echo "   ✓ Copied nix-secrets"
+        REPOS_COPIED=$((REPOS_COPIED + 1))
     else
-        echo "❌ nix-secrets repo not found at $HOME/nix-secrets"
-        exit 1
+        echo "   ⚠ nix-secrets repo not found locally at $HOME/nix-secrets (will clone via SSH)"
     fi
 
     if [ -d "$HOME/.local/share/chezmoi/.git" ]; then
         mkdir -p "$USER_HOME/.local/share"
         cp -r "$HOME/.local/share/chezmoi" "$USER_HOME/.local/share/chezmoi"
+        echo "   ✓ Copied chezmoi"
+        REPOS_COPIED=$((REPOS_COPIED + 1))
     else
-        echo "❌ chezmoi repo not found at $HOME/.local/share/chezmoi"
-        exit 1
+        echo "   ⚠ chezmoi repo not found locally at $HOME/.local/share/chezmoi (will clone via SSH)"
     fi
 
-    echo "   ✅ Repos and deploy keys prepared for deployment"
+    if [ "$REPOS_COPIED" -eq 3 ]; then
+        echo "   ✅ All 3 repos and deploy keys prepared for deployment"
+    else
+        echo "   ✅ Deploy keys prepared; $REPOS_COPIED/3 repos copied (others will be cloned via SSH)"
+    fi
 
 # Helper: Setup and deploy GitHub deploy keys
 _setup-deploy-keys HOST SSH_TARGET PRIMARY_USER:
