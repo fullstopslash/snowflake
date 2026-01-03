@@ -770,8 +770,9 @@ vm-fresh HOST=DEFAULT_VM_HOST:
 
     # Step 4.1: Commit flake.lock so nixos-anywhere uses correct nix-secrets
     echo "📝 Committing flake.lock update..."
-    git add flake.lock
-    git commit -m "chore({{HOST}}): update nix-secrets after key registration" || true
+    source {{justfile_directory()}}/scripts/vcs-helpers.sh
+    vcs_add flake.lock
+    vcs_commit "chore({{HOST}}): update nix-secrets after key registration" || true
 
     # Step 4.5: Get disk encryption password from SOPS
     echo "🔑 Retrieving disk encryption password from SOPS..."
