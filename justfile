@@ -274,6 +274,123 @@ _setup-sops-keys HOST AGE_PUBKEY USER_AGE_PUBKEY PRIMARY_USER:
 
     echo "   ✅ SOPS keys registered and secrets rekeyed"
 
+# Helper: Prepare repos and deploy keys for EXTRA_FILES deployment
+_prepare-repos-for-deploy HOST EXTRA_FILES_DIR PRIMARY_USER:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Preparing repos and deploy keys for deployment..."
+
+    # Determine if host uses /persist
+    if grep -q "btrfs-luks-impermanence\|bcachefs.*encryption" hosts/{{HOST}}/default.nix 2>/dev/null; then
+        USER_HOME="$EXTRA_FILES_DIR/persist/home/{{PRIMARY_USER}}"
+        ROOT_SSH="$EXTRA_FILES_DIR/persist/root/.ssh"
+    else
+        USER_HOME="$EXTRA_FILES_DIR/home/{{PRIMARY_USER}}"
+        ROOT_SSH="$EXTRA_FILES_DIR/root/.ssh"
+    fi
+
+    # Step 1: Generate or extract deploy keys
+    cd ../nix-secrets
+    DEPLOY_KEY_EXISTS=$(sops -d sops/{{HOST}}.yaml 2>/dev/null | grep -c "deploy-keys:" || echo "0")
+
+    if [ "$DEPLOY_KEY_EXISTS" -eq "0" ]; then
+        echo "   Generating new deploy keys..."
+        TEMP_DIR=$(mktemp -d)
+        ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-config-deploy" -N "" -C "{{HOST}}-nix-config-deploy" -q
+        ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-secrets-deploy" -N "" -C "{{HOST}}-nix-secrets-deploy" -q
+        ssh-keygen -t ed25519 -f "$TEMP_DIR/chezmoi-deploy" -N "" -C "{{HOST}}-chezmoi-deploy" -q
+
+        echo "   Adding deploy keys to GitHub..."
+        gh repo deploy-key add "$TEMP_DIR/nix-config-deploy.pub" -R fullstopslash/snowflake -t "{{HOST}}-nix-config-deploy" 2>/dev/null || echo "   (Key may already exist)"
+        gh repo deploy-key add "$TEMP_DIR/nix-secrets-deploy.pub" -R fullstopslash/snowflake-secrets -t "{{HOST}}-nix-secrets-deploy" 2>/dev/null || echo "   (Key may already exist)"
+        gh repo deploy-key add "$TEMP_DIR/chezmoi-deploy.pub" -R fullstopslash/dotfiles -t "{{HOST}}-chezmoi-deploy" 2>/dev/null || echo "   (Key may already exist)"
+
+        # Store in SOPS
+        TMP_YAML=$(mktemp)
+        sops -d sops/{{HOST}}.yaml | yq 'del(.sops)' > $TMP_YAML
+        if ! yq eval '.deploy-keys' $TMP_YAML > /dev/null 2>&1; then
+            yq eval -i '.deploy-keys = {}' $TMP_YAML
+        fi
+        NIX_CONFIG_KEY=$(cat "$TEMP_DIR/nix-config-deploy")
+        NIX_SECRETS_KEY=$(cat "$TEMP_DIR/nix-secrets-deploy")
+        CHEZMOI_KEY=$(cat "$TEMP_DIR/chezmoi-deploy")
+        yq eval -i ".deploy-keys.nix-config = \"$NIX_CONFIG_KEY\"" $TMP_YAML
+        yq eval -i ".deploy-keys.nix-secrets = \"$NIX_SECRETS_KEY\"" $TMP_YAML
+        yq eval -i ".deploy-keys.chezmoi = \"$CHEZMOI_KEY\"" $TMP_YAML
+        sops -e $TMP_YAML > sops/{{HOST}}.yaml.new
+        mv sops/{{HOST}}.yaml.new sops/{{HOST}}.yaml
+        rm $TMP_YAML
+
+        # Copy to deploy directories
+        mkdir -p "$ROOT_SSH"
+        cp "$TEMP_DIR/nix-config-deploy" "$ROOT_SSH/nix-config-deploy"
+        cp "$TEMP_DIR/nix-secrets-deploy" "$ROOT_SSH/nix-secrets-deploy"
+        cp "$TEMP_DIR/chezmoi-deploy" "$ROOT_SSH/chezmoi-deploy"
+        chmod 600 "$ROOT_SSH"/*-deploy
+
+        rm -rf "$TEMP_DIR"
+    else
+        echo "   Extracting existing deploy keys from SOPS..."
+        mkdir -p "$ROOT_SSH"
+        sops -d --extract '["deploy-keys"]["nix-config"]' sops/{{HOST}}.yaml > "$ROOT_SSH/nix-config-deploy"
+        sops -d --extract '["deploy-keys"]["nix-secrets"]' sops/{{HOST}}.yaml > "$ROOT_SSH/nix-secrets-deploy"
+        sops -d --extract '["deploy-keys"]["chezmoi"]' sops/{{HOST}}.yaml > "$ROOT_SSH/chezmoi-deploy"
+        chmod 600 "$ROOT_SSH"/*-deploy
+    fi
+    cd {{justfile_directory()}}
+
+    # Step 2: Configure SSH for GitHub with per-repo aliases
+    echo "   Configuring SSH for GitHub..."
+    cat > "$ROOT_SSH/config" <<'SSHEOF'
+Host github.com-nix-config
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/nix-config-deploy
+    StrictHostKeyChecking no
+
+Host github.com-nix-secrets
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/nix-secrets-deploy
+    StrictHostKeyChecking no
+
+Host github.com-chezmoi
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/chezmoi-deploy
+    StrictHostKeyChecking no
+SSHEOF
+    chmod 600 "$ROOT_SSH/config"
+
+    # Step 3: Clone repos to user home
+    echo "   Cloning repos to deployment directory..."
+    mkdir -p "$USER_HOME"
+
+    # Clone from local repos if they exist, otherwise from GitHub
+    if [ -d "$HOME/nix-config/.git" ]; then
+        cp -r "$HOME/nix-config" "$USER_HOME/nix-config"
+    else
+        echo "❌ nix-config repo not found at $HOME/nix-config"
+        exit 1
+    fi
+
+    if [ -d "$HOME/nix-secrets/.git" ]; then
+        cp -r "$HOME/nix-secrets" "$USER_HOME/nix-secrets"
+    else
+        echo "❌ nix-secrets repo not found at $HOME/nix-secrets"
+        exit 1
+    fi
+
+    if [ -d "$HOME/.local/share/chezmoi/.git" ]; then
+        mkdir -p "$USER_HOME/.local/share"
+        cp -r "$HOME/.local/share/chezmoi" "$USER_HOME/.local/share/chezmoi"
+    else
+        echo "❌ chezmoi repo not found at $HOME/.local/share/chezmoi"
+        exit 1
+    fi
+
+    echo "   ✅ Repos and deploy keys prepared for deployment"
+
 # Helper: Setup and deploy GitHub deploy keys
 _setup-deploy-keys HOST SSH_TARGET PRIMARY_USER:
     #!/usr/bin/env bash
@@ -486,7 +603,10 @@ install HOST:
     # Step 3: Register age key in nix-secrets and rekey
     just _setup-sops-keys {{HOST}} "$AGE_PUBKEY" "$USER_AGE_PUBKEY" "$PRIMARY_USER"
 
-    # Step 4: Update local flake.lock to get rekeyed secrets and initrd key
+    # Step 4: Prepare repos and deploy keys for deployment
+    just _prepare-repos-for-deploy {{HOST}} "$EXTRA_FILES" "$PRIMARY_USER"
+
+    # Step 5: Update local flake.lock to get rekeyed secrets and initrd key
     echo "📥 Updating local nix-secrets flake input..."
     nix flake update nix-secrets
 
@@ -677,6 +797,9 @@ vm-fresh HOST=DEFAULT_VM_HOST:
         (vcs_commit "chore: register {{HOST}} age key and rekey secrets" || true) && \
         vcs_push
     cd "{{justfile_directory()}}"
+
+    # Step 3.75: Prepare repos and deploy keys for deployment
+    just _prepare-repos-for-deploy {{HOST}} "$EXTRA_FILES" "$PRIMARY_USER"
 
     # Step 4: Update local flake.lock to get rekeyed secrets and initrd key
     echo "📥 Updating local nix-secrets flake input..."
