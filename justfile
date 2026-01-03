@@ -298,8 +298,10 @@ _prepare-repos-for-deploy HOST EXTRA_FILES_DIR PRIMARY_USER:
 
     # Step 1: Generate or extract deploy keys
     cd ../nix-secrets
-    # Check if deploy keys actually exist by trying to extract one
-    if sops -d --extract '["deploy-keys"]["nix-config"]' sops/{{HOST}}.yaml >/dev/null 2>&1; then
+    # Check if ALL THREE deploy keys exist
+    if sops -d --extract '["deploy-keys"]["nix-config"]' sops/{{HOST}}.yaml >/dev/null 2>&1 && \
+       sops -d --extract '["deploy-keys"]["nix-secrets"]' sops/{{HOST}}.yaml >/dev/null 2>&1 && \
+       sops -d --extract '["deploy-keys"]["chezmoi"]' sops/{{HOST}}.yaml >/dev/null 2>&1; then
         DEPLOY_KEY_EXISTS=1
     else
         DEPLOY_KEY_EXISTS=0
