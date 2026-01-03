@@ -348,25 +348,25 @@ _prepare-repos-for-deploy HOST EXTRA_FILES_DIR PRIMARY_USER:
 
     # Step 2: Configure SSH for GitHub with per-repo aliases
     echo "   Configuring SSH for GitHub..."
-    cat > "$ROOT_SSH/config" <<'SSHEOF'
-Host github.com-nix-config
-    HostName github.com
-    User git
-    IdentityFile ~/.ssh/nix-config-deploy
-    StrictHostKeyChecking no
-
-Host github.com-nix-secrets
-    HostName github.com
-    User git
-    IdentityFile ~/.ssh/nix-secrets-deploy
-    StrictHostKeyChecking no
-
-Host github.com-chezmoi
-    HostName github.com
-    User git
-    IdentityFile ~/.ssh/chezmoi-deploy
-    StrictHostKeyChecking no
-SSHEOF
+    printf '%s\n' \
+        'Host github.com-nix-config' \
+        '    HostName github.com' \
+        '    User git' \
+        '    IdentityFile ~/.ssh/nix-config-deploy' \
+        '    StrictHostKeyChecking no' \
+        '' \
+        'Host github.com-nix-secrets' \
+        '    HostName github.com' \
+        '    User git' \
+        '    IdentityFile ~/.ssh/nix-secrets-deploy' \
+        '    StrictHostKeyChecking no' \
+        '' \
+        'Host github.com-chezmoi' \
+        '    HostName github.com' \
+        '    User git' \
+        '    IdentityFile ~/.ssh/chezmoi-deploy' \
+        '    StrictHostKeyChecking no' \
+        > "$ROOT_SSH/config"
     chmod 600 "$ROOT_SSH/config"
 
     # Step 3: Copy repos to user home (if available locally)
