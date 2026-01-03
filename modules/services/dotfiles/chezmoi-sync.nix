@@ -99,10 +99,10 @@ let
       if ${pkgs.jujutsu}/bin/jj diff --quiet 2>/dev/null; then
         log "No dotfile changes to commit"
       else
-        # Update working copy description with datever format
-        DATEVER=$(${pkgs.coreutils}/bin/date +%Y.%m.%d.%H.%M)
+        # Update working copy description with datever format (YYYY-MM-DD-HHMM)
+        DATEVER=$(${pkgs.coreutils}/bin/date +%Y-%m-%d-%H%M)
         log "Updating commit description with datever: $DATEVER"
-        ${pkgs.jujutsu}/bin/jj describe -m "chore(dotfiles): automated sync $DATEVER"
+        ${pkgs.jujutsu}/bin/jj describe -m "chore(dotfiles): auto-update $DATEVER on $HOSTNAME"
       fi
     ''}
 

@@ -222,10 +222,13 @@ _clone-repos HOST SSH_TARGET PRIMARY_USER:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "📥 Cloning all repos to {{HOST}}..."
+
+    # Use robust /persist detection
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{SSH_TARGET}} \
         "set -e && \
          if [ -d /persist ]; then \
              USER_HOME=/persist/home/{{PRIMARY_USER}} && \
+             mkdir -p /persist/home && \
              echo '→ Encrypted host detected, using /persist/home/{{PRIMARY_USER}}'; \
          else \
              USER_HOME=/home/{{PRIMARY_USER}} && \
@@ -236,13 +239,21 @@ _clone-repos HOST SSH_TARGET PRIMARY_USER:
          rm -rf nix-config nix-secrets .local/share/chezmoi && \
          echo '→ Cloning nix-config...' && \
          git clone git@github.com:fullstopslash/snowflake.git nix-config && \
+         [ -d nix-config/.git ] || (echo '❌ Failed to clone nix-config' && exit 1) && \
          echo '→ Cloning nix-secrets...' && \
          git clone git@github.com:fullstopslash/snowflake-secrets.git nix-secrets && \
+         [ -d nix-secrets/.git ] || (echo '❌ Failed to clone nix-secrets' && exit 1) && \
          echo '→ Cloning dotfiles...' && \
          mkdir -p .local/share && \
          git clone git@github.com:fullstopslash/dotfiles.git .local/share/chezmoi && \
-         chown -R \$(id -u {{PRIMARY_USER}} 2>/dev/null || echo 1000):\$(id -g {{PRIMARY_USER}} 2>/dev/null || echo 1000) \$USER_HOME && \
-         echo '✅ All repos cloned successfully to '\$USER_HOME"
+         [ -d .local/share/chezmoi/.git ] || (echo '❌ Failed to clone chezmoi' && exit 1) && \
+         USER_ID=\$(id -u {{PRIMARY_USER}} 2>/dev/null || echo 1000) && \
+         GROUP_ID=\$(id -g {{PRIMARY_USER}} 2>/dev/null || echo 100) && \
+         chown -R \$USER_ID:\$GROUP_ID \$USER_HOME && \
+         echo '✅ All repos cloned successfully to '\$USER_HOME && \
+         echo '   Verified: nix-config/.git exists' && \
+         echo '   Verified: nix-secrets/.git exists' && \
+         echo '   Verified: .local/share/chezmoi/.git exists'"
 
 # Helper: Setup SOPS keys (auto-extract, update .sops.yaml, rekey)
 _setup-sops-keys HOST AGE_PUBKEY USER_AGE_PUBKEY PRIMARY_USER:
@@ -364,12 +375,17 @@ _fix-age-key-ownership HOST SSH_TARGET PRIMARY_USER:
 _detect-home-dir HOST SSH_TARGET PRIMARY_USER:
     #!/usr/bin/env bash
     set -euo pipefail
-    # Returns /persist/home/$USER or /home/$USER based on /persist existence
+    # Robustly detect encrypted vs regular hosts and return correct persistent home path
+    # Check if user's home is actually at /persist/home (impermanence pattern)
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{SSH_TARGET}} \
-        "if [ -d /persist ]; then \
-             echo '/persist/home/{{PRIMARY_USER}}'; \
+        "set -e && \
+         if [ -d /persist/home/{{PRIMARY_USER}} ] || ([ -d /persist ] && findmnt /home > /dev/null 2>&1); then \
+             USER_HOME=/persist/home/{{PRIMARY_USER}} && \
+             mkdir -p /persist/home && \
+             echo \$USER_HOME; \
          else \
-             echo '/home/{{PRIMARY_USER}}'; \
+             USER_HOME=/home/{{PRIMARY_USER}} && \
+             echo \$USER_HOME; \
          fi"
 
 # ============================================================================

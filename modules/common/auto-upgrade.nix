@@ -286,7 +286,7 @@ in
               CONFIG_DIR="${home}/nix-config"
               SECRETS_DIR="${home}/nix-secrets"
               CHEZMOI_DIR="${home}/.local/share/chezmoi"
-              DATEVER=$(date +%Y.%m.%d.%H.%M)
+              DATEVER=$(date +%Y-%m-%d-%H%M)
               HOSTNAME=$(hostname)
               validation_failed=0
 
@@ -442,7 +442,7 @@ in
                   if [ "$VCS_TYPE" = "jj" ]; then
                     if ! jj diff --quiet 2>/dev/null; then
                       echo "Committing chezmoi changes with datever..."
-                      maybe_run jj describe -m "chore(dotfiles): automated sync $DATEVER"
+                      maybe_run jj describe -m "chore(dotfiles): auto-update $DATEVER on $HOSTNAME"
                     fi
 
                     # Fetch and auto-merge
@@ -498,9 +498,41 @@ in
                 cd "$CONFIG_DIR"
                 if ! maybe_run nix flake update; then
                   echo "Warning: Flake update failed, continuing with current lock"
+                else
+                  # Commit flake.lock changes if they exist
+                  if [ "$VCS_TYPE" = "jj" ]; then
+                    if ! jj diff --quiet 2>/dev/null; then
+                      echo "Committing flake update with conventional commit..."
+                      maybe_run jj describe -m "chore(flake): auto-update $DATEVER on $HOSTNAME"
+                    fi
+                  fi
                 fi
               else
                 echo "Skipping flake update (SKIP_UPDATE=true)"
+              fi
+
+              # Commit nix-config changes from upstream sync (if any)
+              cd "$CONFIG_DIR"
+              if [ "$VCS_TYPE" = "jj" ] && [ "$SKIP_UPSTREAM" = "false" ]; then
+                # Check if we have changes from the sync (excluding flake.lock already committed above)
+                new_commit=$(get_commit "$CONFIG_DIR")
+                if [ "$new_commit" != "$old_commit" ]; then
+                  echo "Nix-config updated from upstream (commit: ''${new_commit:0:12})"
+                fi
+              fi
+
+              # Commit nix-secrets changes from upstream sync (if any)
+              if [ -d "$SECRETS_DIR" ] && [ "$VCS_TYPE" = "jj" ] && [ "$SKIP_UPSTREAM" = "false" ]; then
+                cd "$SECRETS_DIR"
+                new_secrets_commit=$(get_commit "$SECRETS_DIR")
+                if [ "$new_secrets_commit" != "$old_secrets_commit" ]; then
+                  echo "Nix-secrets updated from upstream (commit: ''${new_secrets_commit:0:12})"
+                  # Check if there are local uncommitted changes (e.g., SOPS rekeying)
+                  if ! jj diff --quiet 2>/dev/null; then
+                    echo "Committing nix-secrets changes with conventional commit..."
+                    maybe_run jj describe -m "chore(secrets): auto-update $DATEVER on $HOSTNAME"
+                  fi
+                fi
               fi
 
               ${
