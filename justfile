@@ -308,11 +308,42 @@ _setup-deploy-keys HOST SSH_TARGET PRIMARY_USER:
         gh repo deploy-key add "$TEMP_DIR/nix-secrets-deploy.pub" -R fullstopslash/snowflake-secrets -t "{{HOST}}-nix-secrets-deploy"
         gh repo deploy-key add "$TEMP_DIR/chezmoi-deploy.pub" -R fullstopslash/dotfiles -t "{{HOST}}-chezmoi-deploy"
         echo "   ✅ Deploy keys added to GitHub"
-        cd ../nix-secrets && TEMP_JSON=$(mktemp) && \
-        yq -n '.["deploy-keys"]["nix-config"] = load_str(env(NIX_CONFIG_KEY)) | .["deploy-keys"]["nix-secrets"] = load_str(env(NIX_SECRETS_KEY)) | .["deploy-keys"]["chezmoi"] = load_str(env(CHEZMOI_KEY))' \
-          NIX_CONFIG_KEY="$TEMP_DIR/nix-config-deploy" NIX_SECRETS_KEY="$TEMP_DIR/nix-secrets-deploy" CHEZMOI_KEY="$TEMP_DIR/chezmoi-deploy" -o=json > "$TEMP_JSON" && \
-        sops --set "$(cat $TEMP_JSON)" sops/{{HOST}}.yaml && rm -rf "$TEMP_DIR" "$TEMP_JSON"
+
+        # Store deploy keys in SOPS using decrypt → modify → encrypt approach
+        cd ../nix-secrets
+        TMP_YAML=$(mktemp)
+        sops -d sops/{{HOST}}.yaml | yq 'del(.sops)' > $TMP_YAML
+
+        # Add deploy-keys section if it doesn't exist
+        if ! yq eval '.deploy-keys' $TMP_YAML > /dev/null 2>&1; then
+            yq eval -i '.deploy-keys = {}' $TMP_YAML
+        fi
+
+        # Read the private keys
+        NIX_CONFIG_KEY=$(cat "$TEMP_DIR/nix-config-deploy")
+        NIX_SECRETS_KEY=$(cat "$TEMP_DIR/nix-secrets-deploy")
+        CHEZMOI_KEY=$(cat "$TEMP_DIR/chezmoi-deploy")
+
+        # Use yq to set the keys (with proper multiline handling)
+        yq eval -i ".deploy-keys.nix-config = \"$NIX_CONFIG_KEY\"" $TMP_YAML
+        yq eval -i ".deploy-keys.nix-secrets = \"$NIX_SECRETS_KEY\"" $TMP_YAML
+        yq eval -i ".deploy-keys.chezmoi = \"$CHEZMOI_KEY\"" $TMP_YAML
+
+        # Encrypt and save
+        sops -e $TMP_YAML > sops/{{HOST}}.yaml.new
+        mv sops/{{HOST}}.yaml.new sops/{{HOST}}.yaml
+        rm $TMP_YAML
+
+        # Commit the changes
+        source {{justfile_directory()}}/scripts/vcs-helpers.sh
+        if vcs_has_changes; then
+            vcs_commit "chore(sops): add deploy keys for {{HOST}}\n\nDatever: $(date +%Y-%m-%d-%H%M)"
+            vcs_push
+            echo "   ✅ Deploy keys stored in SOPS and committed"
+        fi
+
         cd {{justfile_directory()}}
+        rm -rf "$TEMP_DIR"
     fi
 
     TEMP_KEY=$(mktemp) && TEMP_KEY_SECRETS=$(mktemp) && TEMP_KEY_CHEZMOI=$(mktemp) && trap "rm -f $TEMP_KEY $TEMP_KEY_SECRETS $TEMP_KEY_CHEZMOI" EXIT
