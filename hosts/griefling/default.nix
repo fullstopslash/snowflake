@@ -44,6 +44,7 @@
   # ========================================
   # Paths mirror filesystem: extraModules.<top>.<category> = [ "<module>" ]
   extraModules.services.security = [ "bitwarden" ];
+  extraModules.services.development = [ "github-repos" ];
 
   # Enable mDNS resolution for .lan domains (resolves waterbug.lan automatically)
   services.avahi = {
