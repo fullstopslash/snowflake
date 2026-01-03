@@ -92,6 +92,8 @@ in
         ConditionPathExists = "!${homeDir}/nix-config/.git";
       };
 
+      path = [ pkgs.git pkgs.openssh ];
+
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
