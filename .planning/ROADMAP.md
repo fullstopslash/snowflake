@@ -577,7 +577,7 @@ Plans:
 ### Phase 31: Install Automation Audit
 **Goal**: Audit and fix NixOS automated installation system to ensure air-tight, flawless, DRY automation
 **Depends on**: Nothing (comprehensive audit phase)
-**Plans**: 8 plans
+**Plans**: 9 plans (8 complete, 1 pending)
 
 Vision: Ensure both `just install` and `just vm-fresh` function identically with zero manual intervention. All core systems (repos, SOPS, services, cache, chezmoi) must provision correctly on fresh installs and persist across reboots. GitOps workflows must create conventional commits with datever for easy audit and rollback.
 
@@ -591,14 +591,15 @@ Core requirements to audit and fix:
 7. **GitOps Quality**: Conventional commits with datever, only commit when changes exist
 
 Plans:
-- [ ] 31-01: Current State Audit (comprehensive baseline, AUDIT-FINDINGS.md creation)
-- [ ] 31-02: SOPS Key Management Automation (auto-extract VM keys, .sops.yaml updates, rekeying)
-- [ ] 31-03: Install Recipe Normalization (DRY helper extraction, eliminate duplication)
-- [ ] 31-04: Deploy Keys & GitHub Auth (gh CLI automation, root+user access, SSH config)
-- [ ] 31-05: Repository Provisioning & Persistence (/persist detection, reboot testing)
-- [ ] 31-06: Core Services Automation (Atuin, Syncthing, Tailscale verification)
-- [ ] 31-07: Chezmoi & Auto-Update Workflows (first-install, pre-update workflow, conventional commits)
+- [x] 31-01: Current State Audit (comprehensive baseline, AUDIT-FINDINGS.md creation)
+- [x] 31-02: SOPS Key Management Automation (auto-extract VM keys, .sops.yaml updates, rekeying)
+- [x] 31-03: Install Recipe Normalization (DRY helper extraction, eliminate duplication)
+- [x] 31-04: Deploy Keys & GitHub Auth (gh CLI automation, root+user access, SSH config)
+- [x] 31-05: Repository Provisioning & Persistence (/persist detection, reboot testing)
+- [x] 31-06: Core Services Automation (Atuin, Syncthing, Tailscale verification)
+- [x] 31-07: Chezmoi & Auto-Update Workflows (first-install, pre-update workflow, conventional commits)
 - [ ] 31-08: Attic Cache & Final Verification (cache-resolver testing, end-to-end validation)
+- [x] 31-09: Debug SSH Key/SOPS/Repo Deployment Flow (fix impermanence detection, age key sync)
 
 Target outcome:
 - Fresh griefling VM install works end-to-end with zero manual steps

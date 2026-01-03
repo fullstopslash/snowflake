@@ -6,6 +6,18 @@
   lib,
   ...
 }:
+let
+  # Detect if this host uses impermanence (has /persist directory)
+  # Must match openssh.nix logic for SSH key location
+  hasOptinPersistence =
+    if config.disks.enable then
+      builtins.match ".*impermanence.*" config.disks.layout != null
+    else
+      false;
+
+  # SSH host key path (must match services.openssh.hostKeys path)
+  sshHostKeyPath = "${lib.optionalString hasOptinPersistence "/persist"}/etc/ssh/ssh_host_ed25519_key";
+in
 {
   options.sops.categories = {
     base = lib.mkOption {
@@ -42,9 +54,8 @@
       age = {
         keyFile = "/var/lib/sops-nix/key.txt";
         # Allow decryption using the machine's SSH host key (age recipient derived via ssh-to-age)
-        sshKeyPaths = [
-          "/etc/ssh/ssh_host_ed25519_key"
-        ];
+        # Path must match services.openssh.hostKeys configuration
+        sshKeyPaths = [ sshHostKeyPath ];
         generateKey = true;
       };
 

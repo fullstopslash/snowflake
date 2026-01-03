@@ -511,26 +511,50 @@ install HOST:
 
     # Step 1: Pre-generate SSH host keys locally
     echo "🔑 Pre-generating SSH host keys..."
-    mkdir -p "$EXTRA_FILES/etc/ssh"
-    ssh-keygen -t ed25519 -f "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" -N "" -q
-    chmod 600 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
-    chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
 
-    # Deploy SSH host key to /persist (used by both initrd and main system)
-    mkdir -p "$EXTRA_FILES/persist/etc/ssh"
-    cp "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
-    cp "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub" "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
-    chmod 600 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
-    chmod 644 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
+    # Detect if host uses impermanence (check disk layout)
+    DISK_LAYOUT=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.disks.layout 2>/dev/null || echo "btrfs")
+    HAS_IMPERMANENCE=false
+    if [[ "$DISK_LAYOUT" == *"impermanence"* ]]; then
+        HAS_IMPERMANENCE=true
+        echo "   Detected impermanence layout: $DISK_LAYOUT"
+    fi
+
+    # Generate SSH host key in appropriate location
+    if [ "$HAS_IMPERMANENCE" = true ]; then
+        # For impermanence: generate in /persist/etc/ssh (NixOS looks here)
+        mkdir -p "$EXTRA_FILES/persist/etc/ssh"
+        ssh-keygen -t ed25519 -f "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key" -N "" -q
+        chmod 600 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
+        chmod 644 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
+        echo "   ✅ SSH host key generated in /persist/etc/ssh (impermanence mode)"
+    else
+        # For non-impermanence: generate in /etc/ssh (NixOS looks here)
+        mkdir -p "$EXTRA_FILES/etc/ssh"
+        ssh-keygen -t ed25519 -f "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" -N "" -q
+        chmod 600 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
+        chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
+        echo "   ✅ SSH host key generated in /etc/ssh (standard mode)"
+    fi
 
     # Step 2: Derive age key from SSH host key
     echo "🔐 Deriving age key from SSH host key..."
     mkdir -p "$EXTRA_FILES/var/lib/sops-nix"
-    nix-shell -p ssh-to-age --run "cat $EXTRA_FILES/etc/ssh/ssh_host_ed25519_key | ssh-to-age -private-key" > "$EXTRA_FILES/var/lib/sops-nix/key.txt"
+
+    # Use the correct SSH key path based on impermanence detection
+    if [ "$HAS_IMPERMANENCE" = true ]; then
+        SSH_KEY_PATH="$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
+        SSH_PUB_KEY_PATH="$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
+    else
+        SSH_KEY_PATH="$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
+        SSH_PUB_KEY_PATH="$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
+    fi
+
+    nix-shell -p ssh-to-age --run "cat $SSH_KEY_PATH | ssh-to-age -private-key" > "$EXTRA_FILES/var/lib/sops-nix/key.txt"
     chmod 600 "$EXTRA_FILES/var/lib/sops-nix/key.txt"
 
     # Get age public key
-    AGE_PUBKEY=$(nix-shell -p ssh-to-age --run "cat $EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age")
+    AGE_PUBKEY=$(nix-shell -p ssh-to-age --run "cat $SSH_PUB_KEY_PATH | ssh-to-age")
     echo "   Age public key: $AGE_PUBKEY"
 
     # Step 2.5: Generate per-host user age key for granular access control
@@ -676,27 +700,50 @@ vm-fresh HOST=DEFAULT_VM_HOST:
 
     # Step 1: Pre-generate SSH host keys locally
     echo "🔑 Pre-generating SSH host keys..."
-    mkdir -p "$EXTRA_FILES/etc/ssh"
-    ssh-keygen -t ed25519 -f "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" -N "" -q
-    chmod 600 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
-    chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
 
-    # Deploy SSH host key to /persist (used by both initrd and main system)
-    mkdir -p "$EXTRA_FILES/persist/etc/ssh"
-    cp "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
-    cp "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub" "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
-    chmod 600 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
-    chmod 644 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
-    echo "   ✅ SSH host key deployed to /persist (used for both initrd and main system)"
+    # Detect if host uses impermanence (check disk layout)
+    DISK_LAYOUT=$(nix eval --raw .#nixosConfigurations.{{HOST}}.config.disks.layout 2>/dev/null || echo "btrfs")
+    HAS_IMPERMANENCE=false
+    if [[ "$DISK_LAYOUT" == *"impermanence"* ]]; then
+        HAS_IMPERMANENCE=true
+        echo "   Detected impermanence layout: $DISK_LAYOUT"
+    fi
+
+    # Generate SSH host key in appropriate location
+    if [ "$HAS_IMPERMANENCE" = true ]; then
+        # For impermanence: generate in /persist/etc/ssh (NixOS looks here)
+        mkdir -p "$EXTRA_FILES/persist/etc/ssh"
+        ssh-keygen -t ed25519 -f "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key" -N "" -q
+        chmod 600 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
+        chmod 644 "$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
+        echo "   ✅ SSH host key generated in /persist/etc/ssh (impermanence mode)"
+    else
+        # For non-impermanence: generate in /etc/ssh (NixOS looks here)
+        mkdir -p "$EXTRA_FILES/etc/ssh"
+        ssh-keygen -t ed25519 -f "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key" -N "" -q
+        chmod 600 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
+        chmod 644 "$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
+        echo "   ✅ SSH host key generated in /etc/ssh (standard mode)"
+    fi
 
     # Step 2: Derive age key from SSH host key
     echo "🔐 Deriving age key from SSH host key..."
     mkdir -p "$EXTRA_FILES/var/lib/sops-nix"
-    nix-shell -p ssh-to-age --run "cat $EXTRA_FILES/etc/ssh/ssh_host_ed25519_key | ssh-to-age -private-key" > "$EXTRA_FILES/var/lib/sops-nix/key.txt"
+
+    # Use the correct SSH key path based on impermanence detection
+    if [ "$HAS_IMPERMANENCE" = true ]; then
+        SSH_KEY_PATH="$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key"
+        SSH_PUB_KEY_PATH="$EXTRA_FILES/persist/etc/ssh/ssh_host_ed25519_key.pub"
+    else
+        SSH_KEY_PATH="$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key"
+        SSH_PUB_KEY_PATH="$EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub"
+    fi
+
+    nix-shell -p ssh-to-age --run "cat $SSH_KEY_PATH | ssh-to-age -private-key" > "$EXTRA_FILES/var/lib/sops-nix/key.txt"
     chmod 600 "$EXTRA_FILES/var/lib/sops-nix/key.txt"
 
     # Get age public key
-    AGE_PUBKEY=$(nix-shell -p ssh-to-age --run "cat $EXTRA_FILES/etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age")
+    AGE_PUBKEY=$(nix-shell -p ssh-to-age --run "cat $SSH_PUB_KEY_PATH | ssh-to-age")
     echo "   Age public key: $AGE_PUBKEY"
 
     # Step 2.5: Generate per-host user age key for granular access control
