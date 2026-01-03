@@ -180,13 +180,13 @@ _configure-ssh-github HOST SSH_TARGET PRIMARY_USER:
     set -euo pipefail
     echo "🔧 Configuring SSH for GitHub on {{HOST}}..."
 
-    # Configure root SSH
+    # Configure root SSH with per-repo aliases
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{SSH_TARGET}} \
         'chmod 600 ~/.ssh/*-deploy && \
-         printf "Host github.com\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/nix-config-deploy\n    IdentityFile ~/.ssh/nix-secrets-deploy\n    IdentityFile ~/.ssh/chezmoi-deploy\n    StrictHostKeyChecking no\n" > ~/.ssh/config && \
+         printf "Host github.com-nix-config\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/nix-config-deploy\n    StrictHostKeyChecking no\n\nHost github.com-nix-secrets\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/nix-secrets-deploy\n    StrictHostKeyChecking no\n\nHost github.com-chezmoi\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/chezmoi-deploy\n    StrictHostKeyChecking no\n" > ~/.ssh/config && \
          chmod 600 ~/.ssh/config'
 
-    # Configure user SSH
+    # Configure user SSH with per-repo aliases
     echo "🔑 Setting up SSH config for user {{PRIMARY_USER}}..."
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{SSH_TARGET}} \
         'if [ -d /persist/home/{{PRIMARY_USER}} ] || ([ -d /persist ] && findmnt /home > /dev/null 2>&1); then \
@@ -198,7 +198,7 @@ _configure-ssh-github HOST SSH_TARGET PRIMARY_USER:
          cp /root/.ssh/nix-config-deploy $USER_HOME/.ssh/ && \
          cp /root/.ssh/nix-secrets-deploy $USER_HOME/.ssh/ && \
          cp /root/.ssh/chezmoi-deploy $USER_HOME/.ssh/ && \
-         printf "Host github.com\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/nix-config-deploy\n    IdentityFile ~/.ssh/nix-secrets-deploy\n    IdentityFile ~/.ssh/chezmoi-deploy\n    StrictHostKeyChecking no\n" > $USER_HOME/.ssh/config && \
+         printf "Host github.com-nix-config\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/nix-config-deploy\n    StrictHostKeyChecking no\n\nHost github.com-nix-secrets\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/nix-secrets-deploy\n    StrictHostKeyChecking no\n\nHost github.com-chezmoi\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/chezmoi-deploy\n    StrictHostKeyChecking no\n" > $USER_HOME/.ssh/config && \
          chmod 600 $USER_HOME/.ssh/nix-config-deploy $USER_HOME/.ssh/nix-secrets-deploy $USER_HOME/.ssh/chezmoi-deploy $USER_HOME/.ssh/config && \
          chown -R {{PRIMARY_USER}}:users $USER_HOME/.ssh && \
          echo "✅ SSH config configured for {{PRIMARY_USER}}"'
@@ -224,14 +224,14 @@ _clone-repos HOST SSH_TARGET PRIMARY_USER:
          cd \$USER_HOME && \
          rm -rf nix-config nix-secrets .local/share/chezmoi && \
          echo '→ Cloning nix-config...' && \
-         git clone git@github.com:fullstopslash/snowflake.git nix-config && \
+         git clone git@github.com-nix-config:fullstopslash/snowflake.git nix-config && \
          [ -d nix-config/.git ] || (echo '❌ Failed to clone nix-config' && exit 1) && \
          echo '→ Cloning nix-secrets...' && \
-         git clone git@github.com:fullstopslash/snowflake-secrets.git nix-secrets && \
+         git clone git@github.com-nix-secrets:fullstopslash/snowflake-secrets.git nix-secrets && \
          [ -d nix-secrets/.git ] || (echo '❌ Failed to clone nix-secrets' && exit 1) && \
          echo '→ Cloning dotfiles...' && \
          mkdir -p .local/share && \
-         git clone git@github.com:fullstopslash/dotfiles.git .local/share/chezmoi && \
+         git clone git@github.com-chezmoi:fullstopslash/dotfiles.git .local/share/chezmoi && \
          [ -d .local/share/chezmoi/.git ] || (echo '❌ Failed to clone chezmoi' && exit 1) && \
          USER_ID=\$(id -u {{PRIMARY_USER}} 2>/dev/null || echo 1000) && \
          GROUP_ID=\$(id -g {{PRIMARY_USER}} 2>/dev/null || echo 100) && \
