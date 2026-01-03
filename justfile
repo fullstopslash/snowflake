@@ -281,140 +281,69 @@ _setup-sops-keys HOST AGE_PUBKEY USER_AGE_PUBKEY PRIMARY_USER:
 
     echo "   ✅ SOPS keys registered and secrets rekeyed"
 
-# Helper: Prepare repos and deploy keys for EXTRA_FILES deployment
-_prepare-repos-for-deploy HOST EXTRA_FILES_DIR PRIMARY_USER:
+# Helper: Generate deploy keys and store in SOPS (for NixOS module deployment)
+_generate-deploy-keys HOST:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "📦 Preparing repos and deploy keys for deployment..."
+    echo "🔑 Generating deploy keys for {{HOST}}..."
 
-    # Determine if host uses /persist
-    if grep -q "btrfs-luks-impermanence\|bcachefs.*encryption" hosts/{{HOST}}/default.nix 2>/dev/null; then
-        USER_HOME="{{EXTRA_FILES_DIR}}/persist/home/{{PRIMARY_USER}}"
-        ROOT_SSH="{{EXTRA_FILES_DIR}}/persist/root/.ssh"
-    else
-        USER_HOME="{{EXTRA_FILES_DIR}}/home/{{PRIMARY_USER}}"
-        ROOT_SSH="{{EXTRA_FILES_DIR}}/root/.ssh"
-    fi
-
-    # Step 1: Generate or extract deploy keys
     cd ../nix-secrets
+
     # Check if ALL THREE deploy keys exist
     if sops -d --extract '["deploy-keys"]["nix-config"]' sops/{{HOST}}.yaml >/dev/null 2>&1 && \
        sops -d --extract '["deploy-keys"]["nix-secrets"]' sops/{{HOST}}.yaml >/dev/null 2>&1 && \
        sops -d --extract '["deploy-keys"]["chezmoi"]' sops/{{HOST}}.yaml >/dev/null 2>&1; then
-        DEPLOY_KEY_EXISTS=1
-    else
-        DEPLOY_KEY_EXISTS=0
+        echo "   ✅ Deploy keys already exist in SOPS"
+        cd {{justfile_directory()}}
+        exit 0
     fi
 
-    if [ "$DEPLOY_KEY_EXISTS" -eq "0" ]; then
-        echo "   Generating new deploy keys..."
-        TEMP_DIR=$(mktemp -d)
-        ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-config-deploy" -N "" -C "{{HOST}}-nix-config-deploy" -q
-        ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-secrets-deploy" -N "" -C "{{HOST}}-nix-secrets-deploy" -q
-        ssh-keygen -t ed25519 -f "$TEMP_DIR/chezmoi-deploy" -N "" -C "{{HOST}}-chezmoi-deploy" -q
+    echo "   Generating new deploy keys..."
+    TEMP_DIR=$(mktemp -d)
+    ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-config-deploy" -N "" -C "{{HOST}}-nix-config-deploy" -q
+    ssh-keygen -t ed25519 -f "$TEMP_DIR/nix-secrets-deploy" -N "" -C "{{HOST}}-nix-secrets-deploy" -q
+    ssh-keygen -t ed25519 -f "$TEMP_DIR/chezmoi-deploy" -N "" -C "{{HOST}}-chezmoi-deploy" -q
 
-        echo "   Adding deploy keys to GitHub..."
-        gh repo deploy-key add "$TEMP_DIR/nix-config-deploy.pub" -R fullstopslash/snowflake -t "{{HOST}}-nix-config-deploy" 2>/dev/null || echo "   (Key may already exist)"
-        gh repo deploy-key add "$TEMP_DIR/nix-secrets-deploy.pub" -R fullstopslash/snowflake-secrets -t "{{HOST}}-nix-secrets-deploy" 2>/dev/null || echo "   (Key may already exist)"
-        gh repo deploy-key add "$TEMP_DIR/chezmoi-deploy.pub" -R fullstopslash/dotfiles -t "{{HOST}}-chezmoi-deploy" 2>/dev/null || echo "   (Key may already exist)"
+    echo "   Adding deploy keys to GitHub..."
+    gh repo deploy-key add "$TEMP_DIR/nix-config-deploy.pub" -R fullstopslash/snowflake -t "{{HOST}}-nix-config-deploy" 2>/dev/null || echo "   (Key may already exist)"
+    gh repo deploy-key add "$TEMP_DIR/nix-secrets-deploy.pub" -R fullstopslash/snowflake-secrets -t "{{HOST}}-nix-secrets-deploy" 2>/dev/null || echo "   (Key may already exist)"
+    gh repo deploy-key add "$TEMP_DIR/chezmoi-deploy.pub" -R fullstopslash/dotfiles -t "{{HOST}}-chezmoi-deploy" 2>/dev/null || echo "   (Key may already exist)"
 
-        # Store in SOPS
-        TMP_YAML=$(mktemp)
-        sops -d sops/{{HOST}}.yaml | yq 'del(.sops)' > $TMP_YAML
-        if ! yq eval '.deploy-keys' $TMP_YAML > /dev/null 2>&1; then
-            yq eval -i '.deploy-keys = {}' $TMP_YAML
-        fi
-        NIX_CONFIG_KEY=$(cat "$TEMP_DIR/nix-config-deploy")
-        NIX_SECRETS_KEY=$(cat "$TEMP_DIR/nix-secrets-deploy")
-        CHEZMOI_KEY=$(cat "$TEMP_DIR/chezmoi-deploy")
-        yq eval -i ".deploy-keys.nix-config = \"$NIX_CONFIG_KEY\"" $TMP_YAML
-        yq eval -i ".deploy-keys.nix-secrets = \"$NIX_SECRETS_KEY\"" $TMP_YAML
-        yq eval -i ".deploy-keys.chezmoi = \"$CHEZMOI_KEY\"" $TMP_YAML
-        sops -e $TMP_YAML > sops/{{HOST}}.yaml.new
-        mv sops/{{HOST}}.yaml.new sops/{{HOST}}.yaml
-        rm $TMP_YAML
+    # Store deploy keys in SOPS
+    TMP_YAML=$(mktemp)
+    sops -d sops/{{HOST}}.yaml | yq 'del(.sops)' > $TMP_YAML
 
-        # Copy to deploy directories
-        mkdir -p "$ROOT_SSH"
-        cp "$TEMP_DIR/nix-config-deploy" "$ROOT_SSH/nix-config-deploy"
-        cp "$TEMP_DIR/nix-secrets-deploy" "$ROOT_SSH/nix-secrets-deploy"
-        cp "$TEMP_DIR/chezmoi-deploy" "$ROOT_SSH/chezmoi-deploy"
-        chmod 600 "$ROOT_SSH"/*-deploy
-
-        rm -rf "$TEMP_DIR"
-    else
-        echo "   Extracting existing deploy keys from SOPS..."
-        mkdir -p "$ROOT_SSH"
-        sops -d --extract '["deploy-keys"]["nix-config"]' sops/{{HOST}}.yaml > "$ROOT_SSH/nix-config-deploy"
-        sops -d --extract '["deploy-keys"]["nix-secrets"]' sops/{{HOST}}.yaml > "$ROOT_SSH/nix-secrets-deploy"
-        sops -d --extract '["deploy-keys"]["chezmoi"]' sops/{{HOST}}.yaml > "$ROOT_SSH/chezmoi-deploy"
-        chmod 600 "$ROOT_SSH"/*-deploy
+    # Add deploy-keys section if it doesn't exist
+    if ! yq eval '.deploy-keys' $TMP_YAML > /dev/null 2>&1; then
+        yq eval -i '.deploy-keys = {}' $TMP_YAML
     fi
+
+    # Read the private keys
+    NIX_CONFIG_KEY=$(cat "$TEMP_DIR/nix-config-deploy")
+    NIX_SECRETS_KEY=$(cat "$TEMP_DIR/nix-secrets-deploy")
+    CHEZMOI_KEY=$(cat "$TEMP_DIR/chezmoi-deploy")
+
+    # Use yq to set the keys (with proper multiline handling)
+    yq eval -i ".deploy-keys.nix-config = \"$NIX_CONFIG_KEY\"" $TMP_YAML
+    yq eval -i ".deploy-keys.nix-secrets = \"$NIX_SECRETS_KEY\"" $TMP_YAML
+    yq eval -i ".deploy-keys.chezmoi = \"$CHEZMOI_KEY\"" $TMP_YAML
+
+    # Encrypt and save (encrypt in root dir then move to sops/ for creation rule matching)
+    mv $TMP_YAML {{HOST}}.yaml
+    sops -e -i {{HOST}}.yaml
+    mv {{HOST}}.yaml sops/{{HOST}}.yaml
+
+    # Commit the changes
+    source {{justfile_directory()}}/scripts/vcs-helpers.sh
+    vcs_add sops/{{HOST}}.yaml
+    vcs_commit "chore(sops): add deploy keys for {{HOST}}\n\nDatever: $(date +%Y-%m-%d-%H%M)"
+    vcs_push
+    echo "   ✅ Deploy keys stored in SOPS and committed"
+
     cd {{justfile_directory()}}
+    rm -rf "$TEMP_DIR"
 
-    # Step 2: Configure SSH for GitHub with per-repo aliases
-    echo "   Configuring SSH for GitHub..."
-    printf '%s\n' \
-        'Host github.com-nix-config' \
-        '    HostName github.com' \
-        '    User git' \
-        '    IdentityFile ~/.ssh/nix-config-deploy' \
-        '    StrictHostKeyChecking no' \
-        '' \
-        'Host github.com-nix-secrets' \
-        '    HostName github.com' \
-        '    User git' \
-        '    IdentityFile ~/.ssh/nix-secrets-deploy' \
-        '    StrictHostKeyChecking no' \
-        '' \
-        'Host github.com-chezmoi' \
-        '    HostName github.com' \
-        '    User git' \
-        '    IdentityFile ~/.ssh/chezmoi-deploy' \
-        '    StrictHostKeyChecking no' \
-        > "$ROOT_SSH/config"
-    chmod 600 "$ROOT_SSH/config"
-
-    # Step 3: Copy repos to user home (if available locally)
-    echo "   Copying repos to deployment directory (if available)..."
-    mkdir -p "$USER_HOME"
-
-    REPOS_COPIED=0
-
-    # Copy from local repos if they exist
-    if [ -d "$HOME/nix-config/.git" ]; then
-        cp -r "$HOME/nix-config" "$USER_HOME/nix-config"
-        echo "   ✓ Copied nix-config"
-        REPOS_COPIED=$((REPOS_COPIED + 1))
-    else
-        echo "   ⚠ nix-config repo not found locally at $HOME/nix-config (will clone via SSH)"
-    fi
-
-    if [ -d "$HOME/nix-secrets/.git" ]; then
-        cp -r "$HOME/nix-secrets" "$USER_HOME/nix-secrets"
-        echo "   ✓ Copied nix-secrets"
-        REPOS_COPIED=$((REPOS_COPIED + 1))
-    else
-        echo "   ⚠ nix-secrets repo not found locally at $HOME/nix-secrets (will clone via SSH)"
-    fi
-
-    if [ -d "$HOME/.local/share/chezmoi/.git" ]; then
-        mkdir -p "$USER_HOME/.local/share"
-        cp -r "$HOME/.local/share/chezmoi" "$USER_HOME/.local/share/chezmoi"
-        echo "   ✓ Copied chezmoi"
-        REPOS_COPIED=$((REPOS_COPIED + 1))
-    else
-        echo "   ⚠ chezmoi repo not found locally at $HOME/.local/share/chezmoi (will clone via SSH)"
-    fi
-
-    if [ "$REPOS_COPIED" -eq 3 ]; then
-        echo "   ✅ All 3 repos and deploy keys prepared for deployment"
-    else
-        echo "   ✅ Deploy keys prepared; $REPOS_COPIED/3 repos copied (others will be cloned via SSH)"
-    fi
-
-# Helper: Setup and deploy GitHub deploy keys
+# Helper: Setup and deploy GitHub deploy keys (DEPRECATED - use NixOS module)
 _setup-deploy-keys HOST SSH_TARGET PRIMARY_USER:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -626,10 +555,10 @@ install HOST:
     # Step 3: Register age key in nix-secrets and rekey
     just _setup-sops-keys {{HOST}} "$AGE_PUBKEY" "$USER_AGE_PUBKEY" "$PRIMARY_USER"
 
-    # Step 4: Prepare repos and deploy keys for deployment
-    just _prepare-repos-for-deploy {{HOST}} "$EXTRA_FILES" "$PRIMARY_USER"
+    # Step 3.75: Generate deploy keys and store in SOPS (NixOS module will deploy them)
+    just _generate-deploy-keys {{HOST}}
 
-    # Step 5: Update local flake.lock to get rekeyed secrets and initrd key
+    # Step 4: Update local flake.lock to get rekeyed secrets and initrd key
     echo "📥 Updating local nix-secrets flake input..."
     nix flake update nix-secrets
 
@@ -670,26 +599,37 @@ install HOST:
     sleep 10
 
     # Wait for SSH
+    echo "⏳ Waiting for system to boot..."
     for i in {1..30}; do
         if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 root@{{HOST}}.local 'echo ready' >/dev/null 2>&1; then
+            echo "✅ System is up!"
             break
         fi
         sleep 2
     done
 
-    # Step 8: Setup deploy keys
-    just _setup-deploy-keys {{HOST}} "root@{{HOST}}.local" "$PRIMARY_USER"
+    # Step 8: Wait for github-repos-init service to clone repos
+    echo "⏳ Waiting for repos to be cloned by systemd service..."
+    for i in {1..60}; do
+        if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@{{HOST}}.local \
+            "[ -d /home/$PRIMARY_USER/nix-config/.git ] && [ -d /home/$PRIMARY_USER/nix-secrets/.git ] && [ -d /home/$PRIMARY_USER/.local/share/chezmoi/.git ]" 2>/dev/null; then
+            echo "✅ All repos cloned successfully"
+            break
+        fi
+        if [ $i -eq 60 ]; then
+            echo "⚠️  Timeout waiting for repos - checking service status..."
+            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@{{HOST}}.local \
+                "systemctl status github-repos-init" || true
+        fi
+        sleep 2
+    done
 
-    # Configure SSH for GitHub
-    just _configure-ssh-github {{HOST}} "root@{{HOST}}.local" "$PRIMARY_USER"
+    # Step 9: Verify GitHub SSH authentication
+    echo "🔐 Verifying GitHub SSH authentication..."
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@{{HOST}}.local \
+        "su - $PRIMARY_USER -c 'ssh -T git@github.com-nix-config 2>&1'" || true
 
-    # Fix ownership of per-host user age key
-    just _fix-age-key-ownership {{HOST}} "root@{{HOST}}.local" "$PRIMARY_USER"
-
-    # Clone repos
-    just _clone-repos {{HOST}} "root@{{HOST}}.local" "$PRIMARY_USER"
-
-    # Rebuild
+    # Step 10: Rebuild from cloned config
     just _rebuild-from-config {{HOST}} "root@{{HOST}}.local" "$PRIMARY_USER"
 
     echo ""
@@ -821,8 +761,8 @@ vm-fresh HOST=DEFAULT_VM_HOST:
         vcs_push
     cd "{{justfile_directory()}}"
 
-    # Step 3.75: Prepare repos and deploy keys for deployment
-    just _prepare-repos-for-deploy {{HOST}} "$EXTRA_FILES" "$PRIMARY_USER"
+    # Step 3.75: Generate deploy keys and store in SOPS (NixOS module will deploy them)
+    just _generate-deploy-keys {{HOST}}
 
     # Step 4: Update local flake.lock to get rekeyed secrets and initrd key
     echo "📥 Updating local nix-secrets flake input..."
@@ -883,6 +823,7 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     # Step 8: Wait for system to boot and become available
     echo "⏳ Waiting for system to boot (may take 30-60s for TPM unlock)..."
     sleep 30
+    PRIMARY_USER=$(just _get-vm-primary-user {{HOST}} 2>/dev/null || echo "rain")
     for i in {1..30}; do
         if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 -p "$SSH_PORT" root@127.0.0.1 'echo ready' >/dev/null 2>&1; then
             echo "✅ System is up!"
@@ -891,27 +832,28 @@ vm-fresh HOST=DEFAULT_VM_HOST:
         sleep 2
     done
 
-    # Step 9: Setup deploy keys
-    PRIMARY_USER=$(just _get-vm-primary-user {{HOST}} 2>/dev/null || echo "rain")
-    just _setup-deploy-keys {{HOST}} "root@127.0.0.1 -p $SSH_PORT" "$PRIMARY_USER"
+    # Step 9: Wait for github-repos-init service to clone repos
+    echo "⏳ Waiting for repos to be cloned by systemd service..."
+    for i in {1..60}; do
+        if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
+            "[ -d /home/$PRIMARY_USER/nix-config/.git ] && [ -d /home/$PRIMARY_USER/nix-secrets/.git ] && [ -d /home/$PRIMARY_USER/.local/share/chezmoi/.git ]" 2>/dev/null; then
+            echo "✅ All repos cloned successfully"
+            break
+        fi
+        if [ $i -eq 60 ]; then
+            echo "⚠️  Timeout waiting for repos - checking service status..."
+            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
+                "systemctl status github-repos-init" || true
+        fi
+        sleep 2
+    done
 
-    # Configure SSH for GitHub
-    just _configure-ssh-github {{HOST}} "root@127.0.0.1 -p $SSH_PORT" "$PRIMARY_USER"
-
-    # Fix ownership of per-host user age key
-    just _fix-age-key-ownership {{HOST}} "root@127.0.0.1 -p $SSH_PORT" "$PRIMARY_USER"
-
-    # Step 10: Clone repos
-    just _clone-repos {{HOST}} "root@127.0.0.1 -p $SSH_PORT" "$PRIMARY_USER"
-
-    # Step 11: Ensure SSH keys in /persist and rebuild
-    echo "🔧 Ensuring SSH keys in /persist..."
+    # Step 10: Verify GitHub SSH authentication
+    echo "🔐 Verifying GitHub SSH authentication..."
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@127.0.0.1 \
-        "if [ -d /persist ]; then \
-             mkdir -p /persist/etc/ssh && \
-             cp /etc/ssh/ssh_host_ed25519_key* /persist/etc/ssh/; \
-         fi"
+        "su - $PRIMARY_USER -c 'ssh -T git@github.com-nix-config 2>&1'" || true
 
+    # Step 11: Rebuild from cloned config
     just _rebuild-from-config {{HOST}} "root@127.0.0.1 -p $SSH_PORT" "$PRIMARY_USER"
 
     echo ""
