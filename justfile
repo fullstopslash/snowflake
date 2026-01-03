@@ -307,7 +307,10 @@ _setup-deploy-keys HOST SSH_TARGET PRIMARY_USER:
     fi
 
     # Check if deploy keys already exist in host SOPS file
-    DEPLOY_KEY_EXISTS=$(cd ../nix-secrets && sops -d sops/{{HOST}}.yaml 2>/dev/null | grep -c "deploy-key:" || echo "0")
+    DEPLOY_KEY_EXISTS=$(cd ../nix-secrets && sops -d sops/{{HOST}}.yaml 2>/dev/null | grep -c "deploy-key:" || true)
+    if [ -z "$DEPLOY_KEY_EXISTS" ]; then
+        DEPLOY_KEY_EXISTS="0"
+    fi
 
     if [ "$DEPLOY_KEY_EXISTS" -eq "0" ]; then
         TEMP_DIR=$(mktemp -d)
