@@ -289,11 +289,11 @@ _prepare-repos-for-deploy HOST EXTRA_FILES_DIR PRIMARY_USER:
 
     # Determine if host uses /persist
     if grep -q "btrfs-luks-impermanence\|bcachefs.*encryption" hosts/{{HOST}}/default.nix 2>/dev/null; then
-        USER_HOME="$EXTRA_FILES_DIR/persist/home/{{PRIMARY_USER}}"
-        ROOT_SSH="$EXTRA_FILES_DIR/persist/root/.ssh"
+        USER_HOME="{{EXTRA_FILES_DIR}}/persist/home/{{PRIMARY_USER}}"
+        ROOT_SSH="{{EXTRA_FILES_DIR}}/persist/root/.ssh"
     else
-        USER_HOME="$EXTRA_FILES_DIR/home/{{PRIMARY_USER}}"
-        ROOT_SSH="$EXTRA_FILES_DIR/root/.ssh"
+        USER_HOME="{{EXTRA_FILES_DIR}}/home/{{PRIMARY_USER}}"
+        ROOT_SSH="{{EXTRA_FILES_DIR}}/root/.ssh"
     fi
 
     # Step 1: Generate or extract deploy keys
