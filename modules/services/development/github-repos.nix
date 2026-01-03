@@ -34,24 +34,24 @@ in
   };
 
   config = lib.mkIf (config.sops.defaultSopsFile or null != null) {
-    # Deploy keys from SOPS to root's .ssh directory
+    # Deploy keys from SOPS to user's .ssh directory
     sops.secrets = {
       "deploy-keys/nix-config" = {
         sopsFile = "${sopsFolder}/${hostname}.yaml";
-        owner = "root";
-        path = "/root/.ssh/nix-config-deploy";
+        owner = primaryUser;
+        path = "${homeDir}/.ssh/nix-config-deploy";
         mode = "0400";
       };
       "deploy-keys/nix-secrets" = {
         sopsFile = "${sopsFolder}/${hostname}.yaml";
-        owner = "root";
-        path = "/root/.ssh/nix-secrets-deploy";
+        owner = primaryUser;
+        path = "${homeDir}/.ssh/nix-secrets-deploy";
         mode = "0400";
       };
       "deploy-keys/chezmoi" = {
         sopsFile = "${sopsFolder}/${hostname}.yaml";
-        owner = "root";
-        path = "/root/.ssh/chezmoi-deploy";
+        owner = primaryUser;
+        path = "${homeDir}/.ssh/chezmoi-deploy";
         mode = "0400";
       };
     };
@@ -64,19 +64,19 @@ in
       Host github.com-nix-config
           HostName github.com
           User git
-          IdentityFile /root/.ssh/nix-config-deploy
+          IdentityFile ${homeDir}/.ssh/nix-config-deploy
           StrictHostKeyChecking accept-new
 
       Host github.com-nix-secrets
           HostName github.com
           User git
-          IdentityFile /root/.ssh/nix-secrets-deploy
+          IdentityFile ${homeDir}/.ssh/nix-secrets-deploy
           StrictHostKeyChecking accept-new
 
       Host github.com-chezmoi
           HostName github.com
           User git
-          IdentityFile /root/.ssh/chezmoi-deploy
+          IdentityFile ${homeDir}/.ssh/chezmoi-deploy
           StrictHostKeyChecking accept-new
     '';
 
@@ -95,7 +95,8 @@ in
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        User = "root";
+        User = primaryUser;
+        Group = "users";
       };
 
       script = ''
@@ -103,8 +104,8 @@ in
 
         echo "Cloning GitHub repos to ${homeDir}..."
 
-        # Create home directory if needed
-        mkdir -p ${homeDir}
+        # Create directories if needed
+        mkdir -p ${homeDir}/.local/share
 
         # Clone repos using per-repo aliases
         if [ ! -d ${homeDir}/nix-config/.git ]; then
@@ -119,12 +120,8 @@ in
 
         if [ ! -d ${homeDir}/.local/share/chezmoi/.git ]; then
           echo "Cloning chezmoi..."
-          mkdir -p ${homeDir}/.local/share
           ${pkgs.git}/bin/git clone git@github.com-chezmoi:fullstopslash/dotfiles.git ${homeDir}/.local/share/chezmoi
         fi
-
-        # Fix ownership
-        chown -R ${primaryUser}:users ${homeDir}
 
         echo "All repos cloned successfully"
       '';
