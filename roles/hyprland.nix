@@ -14,27 +14,27 @@
 
     # Dim screen after 4 minutes
     listener {
-      timeout = 240
+      timeout = 360
       on-timeout = ${pkgs.brightnessctl}/bin/brightnessctl -s set 10%
       on-resume = ${pkgs.brightnessctl}/bin/brightnessctl -r
     }
 
     # Lock screen after 5 minutes
     listener {
-      timeout = 300
+      timeout = 600
       on-timeout = loginctl lock-session
     }
 
     # Turn off screen after 6 minutes
     listener {
-      timeout = 360
+      timeout = 660
       on-timeout = ${pkgs.hyprland}/bin/hyprctl dispatch dpms off
       on-resume = ${pkgs.hyprland}/bin/hyprctl dispatch dpms on
     }
 
     # Suspend after 10 minutes
     listener {
-      timeout = 600
+      timeout = 2000
       on-timeout = systemctl suspend
     }
   '';
@@ -141,8 +141,8 @@ in {
     eww
     rofi
     # NetworkManager GUI tools
-    networkmanagerapplet  # Provides nm-applet and nm-connection-editor
-    networkmanager_dmenu  # Rofi/dmenu WiFi menu
+    networkmanagerapplet # Provides nm-applet and nm-connection-editor
+    networkmanager_dmenu # Rofi/dmenu WiFi menu
     # Additional packages for waybar modules
     networkmanager
     wirelesstools
