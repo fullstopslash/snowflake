@@ -282,29 +282,31 @@ in
       };
     };
 
-    # State directory and chezmoi config deployment
+    # State directory
     systemd.tmpfiles.rules = [
       "d /var/lib/chezmoi-sync 0755 root root -"
       # Ensure chezmoi config directory exists
       "d ${primaryUser.home}/.config/chezmoi 0755 ${primaryUser.name} ${primaryUser.group} -"
-      # Copy chezmoi.yaml from secrets to user config
-      "C ${primaryUser.home}/.config/chezmoi/chezmoi.yaml 0600 ${primaryUser.name} ${primaryUser.group} - /run/secrets/chezmoi-config"
     ];
+
+    # Deploy chezmoi.yaml using activation script (sops-nix can't handle entire files)
+    system.activationScripts.deploy-chezmoi-config = lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
+      text = ''
+        # Decrypt and deploy chezmoi.yaml to user's config directory
+        if [ -f "${sopsFolder}/chezmoi.yaml" ]; then
+          echo "Deploying chezmoi.yaml..."
+          mkdir -p "${primaryUser.home}/.config/chezmoi"
+          ${pkgs.sops}/bin/sops -d "${sopsFolder}/chezmoi.yaml" > "${primaryUser.home}/.config/chezmoi/chezmoi.yaml"
+          chown ${primaryUser.name}:${primaryUser.group} "${primaryUser.home}/.config/chezmoi/chezmoi.yaml"
+          chmod 0600 "${primaryUser.home}/.config/chezmoi/chezmoi.yaml"
+        fi
+      '';
+      deps = [ "users" "groups" ];
+    };
 
     # SOPS secrets for dotfiles (if hasSecrets is enabled)
     sops.secrets =
       lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
-        # Chezmoi configuration file (contains template variables)
-        # Deploy to a known location, then copy to user's config directory
-        # We can't deploy directly to ~/.config/chezmoi/ because sops-nix
-        # runs as root and can't write to user directories during activation
-        "chezmoi-config" = {
-          sopsFile = "${sopsFolder}/chezmoi.yaml";
-          owner = "root";
-          mode = "0644";
-          # This will be deployed to /run/secrets/chezmoi-config
-          # Then copied to user's home by a systemd tmpfiles rule
-        };
 
         acoustid_api = {
           sopsFile = "${sopsFolder}/shared.yaml";
