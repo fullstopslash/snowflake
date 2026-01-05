@@ -289,19 +289,30 @@ in
       "d ${primaryUser.home}/.config/chezmoi 0755 ${primaryUser.name} ${primaryUser.group} -"
     ];
 
-    # Deploy chezmoi.yaml using activation script (sops-nix can't handle entire files)
-    system.activationScripts.deploy-chezmoi-config = lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
-      text = ''
+    # Deploy chezmoi.yaml using systemd oneshot service (runs after SOPS keys are available)
+    systemd.services.deploy-chezmoi-config = lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
+      description = "Deploy chezmoi configuration from SOPS";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "sops-nix.service" ];
+      wants = [ "sops-nix.service" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+
+      script = ''
         # Decrypt and deploy chezmoi.yaml to user's config directory
+        # This runs after SOPS has imported SSH host keys
         if [ -f "${sopsFolder}/chezmoi.yaml" ]; then
           echo "Deploying chezmoi.yaml..."
           mkdir -p "${primaryUser.home}/.config/chezmoi"
           ${pkgs.sops}/bin/sops -d "${sopsFolder}/chezmoi.yaml" > "${primaryUser.home}/.config/chezmoi/chezmoi.yaml"
           chown ${primaryUser.name}:${primaryUser.group} "${primaryUser.home}/.config/chezmoi/chezmoi.yaml"
           chmod 0600 "${primaryUser.home}/.config/chezmoi/chezmoi.yaml"
+          echo "✅ Deployed chezmoi.yaml"
         fi
       '';
-      deps = [ "users" "groups" ];
     };
 
     # SOPS secrets for dotfiles (if hasSecrets is enabled)
