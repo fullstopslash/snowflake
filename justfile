@@ -747,7 +747,7 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     echo "   Age public key: $AGE_PUBKEY"
 
     # Step 2.5: Generate per-host user age key for granular access control
-    echo "🔐 Generating per-host user age key..."
+    echo "🔐 Setting up per-host user age key..."
     PRIMARY_USER=$(just _get-vm-primary-user {{HOST}} 2>/dev/null || echo "rain")
 
     # Determine user home based on /persist
@@ -758,12 +758,51 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     fi
 
     mkdir -p "$USER_AGE_DIR"
-    nix-shell -p age --run "age-keygen -o $USER_AGE_DIR/keys.txt" 2>/dev/null
-    chmod 600 "$USER_AGE_DIR/keys.txt"
 
-    # Extract public key for .sops.yaml registration
-    USER_AGE_PUBKEY=$(nix-shell -p age --run "age-keygen -y $USER_AGE_DIR/keys.txt")
-    echo "   User age public key: $USER_AGE_PUBKEY"
+    # Check if age key already registered in .sops.yaml
+    cd ../nix-secrets
+    EXISTING_PUBKEY=$(grep "&${PRIMARY_USER}_{{HOST}}" .sops.yaml | grep -oP 'age1\w+' || echo "")
+    cd "{{justfile_directory()}}"
+
+    if [ -n "$EXISTING_PUBKEY" ]; then
+        echo "   Found registered key: $EXISTING_PUBKEY"
+        echo "   Checking for stored private key..."
+
+        # Try to extract private key from SOPS
+        cd ../nix-secrets
+        EXISTING_PRIVKEY=$(sops -d --extract '["keys"]["age"]' sops/{{HOST}}.yaml 2>/dev/null || echo "")
+        cd "{{justfile_directory()}}"
+
+        if [ -n "$EXISTING_PRIVKEY" ]; then
+            # Verify private key matches public key
+            DERIVED_PUBKEY=$(echo "$EXISTING_PRIVKEY" | nix-shell -p age --run "age-keygen -y" 2>/dev/null || echo "")
+
+            if [ "$DERIVED_PUBKEY" = "$EXISTING_PUBKEY" ]; then
+                echo "   ✅ Using existing registered key (verified)"
+                echo "$EXISTING_PRIVKEY" > "$USER_AGE_DIR/keys.txt"
+                chmod 600 "$USER_AGE_DIR/keys.txt"
+                USER_AGE_PUBKEY="$EXISTING_PUBKEY"
+            else
+                echo "   ⚠️  Private key mismatch - generating fresh key"
+                nix-shell -p age --run "age-keygen -o $USER_AGE_DIR/keys.txt" 2>/dev/null
+                chmod 600 "$USER_AGE_DIR/keys.txt"
+                USER_AGE_PUBKEY=$(nix-shell -p age --run "age-keygen -y $USER_AGE_DIR/keys.txt")
+                echo "   New user age public key: $USER_AGE_PUBKEY"
+            fi
+        else
+            echo "   Private key not found in SOPS - generating fresh key"
+            nix-shell -p age --run "age-keygen -o $USER_AGE_DIR/keys.txt" 2>/dev/null
+            chmod 600 "$USER_AGE_DIR/keys.txt"
+            USER_AGE_PUBKEY=$(nix-shell -p age --run "age-keygen -y $USER_AGE_DIR/keys.txt")
+            echo "   New user age public key: $USER_AGE_PUBKEY"
+        fi
+    else
+        echo "   No registered key found - generating fresh key"
+        nix-shell -p age --run "age-keygen -o $USER_AGE_DIR/keys.txt" 2>/dev/null
+        chmod 600 "$USER_AGE_DIR/keys.txt"
+        USER_AGE_PUBKEY=$(nix-shell -p age --run "age-keygen -y $USER_AGE_DIR/keys.txt")
+        echo "   New user age public key: $USER_AGE_PUBKEY"
+    fi
 
     # Step 3: Register age key in nix-secrets and rekey
     echo "📝 Registering {{HOST}} age key in nix-secrets..."
@@ -771,6 +810,28 @@ vm-fresh HOST=DEFAULT_VM_HOST:
 
     # Add per-host user age key for granular access control
     just sops-update-user-age-key $PRIMARY_USER {{HOST}} "$USER_AGE_PUBKEY"
+
+    # Store user private age key in SOPS (if we generated a new one or if mismatch was detected)
+    if [ "$DERIVED_PUBKEY" != "$EXISTING_PUBKEY" ] || [ -z "$EXISTING_PRIVKEY" ]; then
+        echo "   Storing private age key in SOPS..."
+        cd ../nix-secrets
+        USER_PRIVKEY=$(cat "$USER_AGE_DIR/keys.txt")
+
+        # Decrypt, update, and re-encrypt using proper SOPS workflow
+        # Create a temp file with the right name so SOPS can match creation rules
+        TEMP_FILE="/tmp/{{HOST}}.yaml"
+
+        # Decrypt and add/update the private key
+        sops -d sops/{{HOST}}.yaml | yq eval '.keys.age = "'"$USER_PRIVKEY"'"' - > "$TEMP_FILE"
+
+        # Re-encrypt using the temp file (SOPS will use creation rules based on filename)
+        sops -e "$TEMP_FILE" > sops/{{HOST}}.yaml.new
+        mv sops/{{HOST}}.yaml.new sops/{{HOST}}.yaml
+        rm -f "$TEMP_FILE"
+
+        echo "   ✅ Private key stored successfully"
+        cd "{{justfile_directory()}}"
+    fi
 
     just sops-add-creation-rules $PRIMARY_USER {{HOST}}
 

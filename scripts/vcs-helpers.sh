@@ -42,9 +42,23 @@ vcs_commit() {
 	local message="$1"
 	if [[ "$VCS_TYPE" == "jj" ]]; then
 		jj commit -m "$message"
-		# Move bookmark to new commit if it exists
-		if jj bookmark list | grep -q "simple:"; then
-			jj bookmark set simple -r @-
+		# Ensure we have a tracked bookmark for pushing
+		# Try to find existing tracked bookmark, or create one
+		local tracked_bookmark=""
+		for branch in "dev" "main" "master" "simple"; do
+			if jj bookmark list 2>/dev/null | grep -q "${branch}:"; then
+				tracked_bookmark="$branch"
+				break
+			fi
+		done
+
+		if [[ -n "$tracked_bookmark" ]]; then
+			# Move existing bookmark to new commit
+			jj bookmark set "$tracked_bookmark" -r @-
+		else
+			# No tracked bookmark found - create and track 'dev' bookmark
+			jj bookmark create dev -r @-
+			jj bookmark track dev@origin 2>/dev/null || true
 		fi
 	else
 		git commit -m "$message"
@@ -57,8 +71,23 @@ vcs_push() {
 	local branch="${2:-}"
 
 	if [[ "$VCS_TYPE" == "jj" ]]; then
-		# jj git push pushes current change to tracking remote
-		jj git push
+		# Find tracked bookmark to push
+		local bookmark_to_push=""
+		for b in "dev" "main" "master" "simple"; do
+			if jj bookmark list 2>/dev/null | grep -q "${b}:"; then
+				bookmark_to_push="$b"
+				break
+			fi
+		done
+
+		if [[ -n "$bookmark_to_push" ]]; then
+			echo "Pushing bookmark: $bookmark_to_push"
+			jj git push --bookmark "$bookmark_to_push"
+		else
+			# Fallback to default push (may fail with no bookmarks warning)
+			echo "Warning: No tracked bookmark found, attempting default push"
+			jj git push
+		fi
 	else
 		if [[ -n "$branch" ]]; then
 			git push "$remote" "$branch"
