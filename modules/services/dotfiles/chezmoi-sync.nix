@@ -302,8 +302,8 @@ in
       };
 
       environment = {
-        # Tell SOPS to use the SSH host key for decryption
-        SOPS_AGE_KEY_FILE = "/etc/ssh/ssh_host_ed25519_key";
+        # Tell SOPS to convert SSH host key to age format for decryption
+        SOPS_AGE_KEY_CMD = "${pkgs.ssh-to-age}/bin/ssh-to-age -private-key -i /etc/ssh/ssh_host_ed25519_key";
       };
 
       script = ''
