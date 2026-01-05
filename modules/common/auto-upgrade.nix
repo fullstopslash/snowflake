@@ -68,7 +68,7 @@ in
 
     flakeUrl = lib.mkOption {
       type = lib.types.str;
-      default = "github:fullstopslash/snowflake?ref=dev";
+      default = "github:fullstopslash/snowflake?ref=main";
       description = "Remote flake URL for upgrades";
     };
 
@@ -369,9 +369,9 @@ in
                     return 1
                   fi
 
-                  # Get trunk branch (dev, main, master, or simple)
-                  TRUNK_BRANCH="dev"
-                  for branch in dev main master simple; do
+                  # Get trunk branch (main, dev, master, or simple)
+                  TRUNK_BRANCH="main"
+                  for branch in main dev master simple; do
                     if jj log -r "''${branch}@origin" --no-graph -T 'change_id' 2>/dev/null | grep -q .; then
                       TRUNK_BRANCH="$branch"
                       break
