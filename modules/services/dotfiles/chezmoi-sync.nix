@@ -282,23 +282,28 @@ in
       };
     };
 
-    # State directory
+    # State directory and chezmoi config deployment
     systemd.tmpfiles.rules = [
       "d /var/lib/chezmoi-sync 0755 root root -"
+      # Ensure chezmoi config directory exists
+      "d ${primaryUser.home}/.config/chezmoi 0755 ${primaryUser.name} ${primaryUser.group} -"
+      # Copy chezmoi.yaml from secrets to user config
+      "C ${primaryUser.home}/.config/chezmoi/chezmoi.yaml 0600 ${primaryUser.name} ${primaryUser.group} - /run/secrets/chezmoi-config"
     ];
 
     # SOPS secrets for dotfiles (if hasSecrets is enabled)
     sops.secrets =
       lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
         # Chezmoi configuration file (contains template variables)
-        # Note: This uses the entire SOPS file as the secret (no key extraction)
+        # Deploy to a known location, then copy to user's config directory
+        # We can't deploy directly to ~/.config/chezmoi/ because sops-nix
+        # runs as root and can't write to user directories during activation
         "chezmoi-config" = {
           sopsFile = "${sopsFolder}/chezmoi.yaml";
-          format = "binary";  # Treat entire decrypted file as the secret
-          path = "${primaryUser.home}/.config/chezmoi/chezmoi.yaml";
-          owner = primaryUser.name;
-          mode = "0600";
-          # Deploy entire chezmoi.yaml file to ~/.config/chezmoi/chezmoi.yaml
+          owner = "root";
+          mode = "0644";
+          # This will be deployed to /run/secrets/chezmoi-config
+          # Then copied to user's home by a systemd tmpfiles rule
         };
 
         acoustid_api = {
