@@ -290,6 +290,16 @@ in
     # SOPS secrets for dotfiles (if hasSecrets is enabled)
     sops.secrets =
       lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
+        # Chezmoi configuration file (contains template variables)
+        "chezmoi-config" = {
+          sopsFile = "${sopsFolder}/chezmoi.yaml";
+          format = "yaml";
+          path = "${primaryUser.home}/.config/chezmoi/chezmoi.yaml";
+          owner = primaryUser.name;
+          mode = "0600";
+          # Deploy entire chezmoi.yaml file to ~/.config/chezmoi/chezmoi.yaml
+        };
+
         acoustid_api = {
           sopsFile = "${sopsFolder}/shared.yaml";
           key = "dotfiles/acoustid_api"; # Read from dotfiles.acoustid_api in SOPS
