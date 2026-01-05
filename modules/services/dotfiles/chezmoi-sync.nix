@@ -301,6 +301,11 @@ in
         RemainAfterExit = true;
       };
 
+      environment = {
+        # Tell SOPS to use the SSH host key for decryption
+        SOPS_AGE_KEY_FILE = "/etc/ssh/ssh_host_ed25519_key";
+      };
+
       script = ''
         # Decrypt and deploy chezmoi.yaml to user's config directory
         # This runs after SOPS has imported SSH host keys
