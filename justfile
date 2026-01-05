@@ -762,6 +762,8 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     EXISTING_PUBKEY=$(grep "&${PRIMARY_USER}_{{HOST}}" .sops.yaml | grep -oP 'age1\w+' || echo "")
     cd "{{justfile_directory()}}"
 
+    NEED_TO_STORE_KEY="no"  # Track if we need to store the private key in SOPS
+
     if [ -n "$EXISTING_PUBKEY" ]; then
         echo "   Found registered key: $EXISTING_PUBKEY"
         echo "   Checking for stored private key..."
@@ -786,6 +788,7 @@ vm-fresh HOST=DEFAULT_VM_HOST:
                 chmod 600 "$USER_AGE_DIR/keys.txt"
                 USER_AGE_PUBKEY=$(nix-shell -p age --run "age-keygen -y $USER_AGE_DIR/keys.txt")
                 echo "   New user age public key: $USER_AGE_PUBKEY"
+                NEED_TO_STORE_KEY="yes"
             fi
         else
             echo "   Private key not found in SOPS - generating fresh key"
@@ -793,6 +796,7 @@ vm-fresh HOST=DEFAULT_VM_HOST:
             chmod 600 "$USER_AGE_DIR/keys.txt"
             USER_AGE_PUBKEY=$(nix-shell -p age --run "age-keygen -y $USER_AGE_DIR/keys.txt")
             echo "   New user age public key: $USER_AGE_PUBKEY"
+            NEED_TO_STORE_KEY="yes"
         fi
     else
         echo "   No registered key found - generating fresh key"
@@ -800,6 +804,7 @@ vm-fresh HOST=DEFAULT_VM_HOST:
         chmod 600 "$USER_AGE_DIR/keys.txt"
         USER_AGE_PUBKEY=$(nix-shell -p age --run "age-keygen -y $USER_AGE_DIR/keys.txt")
         echo "   New user age public key: $USER_AGE_PUBKEY"
+        NEED_TO_STORE_KEY="yes"
     fi
 
     # Step 3: Register age key in nix-secrets and rekey
@@ -810,7 +815,7 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     just sops-update-user-age-key $PRIMARY_USER {{HOST}} "$USER_AGE_PUBKEY"
 
     # Store user private age key in SOPS (if we generated a new one or if mismatch was detected)
-    if [ "$DERIVED_PUBKEY" != "$EXISTING_PUBKEY" ] || [ -z "$EXISTING_PRIVKEY" ]; then
+    if [ "$NEED_TO_STORE_KEY" = "yes" ]; then
         echo "   Storing private age key in SOPS..."
         cd ../nix-secrets
         USER_PRIVKEY=$(cat "$USER_AGE_DIR/keys.txt")
