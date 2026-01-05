@@ -291,9 +291,10 @@ in
     sops.secrets =
       lib.mkIf ((config.sops.defaultSopsFile or null) != null) {
         # Chezmoi configuration file (contains template variables)
+        # Note: This uses the entire SOPS file as the secret (no key extraction)
         "chezmoi-config" = {
           sopsFile = "${sopsFolder}/chezmoi.yaml";
-          format = "yaml";
+          format = "binary";  # Treat entire decrypted file as the secret
           path = "${primaryUser.home}/.config/chezmoi/chezmoi.yaml";
           owner = primaryUser.name;
           mode = "0600";
