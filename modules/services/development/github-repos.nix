@@ -145,14 +145,7 @@ in
           fi
         done
 
-        # Verify SSH config exists
-        if [ ! -f ${homeDir}/.ssh/config ]; then
-          log "ERROR: SSH config not found at ${homeDir}/.ssh/config"
-          log "programs.ssh.extraConfig may not have been applied"
-          exit 1
-        fi
-
-        log "All SSH keys and config verified - ready to clone"
+        log "All SSH keys verified - ready to clone"
 
         # Create directories if needed
         mkdir -p ${homeDir}/.local/share
