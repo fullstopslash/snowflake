@@ -311,22 +311,24 @@ _generate-deploy-keys HOST:
 
     # Store deploy keys in SOPS
     TMP_YAML=$(mktemp)
-    sops -d sops/{{HOST}}.yaml | yq 'del(.sops)' > $TMP_YAML
+    # Try to decrypt existing file, create minimal structure if it fails
+    if sops -d sops/{{HOST}}.yaml 2>/dev/null | yq 'del(.sops)' > $TMP_YAML 2>/dev/null; then
+        echo "   Using existing SOPS file structure"
+    else
+        echo "   Creating fresh SOPS file structure"
+        echo "{}" > $TMP_YAML
+    fi
 
     # Add deploy-keys section if it doesn't exist
     if ! yq eval '.deploy-keys' $TMP_YAML > /dev/null 2>&1; then
         yq eval -i '.deploy-keys = {}' $TMP_YAML
     fi
 
-    # Read the private keys
-    NIX_CONFIG_KEY=$(cat "$TEMP_DIR/nix-config-deploy")
-    NIX_SECRETS_KEY=$(cat "$TEMP_DIR/nix-secrets-deploy")
-    CHEZMOI_KEY=$(cat "$TEMP_DIR/chezmoi-deploy")
-
-    # Use yq to set the keys (with proper multiline handling)
-    yq eval -i ".deploy-keys.nix-config = \"$NIX_CONFIG_KEY\"" $TMP_YAML
-    yq eval -i ".deploy-keys.nix-secrets = \"$NIX_SECRETS_KEY\"" $TMP_YAML
-    yq eval -i ".deploy-keys.chezmoi = \"$CHEZMOI_KEY\"" $TMP_YAML
+    # Store keys using proper multiline format (preserve SSH key structure)
+    # Use yq's from_file to preserve exact formatting including newlines
+    yq eval -i ".deploy-keys.nix-config = load_str(\"$TEMP_DIR/nix-config-deploy\")" $TMP_YAML
+    yq eval -i ".deploy-keys.nix-secrets = load_str(\"$TEMP_DIR/nix-secrets-deploy\")" $TMP_YAML
+    yq eval -i ".deploy-keys.chezmoi = load_str(\"$TEMP_DIR/chezmoi-deploy\")" $TMP_YAML
 
     # Encrypt and save (encrypt in root dir then move to sops/ for creation rule matching)
     mv $TMP_YAML {{HOST}}.yaml
@@ -388,15 +390,11 @@ _setup-deploy-keys HOST SSH_TARGET PRIMARY_USER:
             yq eval -i '.deploy-keys = {}' $TMP_YAML
         fi
 
-        # Read the private keys
-        NIX_CONFIG_KEY=$(cat "$TEMP_DIR/nix-config-deploy")
-        NIX_SECRETS_KEY=$(cat "$TEMP_DIR/nix-secrets-deploy")
-        CHEZMOI_KEY=$(cat "$TEMP_DIR/chezmoi-deploy")
-
-        # Use yq to set the keys (with proper multiline handling)
-        yq eval -i ".deploy-keys.nix-config = \"$NIX_CONFIG_KEY\"" $TMP_YAML
-        yq eval -i ".deploy-keys.nix-secrets = \"$NIX_SECRETS_KEY\"" $TMP_YAML
-        yq eval -i ".deploy-keys.chezmoi = \"$CHEZMOI_KEY\"" $TMP_YAML
+        # Store keys using proper multiline format (preserve SSH key structure)
+        # Use yq's load_str to preserve exact formatting including newlines
+        yq eval -i ".deploy-keys.nix-config = load_str(\"$TEMP_DIR/nix-config-deploy\")" $TMP_YAML
+        yq eval -i ".deploy-keys.nix-secrets = load_str(\"$TEMP_DIR/nix-secrets-deploy\")" $TMP_YAML
+        yq eval -i ".deploy-keys.chezmoi = load_str(\"$TEMP_DIR/chezmoi-deploy\")" $TMP_YAML
 
         # Encrypt and save (encrypt in root dir then move to sops/ for creation rule matching)
         mv $TMP_YAML {{HOST}}.yaml
