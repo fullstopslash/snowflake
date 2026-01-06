@@ -744,6 +744,15 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     AGE_PUBKEY=$(nix-shell -p ssh-to-age --run "cat $SSH_PUB_KEY_PATH | ssh-to-age")
     echo "   Age public key: $AGE_PUBKEY"
 
+    # Step 2.4: Create cache override file for VM environment
+    # VMs use QEMU user networking (10.0.2.x) and can't resolve waterbug.lan
+    # The socat proxy forwards 10.0.2.2:9999 to waterbug.lan:9999
+    echo "🌐 Configuring binary cache for VM environment..."
+    mkdir -p "$EXTRA_FILES/etc/cache-resolver"
+    echo "10.0.2.2" > "$EXTRA_FILES/etc/cache-resolver/waterbug-override"
+    chmod 644 "$EXTRA_FILES/etc/cache-resolver/waterbug-override"
+    echo "   ✅ Cache override set to 10.0.2.2 (VM proxy to waterbug.lan)"
+
     # Step 2.5: Generate per-host user age key for granular access control
     echo "🔐 Setting up per-host user age key..."
     PRIMARY_USER=$(just _get-vm-primary-user {{HOST}} 2>/dev/null || echo "rain")
@@ -879,11 +888,12 @@ vm-fresh HOST=DEFAULT_VM_HOST:
     echo "📥 Updating local nix-secrets flake input..."
     nix flake update nix-secrets
 
-    # Step 4.1: Commit flake.lock so nixos-anywhere uses correct nix-secrets
-    echo "📝 Committing flake.lock update..."
+    # Step 4.1: Commit and push flake.lock so nixos-anywhere uses correct nix-secrets
+    echo "📝 Committing and pushing flake.lock update..."
     source {{justfile_directory()}}/scripts/vcs-helpers.sh
     vcs_add flake.lock
     vcs_commit "chore({{HOST}}): update nix-secrets after key registration" || true
+    vcs_push
 
     # Step 4.5: Get disk encryption password from SOPS
     echo "🔑 Retrieving disk encryption password from SOPS..."
