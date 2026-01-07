@@ -5,11 +5,9 @@
   lib,
   inputs,
   ...
-}:
-let
+}: let
   cfg = config.myModules.services.buildCache;
-in
-{
+in {
   options.myModules.services.buildCache = {
     enable = lib.mkEnableOption "binary cache configuration with Attic";
 
@@ -102,12 +100,13 @@ in
       # - Dynamic mode: runtime config provides waterbug + cache.nixos.org
       # - Static mode: explicitly add waterbug cache URL before cache.nixos.org
       substituters =
-        if cfg.dynamicResolution then
+        if cfg.dynamicResolution
+        then
           # Dynamic mode: just ensure cache.nixos.org as fallback (runtime config adds waterbug)
-          lib.mkDefault [ "https://cache.nixos.org" ]
+          lib.mkDefault ["https://cache.nixos.org"]
         else
           # Static mode: explicitly configure waterbug cache before cache.nixos.org
-          lib.mkBefore [ cfg.cacheUrl ] ++ lib.mkDefault [ "https://cache.nixos.org" ];
+          lib.mkBefore [cfg.cacheUrl] ++ lib.mkDefault ["https://cache.nixos.org"];
 
       # Trust the cache (required for unsigned caches)
       # Only needed in static mode (dynamic mode gets this from nix.conf)
@@ -117,6 +116,7 @@ in
 
       # Add Attic cache public key to trusted keys (always needed)
       trusted-public-keys = [
+        "waterbug.lan:pKkYE7Bc1F5ufaqmGFEUWO0LGN2mKrw6HLm3JUvwyYU="
         "system:oio0pk/Mlb/DR3s1b78tHHmOclp82OkQrYOTRlaqays="
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       ];
@@ -130,6 +130,11 @@ in
       # Enable keep-outputs and keep-derivations for better cache hits
       keep-outputs = lib.mkDefault true;
       keep-derivations = lib.mkDefault true;
+
+      # Sign built packages with our key (only on build machines)
+      secret-key-files = lib.mkIf cfg.enablePush [
+        "/var/lib/attic-signing/secret-key"
+      ];
     };
 
     # Distributed build configuration (for non-build machines)
@@ -148,7 +153,7 @@ in
           "big-parallel"
           "kvm"
         ];
-        mandatoryFeatures = [ ];
+        mandatoryFeatures = [];
         # SSH key should be configured in ~/.ssh/config
         # The build machine needs to allow SSH access from this host
       }
@@ -160,8 +165,8 @@ in
     # Configure Attic client (only on machines that push)
     systemd.services.attic-config-setup = lib.mkIf cfg.enablePush {
       description = "Setup Attic client configuration";
-      wantedBy = [ "multi-user.target" ];
-      before = [ "nix-daemon.service" ];
+      wantedBy = ["multi-user.target"];
+      before = ["nix-daemon.service"];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
@@ -190,20 +195,23 @@ in
     # Watches nix store and pushes new paths to attic automatically
     systemd.services.attic-watch = lib.mkIf cfg.enablePush {
       description = "Watch Nix store and push to Attic cache";
-      wantedBy = [ "multi-user.target" ];
+      wantedBy = ["multi-user.target"];
       after = [
         "attic-config-setup.service"
         "network-online.target"
       ];
-      requires = [ "attic-config-setup.service" ];
-      wants = [ "network-online.target" ];
+      requires = ["attic-config-setup.service"];
+      wants = ["network-online.target"];
       serviceConfig = {
         Type = "simple";
         Restart = "on-failure";
         RestartSec = "30s";
 
-        # Watch the nix store and push new paths automatically
-        ExecStart = "${pkgs.attic-client}/bin/attic watch-store ${cfg.cacheName}";
+        # Watch the nix store and push new paths automatically with signing
+        ExecStart = "${pkgs.writeShellScript "attic-watch-signed" ''
+          export NIX_SECRET_KEY_FILE=/var/lib/attic-signing/secret-key
+          exec ${pkgs.attic-client}/bin/attic watch-store ${cfg.cacheName}
+        ''}";
 
         # Security hardening (relaxed to allow nix daemon and config access)
         PrivateTmp = true;
