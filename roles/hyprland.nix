@@ -10,6 +10,8 @@
       lock_cmd = pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock
       before_sleep_cmd = loginctl lock-session
       after_sleep_cmd = ${pkgs.hyprland}/bin/hyprctl dispatch dpms on
+      ignore_dbus_inhibit = false       # Allow apps like Steam/Firefox to prevent idle
+      ignore_systemd_inhibit = false    # Allow systemd inhibitors to prevent idle
     }
 
     # Dim screen after 4 minutes
@@ -127,6 +129,8 @@ in {
     hyprpaper
     hyprutils
     hyprlang
+    hyprtoolkit
+    hyprwire
     kdePackages.kwallet
     kdePackages.dolphin
     kdePackages.okular

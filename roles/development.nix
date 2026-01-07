@@ -31,6 +31,7 @@
     zed-editor
     vscodium-fhs
     helix
+    fresh-editor
     neovide
     micro
 
