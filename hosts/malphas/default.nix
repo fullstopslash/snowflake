@@ -16,6 +16,7 @@
     ./hardware-configuration.nix
     inputs.sops-nix.nixosModules.sops
     inputs.stylix.nixosModules.stylix
+    inputs.chaotic.nixosModules.default
     ../../modules/sops.nix
     # ../../modules/hdr.nix
     # ../../roles/cachix.nix
@@ -90,7 +91,7 @@
       "amd_pstate=active"
       "transparent_hugepage=madvise"
     ];
-    # boot.kernelPackages = pkgs.linuxPackages_cachyos;
+    # kernelPackages = inputs.chaotic.legacyPackages.${pkgs.system}.linuxPackages_cachyos;
     # kernelPackages = pkgs.linuxPackages_zen;
     kernelPackages = pkgs.linuxPackages_latest;
 

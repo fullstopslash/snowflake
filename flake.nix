@@ -46,6 +46,10 @@
       url = "github:jacopone/antigravity-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    chaotic = {
+      url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Fix Dolphin OpenURI behavior via overlay
     # dolphin-overlay = {
     #   url = "github:rumboon/dolphin-overlay";

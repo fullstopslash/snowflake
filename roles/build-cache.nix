@@ -47,8 +47,8 @@ in {
 
     # Configure Nix to use the binary cache
     nix.settings = {
-      # Add attic cache as a substituter
-      substituters = [
+      # Add attic cache as a substituter (prepend to use it first)
+      substituters = lib.mkBefore [
         atticCacheUrl
       ];
 
@@ -57,11 +57,19 @@ in {
         atticCacheUrl
       ];
 
-      # If using signed caches, add the public key here
-      # trusted-public-keys = [
-      #   "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-      #   "attic:your-public-key-here"
-      # ];
+      # Add public key for signed caches
+      trusted-public-keys = [
+        "waterbug.lan:pKkYE7Bc1F5ufaqmGFEUWO0LGN2mKrw6HLm3JUvwyYU="
+        "system:oio0pk/Mlb/DR3s1b78tHHmOclp82OkQrYOTRlaqays="
+      ];
+
+      # Keep signature verification enabled now that we have signing
+      # require-sigs = true; # (default)
+
+      # Sign built packages with our key
+      secret-key-files = lib.mkIf cfg.enablePush [
+        "/var/lib/attic-signing/secret-key"
+      ];
 
       # Allow building on this machine
       builders-use-substitutes = true;
@@ -120,9 +128,11 @@ in {
         # Limit restart attempts to avoid log spam when cache is unavailable
         StartLimitIntervalSec = "300s";
         StartLimitBurst = 3;
-        # Watch the nix store and push new paths to attic
-        # This watches for new store paths and pushes them automatically
-        ExecStart = "${pkgs.attic-client}/bin/attic watch-store ${atticCacheName}";
+        # Watch the nix store and push new paths to attic with signing
+        ExecStart = "${pkgs.writeShellScript "attic-watch-signed" ''
+          export NIX_SECRET_KEY_FILE=/var/lib/attic-signing/secret-key
+          exec ${pkgs.attic-client}/bin/attic watch-store ${atticCacheName}
+        ''}";
       };
     };
 
