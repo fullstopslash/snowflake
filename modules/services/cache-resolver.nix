@@ -113,6 +113,15 @@ in
 {
   # Note: dynamicResolution option is declared in build-cache.nix to avoid duplication
   config = lib.mkIf (cfg.enable && cfg.dynamicResolution) {
+    # For VMs: Create cache override file pointing to QEMU gateway proxy
+    # VMs use QEMU user networking and can't resolve waterbug.lan via mDNS
+    # The host runs socat proxy: localhost:9999 -> waterbug.lan:9999
+    # QEMU forwards this to 10.0.2.2:9999 inside the VM
+    environment.etc."cache-resolver/waterbug-override" = lib.mkIf (builtins.elem "vm" config.roles) {
+      text = "10.0.2.2\n";
+      mode = "0644";
+    };
+
     # Runtime cache resolver service
     systemd.services.cache-resolver = {
       description = "Resolve waterbug.lan binary cache and configure substituters";
