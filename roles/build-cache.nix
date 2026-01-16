@@ -118,21 +118,33 @@ in {
     # Automatic cache push service (for build machine)
     systemd.services.attic-watch = lib.mkIf cfg.enablePush {
       description = "Watch and push to Attic cache";
-      wantedBy = ["multi-user.target"];
       after = ["attic-netrc-setup.service" "network-online.target" "nss-lookup.target"];
       wants = ["network-online.target" "attic-netrc-setup.service"];
+      # Limit restart attempts to avoid log spam when cache is unavailable
+      unitConfig = {
+        StartLimitIntervalSec = 300; # 300 seconds
+        StartLimitBurst = 3;
+      };
       serviceConfig = {
         Type = "simple";
         Restart = "on-failure";
         RestartSec = "60s";
-        # Limit restart attempts to avoid log spam when cache is unavailable
-        StartLimitIntervalSec = "300s";
-        StartLimitBurst = 3;
         # Watch the nix store and push new paths to attic with signing
         ExecStart = "${pkgs.writeShellScript "attic-watch-signed" ''
           export NIX_SECRET_KEY_FILE=/var/lib/attic-signing/secret-key
           exec ${pkgs.attic-client}/bin/attic watch-store ${atticCacheName}
         ''}";
+      };
+    };
+
+    # Timer to periodically attempt to start attic-watch service
+    systemd.timers.attic-watch = lib.mkIf cfg.enablePush {
+      description = "Periodically attempt to start attic-watch service";
+      wantedBy = ["timers.target"];
+      timerConfig = {
+        OnBootSec = "2min"; # First attempt 2 minutes after boot
+        OnUnitActiveSec = "10min"; # Retry every 10 minutes if failed
+        Persistent = true; # Catch up if system was off
       };
     };
 

@@ -79,7 +79,7 @@
     stable.lutris
     protontricks
     protonup-qt
-    nexusmods-app
+    # nexusmods-app
     playonlinux
     winetricks
     vulkan-tools
