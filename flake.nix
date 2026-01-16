@@ -50,6 +50,10 @@
       url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    beads = {
+      url = "path:./beads";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Fix Dolphin OpenURI behavior via overlay
     # dolphin-overlay = {
     #   url = "github:rumboon/dolphin-overlay";
