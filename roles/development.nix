@@ -36,6 +36,7 @@
     micro
 
     #Git management
+    forgejo-cli
     gittyup
     # gitbutler
     meld

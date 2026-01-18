@@ -62,6 +62,7 @@
     rclone
     mkpasswd
     pwgen
+    speedtest-cli
 
     cliphist
     # developer utilities
