@@ -31,8 +31,14 @@
 
     hardware.url = "github:nixos/nixos-hardware";
     # Role-specific inputs
-    mcphub-nvim.url = "github:ravitemer/mcphub.nvim";
-    mcp-hub.url = "github:ravitemer/mcp-hub";
+    mcphub-nvim = {
+      url = "github:ravitemer/mcphub.nvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    mcp-hub = {
+      url = "github:ravitemer/mcp-hub";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nix-ai-tools.url = "github:numtide/nix-ai-tools";
     nixos-anywhere = {
       url = "github:nix-community/nixos-anywhere";

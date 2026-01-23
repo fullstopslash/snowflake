@@ -188,6 +188,7 @@
     ladybird
 
     # Desktop utilities
+    quickshell
     input-leap
     darkman
     pywal16

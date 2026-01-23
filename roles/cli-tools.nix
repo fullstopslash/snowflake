@@ -1,5 +1,7 @@
 # CLI tools rollup role (temporary consolidation)
-{pkgs, ...}: {
+{pkgs, ...}: let
+  grafatui = pkgs.callPackage ../pkgs/grafatui {};
+in {
   programs = {
     bat.enable = true;
     mosh.enable = true;
@@ -37,6 +39,7 @@
     btop-rocm
     ncdu
     grex
+    grafatui
     python313Packages.faker
     ttyd
     viddy
@@ -76,6 +79,7 @@
     moor
     tmux-sessionizer
     tmuxp
+    chafa
     wezterm
     urlencode
     managarr
@@ -116,6 +120,7 @@
 
     # Communication and news
     neomutt
+    taskwarrior3
     # procmail  # Fails to build with modern GCC
     newsboat
     weechat

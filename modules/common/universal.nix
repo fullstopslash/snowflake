@@ -227,6 +227,7 @@
       experimental-features = ["nix-command" "flakes"];
       auto-optimise-store = false;
       max-jobs = 12;  # Parallel derivation builds
+      max-substitution-jobs = 1;  # Force sequential cache checking to honor priority
       download-buffer-size = 524288000;
       cores = 0;  # 0 = use all available cores per build
       http-connections = 50;

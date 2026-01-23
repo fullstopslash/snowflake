@@ -33,6 +33,7 @@
     ../../roles/media.nix
     ../../roles/obs.nix
     ../../roles/waybar.nix
+    ../../roles/quickshell.nix
     ../../roles/networking.nix
     # ../../roles/sinkzone.nix
     ../../roles/vpn.nix

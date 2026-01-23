@@ -14,6 +14,7 @@
   greetd = ../../roles/greetd.nix;
   flatpak = ../../roles/flatpak.nix;
   waybar = ../../roles/waybar.nix;
+  quickshell = ../../roles/quickshell.nix;
 
   # Gaming and Media
   gaming = ../../roles/gaming.nix;

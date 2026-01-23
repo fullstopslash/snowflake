@@ -80,4 +80,15 @@
     wantedBy = ["graphical-session.target"];
   };
 
+  # Restart jellyfin-mpv-shim on resume from sleep
+  systemd.user.services.jellyfin-mpv-shim-resume = {
+    description = "Restart jellyfin-mpv-shim after resume";
+    after = ["suspend.target" "hibernate.target" "hybrid-sleep.target" "suspend-then-hibernate.target"];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.systemd}/bin/systemctl --user restart jellyfin-mpv-shim.service";
+    };
+    wantedBy = ["suspend.target" "hibernate.target" "hybrid-sleep.target" "suspend-then-hibernate.target"];
+  };
+
 }
