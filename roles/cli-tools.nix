@@ -121,6 +121,8 @@ in {
     # Communication and news
     neomutt
     taskwarrior3
+    taskwarrior-tui
+    todoman
     # procmail  # Fails to build with modern GCC
     newsboat
     weechat

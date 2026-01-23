@@ -57,7 +57,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     beads = {
-      url = "path:./beads";
+      url = "github:steveyegge/beads";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Fix Dolphin OpenURI behavior via overlay

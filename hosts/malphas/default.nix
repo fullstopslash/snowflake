@@ -39,6 +39,9 @@
     ../../roles/vpn.nix
     ../../roles/tailscale.nix
     ../../roles/syncthing.nix
+    ../../roles/syncall.nix
+    ../../roles/vikunja-sync.nix
+    ../../roles/vikunja-webhook.nix
     ../../roles/network-storage.nix
     ../../roles/bitwarden-automation.nix
     # ../../roles/latex.nix
@@ -128,4 +131,26 @@
     enableBuilder = true; # This is the main build machine
     enablePush = true; # Automatically push built packages to cache
   };
+
+  # Vikunja: bidirectional multi-project sync with instant webhook triggers
+  roles.vikunjaWebhook.enable = true;
+  roles.vikunjaSync.enable = true;
+
+  # Syncall: Taskwarrior <-> CalDAV sync (Nextcloud only - Vikunja uses vikunja-sync)
+  roles.syncall = {
+    enable = true;
+    targets = {
+      nextcloud = {
+        caldavUrl = "https://nextcloud.chimera-micro.ts.net/remote.php/dav";
+        caldavUser = "rain";
+        caldavCalendar = "Tasks";
+        secretKey = "caldav/nextcloud";
+      };
+    };
+  };
+
+  # Trust Caddy's internal CA for local services (forgejo, etc.)
+  security.pki.certificateFiles = [
+    ../../assets/certs/caddy-root-ca.crt
+  ];
 }
