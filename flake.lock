@@ -572,8 +572,8 @@
     },
     "nix-secrets": {
       "locked": {
-        "lastModified": 1769249767,
-        "narHash": "sha256-JNU456GtizWv6mskl152TJh/fl9j0tsHg/ge/mML10M=",
+        "lastModified": 1769278917,
+        "narHash": "sha256-HtNvaK63DrWqsuL3nMPDPCL3Qm9q5Uk4rsLRygWFHfw=",
         "path": "/home/rain/nix-secrets",
         "type": "path"
       },

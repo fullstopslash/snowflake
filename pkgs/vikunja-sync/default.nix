@@ -16,19 +16,39 @@ let
   labelSyncScript = pkgs.writers.writePython3Bin "vikunja-sync-labels" {
     flakeIgnore = ["E501" "E265"];
   } (builtins.readFile ./label-sync.py);
+
+  # Direct-write sync script (instant webhook/hook handling)
+  # Target latency: <100ms vs ~2000ms for full sync
+  directSyncScript = pkgs.writers.writePython3Bin "vikunja-direct" {
+    flakeIgnore = ["E501" "E265" "W503"];
+  } (builtins.readFile ./vikunja-direct.py);
+
+  # Main vikunja-sync shell script (for reconciliation/full sync)
+  mainScript = pkgs.writeShellApplication {
+    name = "vikunja-sync";
+    runtimeInputs = [
+      syncallPkg
+      correlateScript
+      labelSyncScript
+      pkgs.curl
+      pkgs.jq
+      pkgs.yq-go
+      pkgs.sops
+      pkgs.taskwarrior3
+      pkgs.coreutils
+    ];
+    text = builtins.readFile ./vikunja-sync.sh;
+  };
 in
-pkgs.writeShellApplication {
+# Combine both scripts into a single derivation with multiple binaries
+pkgs.symlinkJoin {
   name = "vikunja-sync";
-  runtimeInputs = [
-    syncallPkg
-    correlateScript
-    labelSyncScript
-    pkgs.curl
-    pkgs.jq
-    pkgs.yq-go
-    pkgs.sops
-    pkgs.taskwarrior3
-    pkgs.coreutils
+  paths = [
+    mainScript
+    directSyncScript
   ];
-  text = builtins.readFile ./vikunja-sync.sh;
+  meta = {
+    description = "Bidirectional Taskwarrior <-> Vikunja sync with instant direct-write mode";
+    mainProgram = "vikunja-sync";
+  };
 }

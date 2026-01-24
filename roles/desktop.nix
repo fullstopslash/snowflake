@@ -2,8 +2,11 @@
 {
   config,
   pkgs,
+  inputs,
   ...
-}: {
+}: let
+  secrets = inputs.nix-secrets;
+in {
   # Allow insecure packages specifically required for the desktop role
   nixpkgs.config.permittedInsecurePackages = [
     "ventoy-1.1.07"
@@ -60,7 +63,7 @@
       #   wantedBy = ["suspend.target" "hibernate.target" "hybrid-sleep.target"];
       #   serviceConfig = {
       #     Type = "oneshot";
-      #     ExecStart = "${pkgs.curl}/bin/curl https://ntfy.chimera-micro.ts.net/waterbug-alerts -d 'Resumed: \"post sleep\"' -H 'Tags: skull' ";
+      #     ExecStart = "${pkgs.curl}/bin/curl ${secrets.services.ntfy.url}/waterbug-alerts -d 'Resumed: \"post sleep\"' -H 'Tags: skull' ";
       #     User = "rain";
       #   };
       # };
@@ -143,7 +146,7 @@
         wantedBy = ["default.target"];
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${pkgs.curl}/bin/curl https://ntfy.chimera-micro.ts.net/waterbug-alerts -d 'Resumed: \"Graphical-session\"' -H 'Tags: skull' ";
+          ExecStart = "${pkgs.curl}/bin/curl ${secrets.services.ntfy.url}/waterbug-alerts -d 'Resumed: \"Graphical-session\"' -H 'Tags: skull' ";
           RemainAfterExit = true;
         };
       };

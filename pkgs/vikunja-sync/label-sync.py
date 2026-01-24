@@ -165,7 +165,10 @@ def sync_labels(base_url: str, project_filter: str | None = None) -> int:
 
 
 def main():
-    base_url = os.environ.get("VIKUNJA_URL", "https://vikunja.chimera-micro.ts.net")
+    base_url = os.environ.get("VIKUNJA_URL", "")
+    if not base_url:
+        print("VIKUNJA_URL not set", file=sys.stderr)
+        sys.exit(1)
     project = sys.argv[1] if len(sys.argv) > 1 else None
 
     try:

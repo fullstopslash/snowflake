@@ -2,9 +2,9 @@
 # vikunja-sync: Bidirectional multi-project sync between Taskwarrior and Vikunja
 set -euo pipefail
 
-# Configuration (can be overridden via environment)
-VIKUNJA_URL="${VIKUNJA_URL:-https://vikunja.chimera-micro.ts.net}"
-VIKUNJA_USER="${VIKUNJA_USER:-rain}"
+# Configuration (must be set via environment)
+: "${VIKUNJA_URL:?VIKUNJA_URL must be set}"
+: "${VIKUNJA_USER:?VIKUNJA_USER must be set}"
 CALDAV_URL="${VIKUNJA_URL}/dav"
 
 # Paths to secrets (set by NixOS module)

@@ -141,8 +141,8 @@
     enable = true;
     targets = {
       nextcloud = {
-        caldavUrl = "https://nextcloud.chimera-micro.ts.net/remote.php/dav";
-        caldavUser = "rain";
+        caldavUrl = "${inputs.nix-secrets.services.nextcloud.url}${inputs.nix-secrets.services.nextcloud.caldavPath}";
+        caldavUser = inputs.nix-secrets.services.nextcloud.user;
         caldavCalendar = "Tasks";
         secretKey = "caldav/nextcloud";
       };

@@ -1,4 +1,7 @@
-# Vikunja webhook receiver role - triggers vikunja-sync on task changes
+# Vikunja webhook receiver role - direct-write sync on task changes
+#
+# Architecture: Webhook payload -> vikunja-direct webhook -> TW import
+# Target latency: <100ms (vs ~2000ms with full sync)
 {
   config,
   lib,
@@ -7,48 +10,57 @@
 }: let
   cfg = config.roles.vikunjaWebhook;
   username = config.hostSpec.primaryUser;
+  homeDir = config.users.users.${username}.home;
 
   # Get vikunja-sync config from the sync role
   syncCfg = config.roles.vikunjaSync;
 
-  # Script to trigger vikunja-sync for a specific project
-  # Receives project title directly from webhook payload
-  triggerScript = pkgs.writeShellScript "trigger-vikunja-sync" ''
-    PROJECT_TITLE="''${1:-}"
+  # Direct-write handler package
+  vikunjaDirectPkg = pkgs.callPackage ../pkgs/vikunja-sync/default.nix {};
 
-    echo "$(date -Iseconds) Vikunja webhook received for project: $PROJECT_TITLE"
+  # Queue directory for webhook payloads (user-writable for cleanup)
+  queueDir = "/run/vikunja-webhook";
 
-    # Environment variables for vikunja-sync (including label sync)
-    SYNC_ENV="VIKUNJA_URL=${syncCfg.vikunjaUrl}"
-    SYNC_ENV="$SYNC_ENV VIKUNJA_USER=${syncCfg.caldavUser}"
-    SYNC_ENV="$SYNC_ENV VIKUNJA_API_TOKEN_FILE=${config.sops.secrets."caldav/vikunja-api".path}"
-    SYNC_ENV="$SYNC_ENV VIKUNJA_CALDAV_PASS_FILE=${config.sops.secrets."caldav/vikunja".path}"
+  # Direct webhook handler - writes payload to queue, triggers user service
+  # No sudo - uses machinectl to trigger user service that reads from queue
+  triggerScript = pkgs.writeShellScript "trigger-vikunja-direct" ''
+    set -euo pipefail
 
-    if [[ -n "$PROJECT_TITLE" && "$PROJECT_TITLE" != "null" ]]; then
-      # Sync specific project with environment variables
-      ${pkgs.systemd}/bin/machinectl shell ${username}@.host \
-        ${pkgs.systemd}/bin/systemd-run --user --collect --no-block \
-        --unit=vikunja-sync-webhook \
-        /usr/bin/env $SYNC_ENV \
-        /run/current-system/sw/bin/vikunja-sync project "$PROJECT_TITLE"
-    else
-      # No project title, run full sync via service (which sets its own env)
-      ${pkgs.systemd}/bin/machinectl shell ${username}@.host \
-        ${pkgs.systemd}/bin/systemctl --user start vikunja-sync.service --no-block
+    # Webhook passes payload file via PAYLOAD env var (from pass-file-to-command)
+    PAYLOAD_FILE="''${PAYLOAD:-''${1:-}}"
+
+    if [[ -z "$PAYLOAD_FILE" || ! -f "$PAYLOAD_FILE" ]]; then
+      echo "ERROR: No payload file provided" >&2
+      exit 1
     fi
+
+    # Log with timestamp
+    echo "$(date -Iseconds) Vikunja webhook received"
+
+    # Copy payload to queue directory (user-owned so user service can delete it)
+    QUEUE_FILE="${queueDir}/$(date +%s%N).json"
+    cp "$PAYLOAD_FILE" "$QUEUE_FILE"
+    chown ${username}:users "$QUEUE_FILE"
+    chmod 644 "$QUEUE_FILE"
+
+    # Trigger user service to process the payload
+    ${pkgs.systemd}/bin/machinectl shell ${username}@.host \
+      /run/current-system/sw/bin/systemctl --user start vikunja-webhook-process@"$(basename "$QUEUE_FILE")" --no-block
+
+    echo "Queued: $QUEUE_FILE"
   '';
 
-  # JSON config for webhook - uses sops placeholder for HMAC secret
-  # Extracts project title from payload (data.project.title)
+  # JSON config for webhook - passes full payload via file
   hooksJson = builtins.toJSON [{
     id = "vikunja-sync";
     execute-command = toString triggerScript;
     command-working-directory = "/tmp";
     response-message = "Sync triggered";
-    pass-arguments-to-command = [
+    # Pass full payload as file (more reliable than args for large JSON)
+    pass-file-to-command = [
       {
-        source = "payload";
-        name = "data.project.title";
+        source = "entire-payload";
+        envname = "PAYLOAD";
       }
     ];
     trigger-rule = {
@@ -112,7 +124,8 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    # SOPS secret for HMAC validation
+    # SOPS secret for webhook HMAC validation
+    # Note: caldav/vikunja-api is defined in vikunja-sync.nix
     sops.secrets."webhook/vikunja" = {
       key = "webhook/vikunja";
       owner = "root";
@@ -129,9 +142,14 @@ in {
       mode = "0600";
     };
 
-    # Webhook receiver service
+    # Queue directory for webhook payloads (user-writable for cleanup)
+    systemd.tmpfiles.rules = [
+      "d ${queueDir} 0777 root root -"
+    ];
+
+    # Webhook receiver service (root, validates HMAC)
     systemd.services.vikunja-webhook = {
-      description = "Vikunja webhook receiver";
+      description = "Vikunja webhook receiver (direct-write)";
       after = ["network.target" "sops-nix.service"];
       wants = ["sops-nix.service"];
       wantedBy = ["multi-user.target"];
@@ -142,6 +160,23 @@ in {
         Restart = "on-failure";
         RestartSec = 5;
       };
+    };
+
+    # User service template to process webhook payloads
+    systemd.user.services."vikunja-webhook-process@" = {
+      description = "Process Vikunja webhook payload %i";
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${vikunjaDirectPkg}/bin/vikunja-direct webhook ${queueDir}/%i";
+        ExecStartPost = "${pkgs.coreutils}/bin/rm -f ${queueDir}/%i";
+      };
+      environment = {
+        VIKUNJA_URL = syncCfg.vikunjaUrl;
+        VIKUNJA_USER = syncCfg.caldavUser;
+        VIKUNJA_API_TOKEN_FILE = config.sops.secrets."caldav/vikunja-api".path;
+      };
+      # Include bash for TW hooks that use #!/usr/bin/env bash
+      path = [pkgs.taskwarrior3 pkgs.bash pkgs.coreutils];
     };
 
     # Open port on Tailscale interface only
