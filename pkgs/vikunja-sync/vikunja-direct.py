@@ -167,6 +167,12 @@ def handle_webhook(payload: dict) -> dict:
 
             # Build modification changes
             changes: dict[str, Any] = {}
+
+            # Sync description (title) changes
+            if tw_task.get("description") and existing_task:
+                if tw_task["description"] != existing_task.get("description"):
+                    changes["description"] = tw_task["description"]
+
             if "due" in tw_task:
                 changes["due"] = tw_task["due"]
             if "priority" in tw_task:
