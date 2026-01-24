@@ -133,7 +133,10 @@
   };
 
   # Vikunja: bidirectional multi-project sync with instant webhook triggers
-  roles.vikunjaWebhook.enable = true;
+  roles.vikunjaWebhook = {
+    enable = true;
+    callbackHost = "100.77.72.15"; # Tailscale IP for this machine
+  };
   roles.vikunjaSync.enable = true;
 
   # Syncall: Taskwarrior <-> CalDAV sync (Nextcloud only - Vikunja uses vikunja-sync)

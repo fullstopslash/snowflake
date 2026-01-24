@@ -2,6 +2,8 @@
 #
 # Architecture: Webhook payload -> vikunja-direct webhook -> TW import
 # Target latency: <100ms (vs ~2000ms with full sync)
+#
+# Webhook provisioning: Automatically creates webhooks on all Vikunja projects
 {
   config,
   lib,
@@ -14,6 +16,63 @@
 
   # Get vikunja-sync config from the sync role
   syncCfg = config.roles.vikunjaSync;
+
+  # Webhook provisioning script - ensures webhooks exist on all projects
+  provisionWebhooksScript = pkgs.writeShellScript "vikunja-provision-webhooks" ''
+    set -euo pipefail
+
+    VIKUNJA_URL="$1"
+    API_TOKEN_FILE="$2"
+    WEBHOOK_SECRET_FILE="$3"
+    WEBHOOK_URL="$4"
+
+    API_TOKEN=$(cat "$API_TOKEN_FILE")
+    WEBHOOK_SECRET=$(cat "$WEBHOOK_SECRET_FILE")
+
+    log() { echo "[$(date -Iseconds)] $*"; }
+
+    # Get all projects
+    PROJECTS=$(${pkgs.curl}/bin/curl -sf \
+      -H "Authorization: Bearer $API_TOKEN" \
+      "$VIKUNJA_URL/api/v1/projects" | ${pkgs.jq}/bin/jq -r '.[].id')
+
+    if [[ -z "$PROJECTS" ]]; then
+      log "No projects found or API error"
+      exit 1
+    fi
+
+    for PROJECT_ID in $PROJECTS; do
+      # Check if webhook already exists for this project
+      EXISTING=$(${pkgs.curl}/bin/curl -sf \
+        -H "Authorization: Bearer $API_TOKEN" \
+        "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks" | \
+        ${pkgs.jq}/bin/jq -r --arg url "$WEBHOOK_URL" '.[] | select(.target_url == $url) | .id')
+
+      if [[ -n "$EXISTING" ]]; then
+        log "Project $PROJECT_ID: webhook already exists (id=$EXISTING)"
+        continue
+      fi
+
+      # Create webhook
+      RESULT=$(${pkgs.curl}/bin/curl -sf -X PUT \
+        -H "Authorization: Bearer $API_TOKEN" \
+        -H "Content-Type: application/json" \
+        "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks" \
+        -d "{
+          \"target_url\": \"$WEBHOOK_URL\",
+          \"events\": [\"task.created\", \"task.updated\", \"task.deleted\"],
+          \"secret\": \"$WEBHOOK_SECRET\"
+        }" | ${pkgs.jq}/bin/jq -r '.id // "error"')
+
+      if [[ "$RESULT" == "error" ]]; then
+        log "Project $PROJECT_ID: failed to create webhook"
+      else
+        log "Project $PROJECT_ID: created webhook (id=$RESULT)"
+      fi
+    done
+
+    log "Webhook provisioning complete"
+  '';
 
   # Direct-write handler package
   vikunjaDirectPkg = pkgs.callPackage ../pkgs/vikunja-sync/default.nix {};
@@ -121,14 +180,27 @@ in {
       default = 9000;
       description = "Port for webhook receiver";
     };
+
+    callbackHost = lib.mkOption {
+      type = lib.types.str;
+      description = "Host/IP that Vikunja can reach this webhook receiver at (e.g., Tailscale IP)";
+      example = "100.77.72.15";
+    };
   };
 
   config = lib.mkIf cfg.enable {
-    # SOPS secret for webhook HMAC validation
+    # SOPS secret for webhook HMAC validation (root-owned for webhook service)
     # Note: caldav/vikunja-api is defined in vikunja-sync.nix
     sops.secrets."webhook/vikunja" = {
       key = "webhook/vikunja";
       owner = "root";
+      mode = "0600";
+    };
+
+    # User-owned copy for provisioning service
+    sops.secrets."webhook/vikunja-user" = {
+      key = "webhook/vikunja";
+      owner = username;
       mode = "0600";
     };
 
@@ -181,5 +253,27 @@ in {
 
     # Open port on Tailscale interface only
     networking.firewall.interfaces."tailscale0".allowedTCPPorts = [cfg.port];
+
+    # Webhook provisioning service - ensures webhooks exist on all projects
+    systemd.user.services.vikunja-provision-webhooks = {
+      description = "Provision Vikunja webhooks on all projects";
+      after = ["network-online.target"];
+      wants = ["network-online.target"];
+      path = [pkgs.curl pkgs.jq pkgs.coreutils];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${provisionWebhooksScript} ${syncCfg.vikunjaUrl} ${config.sops.secrets."caldav/vikunja-api".path} ${config.sops.secrets."webhook/vikunja-user".path} http://${cfg.callbackHost}:${toString cfg.port}/hooks/vikunja-sync";
+      };
+    };
+
+    # Timer to run provisioning on boot and hourly (catches new projects)
+    systemd.user.timers.vikunja-provision-webhooks = {
+      wantedBy = ["timers.target"];
+      timerConfig = {
+        OnBootSec = "2min";
+        OnUnitActiveSec = "1h";
+        Persistent = true;
+      };
+    };
   };
 }
