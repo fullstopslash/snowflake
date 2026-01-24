@@ -228,6 +228,35 @@ in {
       '';
     };
 
+    # Retry queue processor service (processes failed syncs)
+    systemd.user.services.vikunja-sync-retry = lib.mkIf cfg.enableDirectSync {
+      description = "Vikunja Sync Retry Queue Processor";
+      after = ["network-online.target"];
+      wants = ["network-online.target"];
+      path = [vikunjaSync pkgs.taskwarrior3 pkgs.curl pkgs.jq pkgs.bash pkgs.coreutils];
+      serviceConfig = {
+        Type = "oneshot";
+      };
+      environment = {
+        VIKUNJA_URL = cfg.vikunjaUrl;
+        VIKUNJA_USER = cfg.caldavUser;
+        VIKUNJA_API_TOKEN_FILE = config.sops.secrets."caldav/vikunja-api".path;
+      };
+      script = ''
+        exec ${vikunjaSync}/bin/vikunja-sync-retry
+      '';
+    };
+
+    # Retry queue timer (runs every 5 minutes)
+    systemd.user.timers.vikunja-sync-retry = lib.mkIf cfg.enableDirectSync {
+      description = "Run Vikunja Sync Retry every 5 minutes";
+      wantedBy = ["timers.target"];
+      timerConfig = {
+        OnBootSec = "5min";
+        OnUnitActiveSec = "5min";
+      };
+    };
+
     # Taskwarrior on-add hook - direct push to Vikunja API (instant sync for new tasks)
     # NON-BLOCKING: outputs task immediately, syncs in background
     environment.etc."vikunja-sync-hook/on-add-vikunja" = lib.mkIf cfg.enableDirectSync {
@@ -252,10 +281,11 @@ in {
           export VIKUNJA_USER="${cfg.caldavUser}"
           export VIKUNJA_API_TOKEN_FILE="${config.sops.secrets."caldav/vikunja-api".path}"
 
-          echo "$1" | ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1
+          ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1 <<< "$1"
+          exit_code=$?
 
           # On failure, queue for retry
-          if [[ $? -ne 0 ]]; then
+          if [[ $exit_code -ne 0 ]]; then
             uuid=$(echo "$1" | ${pkgs.jq}/bin/jq -r ".uuid // empty")
             [[ -n "$uuid" ]] && echo "$uuid" >> /tmp/vikunja-sync-queue.txt
           fi
@@ -290,10 +320,11 @@ in {
           export VIKUNJA_USER="${cfg.caldavUser}"
           export VIKUNJA_API_TOKEN_FILE="${config.sops.secrets."caldav/vikunja-api".path}"
 
-          printf "%s\n%s\n" "$1" "$2" | ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1
+          ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1 <<< "$(printf '%s\n%s\n' "$1" "$2")"
+          exit_code=$?
 
           # On failure, queue for retry
-          if [[ $? -ne 0 ]]; then
+          if [[ $exit_code -ne 0 ]]; then
             uuid=$(echo "$2" | ${pkgs.jq}/bin/jq -r ".uuid // empty")
             [[ -n "$uuid" ]] && echo "$uuid" >> /tmp/vikunja-sync-queue.txt
           fi

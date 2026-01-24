@@ -7,31 +7,15 @@ Taskwarrior and Vikunja/CalDAV. Prevents "Item already has UUID" errors by
 pre-creating TW tasks for orphaned CalDAV items.
 """
 
-import json
 import os
 import re
-import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import caldav
 
-
-def get_tw_tasks(project: str) -> dict[str, dict]:
-    """Get Taskwarrior tasks for a project. Returns {uuid: task_dict}."""
-    try:
-        result = subprocess.run(
-            ["task", f"project:{project}", "export"],
-            capture_output=True,
-            text=True,
-            check=True,
-            env={**os.environ, "VIKUNJA_SYNC_RUNNING": "1"},
-        )
-        tasks = json.loads(result.stdout) if result.stdout.strip() else []
-        return {t["uuid"]: t for t in tasks if "uuid" in t}
-    except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
-        print(f"Warning: Failed to get TW tasks: {e}", file=sys.stderr)
-        return {}
+from vikunja_common import TaskwarriorClient, SyncLogger
 
 
 def get_caldav_items(url: str, user: str, passwd: str, calendar: str) -> dict[str, dict]:
@@ -54,7 +38,6 @@ def get_caldav_items(url: str, user: str, passwd: str, calendar: str) -> dict[st
                     }
                 return items
 
-        print(f"Warning: Calendar '{calendar}' not found", file=sys.stderr)
         return {}
     except Exception as e:
         print(f"Warning: Failed to get CalDAV items: {e}", file=sys.stderr)
@@ -80,7 +63,12 @@ def load_correlations(filepath: Path) -> dict[str, str]:
             if in_fwdm:
                 if "_inv:" in line or "_invm:" in line:
                     break
-                match = re.match(r"\s+([a-f0-9-]+):\s+([a-f0-9-]+)", line)
+                match = re.match(
+                    r"\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):\s+"
+                    r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})",
+                    line,
+                    re.IGNORECASE
+                )
                 if match:
                     result[match.group(1)] = match.group(2)
         return result
@@ -110,48 +98,37 @@ def save_correlations(filepath: Path, correlations: dict[str, str]) -> None:
   _invm: *id002
 """
     filepath.parent.mkdir(parents=True, exist_ok=True)
-    with open(filepath, "w") as f:
-        f.write(content)
 
-
-def create_tw_task(project: str, description: str, completed: bool = False) -> str | None:
-    """Create a TW task and return its UUID."""
-    env = {**os.environ, "VIKUNJA_SYNC_RUNNING": "1"}
+    # Atomic write: write to temp file, then rename
+    fd, temp_path = tempfile.mkstemp(dir=filepath.parent, prefix=".tmp_", suffix=".yaml")
     try:
-        cmd = ["task", "add", f"project:{project}", description]
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True, env=env)
-
-        # Extract task ID from "Created task 123."
-        match = re.search(r"Created task (\d+)", result.stdout)
-        if not match:
-            return None
-
-        task_id = match.group(1)
-
-        # Get UUID using task export
-        export = subprocess.run(
-            ["task", task_id, "export"],
-            capture_output=True, text=True, check=True, env=env,
-        )
-        tasks = json.loads(export.stdout) if export.stdout.strip() else []
-        if not tasks:
-            return None
-
-        uuid = tasks[0].get("uuid")
-        if completed and uuid:
-            subprocess.run(["task", uuid, "done"], capture_output=True, check=True, env=env)
-        return uuid
-    except subprocess.CalledProcessError as e:
-        print(f"Warning: Failed to create TW task: {e}", file=sys.stderr)
-        return None
+        with os.fdopen(fd, "w") as f:
+            f.write(content)
+        os.rename(temp_path, filepath)
+    except Exception:
+        # Clean up temp file on failure
+        try:
+            os.unlink(temp_path)
+        except OSError:
+            pass
+        raise
 
 
-def repair(project: str, caldav_url: str, caldav_user: str, caldav_pass: str) -> int:
+def repair(
+    project: str,
+    caldav_url: str,
+    caldav_user: str,
+    caldav_pass: str,
+    tw: TaskwarriorClient,
+    logger: SyncLogger,
+) -> int:
     """Repair correlations for a project. Returns count of new correlations."""
     config_dir = Path.home() / ".config" / "syncall"
     correlation_file = config_dir / f"{project}____{project}__.yaml"
 
-    tw_tasks = get_tw_tasks(project)
+    tw_tasks = tw.export_project(project)
+    tw_by_uuid = {t["uuid"]: t for t in tw_tasks if "uuid" in t}
+
     caldav_items = get_caldav_items(caldav_url, caldav_user, caldav_pass, project)
 
     if not caldav_items:
@@ -183,7 +160,7 @@ def repair(project: str, caldav_url: str, caldav_user: str, caldav_pass: str) ->
 
         # Check if TW already has a task with same description (by content match)
         tw_match = None
-        for tw_uuid, tw_task in tw_tasks.items():
+        for tw_uuid, tw_task in tw_by_uuid.items():
             if tw_task.get("description", "") == summary:
                 tw_match = tw_uuid
                 break
@@ -194,19 +171,21 @@ def repair(project: str, caldav_url: str, caldav_user: str, caldav_pass: str) ->
                 # TW task not yet correlated - link it
                 updated[tw_match] = caldav_uid
                 new_count += 1
-                print(f"Linked existing TW task to CalDAV: {summary[:30]}")
+                logger.info(f"Linked existing TW task to CalDAV: {summary[:30]}")
             else:
                 # TW task already correlated to different CalDAV UID - this is a duplicate
                 duplicates_to_delete.append((caldav_uid, summary))
         else:
             # Create new TW task
             is_completed = item["status"] == "COMPLETED"
-            new_uuid = create_tw_task(project, summary, completed=is_completed)
+            new_uuid = tw.add_task(summary, project=project)
             if new_uuid:
+                if is_completed:
+                    tw.complete_task(new_uuid)
                 updated[new_uuid] = caldav_uid
                 new_count += 1
                 status = " (completed)" if is_completed else ""
-                print(f"Created TW task{status}: {summary[:30]}")
+                logger.info(f"Created TW task{status}: {summary[:30]}")
 
     # Delete duplicate CalDAV items
     if duplicates_to_delete:
@@ -219,31 +198,39 @@ def repair(project: str, caldav_url: str, caldav_user: str, caldav_pass: str) ->
                         uid = todo.vobject_instance.vtodo.uid.value
                         for dup_uid, dup_summary in duplicates_to_delete:
                             if uid == dup_uid:
-                                print(f"Deleting duplicate CalDAV item: {dup_summary[:30]}")
+                                logger.info(f"Deleting duplicate CalDAV item: {dup_summary[:30]}")
                                 todo.delete()
                     break
         except Exception as e:
-            print(f"Warning: Failed to delete duplicates: {e}", file=sys.stderr)
+            logger.warning(f"Failed to delete duplicates: {e}")
 
     if new_count > 0:
         save_correlations(correlation_file, updated)
-        print(f"Added {new_count} correlations for '{project}'")
+        logger.info(f"Added {new_count} correlations for '{project}'")
 
     return new_count
 
 
 def main():
-    if len(sys.argv) < 5:
-        print(
-            "Usage: correlate.py <project> <url> <user> <pass>",
-            file=sys.stderr,
-        )
+    logger = SyncLogger("correlate")
+
+    if len(sys.argv) != 4:
+        print("Usage: correlate.py <project> <caldav_url> <user>", file=sys.stderr)
+        print("Set CALDAV_PASSWORD environment variable", file=sys.stderr)
         sys.exit(1)
 
+    project, caldav_url, user = sys.argv[1:4]
+    password = os.environ.get("CALDAV_PASSWORD")
+    if not password:
+        logger.error("CALDAV_PASSWORD environment variable not set")
+        sys.exit(1)
+
+    tw = TaskwarriorClient()
+
     try:
-        repair(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+        repair(project, caldav_url, user, password, tw, logger)
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error(f"Correlation repair failed: {e}")
         sys.exit(1)
 
 

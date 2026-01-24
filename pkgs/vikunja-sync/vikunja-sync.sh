@@ -97,7 +97,7 @@ repair_correlations() {
     caldav_pass=$(get_caldav_pass)
 
     # Run correlation repair script (failures are non-fatal)
-    vikunja-sync-correlate "$project" "$CALDAV_URL" "$VIKUNJA_USER" "$caldav_pass" 2>&1 || true
+    CALDAV_PASSWORD="$caldav_pass" vikunja-sync-correlate "$project" "$CALDAV_URL" "$VIKUNJA_USER" 2>&1 || true
 }
 
 # Sync a single project

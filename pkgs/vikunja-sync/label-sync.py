@@ -6,50 +6,30 @@ This runs after the main syncall sync to handle labels/tags which syncall
 doesn't support natively.
 """
 
-import json
-import os
 import re
-import subprocess
 import sys
-from urllib.request import Request, urlopen
-from urllib.error import URLError
+
+from vikunja_common import Config, ConfigError, VikunjaClient, TaskwarriorClient, SyncLogger
 
 
-def get_api_token():
-    """Get Vikunja API token from file or environment."""
-    token_file = os.environ.get("VIKUNJA_API_TOKEN_FILE", "")
-    if token_file and os.path.exists(token_file):
-        with open(token_file) as f:
-            return f.read().strip()
-    raise ValueError("VIKUNJA_API_TOKEN_FILE not set or file not found")
+def extract_tw_uuid(description: str) -> str | None:
+    """Extract Taskwarrior UUID from task description."""
+    if not description:
+        return None
+    # Look for "uuid: <uuid>" pattern (added during import)
+    match = re.search(
+        r"uuid:\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})",
+        description,
+        re.IGNORECASE
+    )
+    return match.group(1) if match else None
 
 
-def api_get(url: str, token: str) -> dict | list:
-    """Make authenticated GET request to Vikunja API."""
-    req = Request(url, headers={"Authorization": f"Bearer {token}"})
-    try:
-        with urlopen(req, timeout=30) as resp:
-            return json.loads(resp.read().decode())
-    except URLError as e:
-        print(f"API error: {e}", file=sys.stderr)
-        return []
-
-
-def get_all_projects(base_url: str, token: str) -> list[dict]:
-    """Fetch all Vikunja projects."""
-    projects = api_get(f"{base_url}/api/v1/projects", token)
-    return projects if projects else []
-
-
-def get_project_tasks(base_url: str, token: str, project_id: int) -> list[dict]:
-    """Fetch all tasks for a specific project."""
-    tasks = api_get(f"{base_url}/api/v1/projects/{project_id}/tasks", token)
-    return tasks if tasks else []
-
-
-def get_vikunja_tasks_with_labels(base_url: str, token: str, project_filter: str | None = None) -> list[dict]:
+def get_vikunja_tasks_with_labels(
+    vikunja: VikunjaClient, project_filter: str | None = None
+) -> list[dict]:
     """Fetch all Vikunja tasks that have labels, by iterating through projects."""
-    projects = get_all_projects(base_url, token)
+    projects = vikunja.get("/projects")
     if not projects:
         return []
 
@@ -63,71 +43,26 @@ def get_vikunja_tasks_with_labels(base_url: str, token: str, project_filter: str
         if not project_id:
             continue
 
-        tasks = get_project_tasks(base_url, token, project_id)
-        for task in tasks:
-            if task.get("labels") and len(task["labels"]) > 0:
-                all_tasks_with_labels.append(task)
+        tasks = vikunja.get(f"/projects/{project_id}/tasks")
+        if tasks:
+            for task in tasks:
+                if task.get("labels") and len(task["labels"]) > 0:
+                    all_tasks_with_labels.append(task)
 
     return all_tasks_with_labels
 
 
-def extract_tw_uuid(description: str) -> str | None:
-    """Extract Taskwarrior UUID from task description."""
-    if not description:
-        return None
-    # Look for "uuid: <uuid>" pattern (added during import)
-    match = re.search(r"uuid:\s*([a-f0-9-]{36})", description, re.IGNORECASE)
-    return match.group(1) if match else None
-
-
-def get_tw_task(uuid: str) -> dict | None:
-    """Get Taskwarrior task by UUID."""
-    try:
-        result = subprocess.run(
-            ["task", uuid, "export"],
-            capture_output=True,
-            text=True,
-            check=True,
-            env={**os.environ, "VIKUNJA_SYNC_RUNNING": "1"},
-        )
-        tasks = json.loads(result.stdout) if result.stdout.strip() else []
-        return tasks[0] if tasks else None
-    except (subprocess.CalledProcessError, json.JSONDecodeError):
-        return None
-
-
-def update_tw_tags(uuid: str, tags: list[str]) -> bool:
-    """Update Taskwarrior task tags."""
-    if not tags:
-        return True
-
-    try:
-        # Build tag modification command
-        # First remove all existing tags, then add new ones
-        tag_args = [f"+{tag}" for tag in tags]
-        cmd = ["task", uuid, "modify"] + tag_args
-
-        subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=True,
-            env={**os.environ, "VIKUNJA_SYNC_RUNNING": "1"},
-        )
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"Failed to update tags for {uuid}: {e}", file=sys.stderr)
-        return False
-
-
-def sync_labels(base_url: str, project_filter: str | None = None) -> int:
+def sync_labels(
+    vikunja: VikunjaClient,
+    tw: TaskwarriorClient,
+    logger: SyncLogger,
+    project_filter: str | None = None,
+) -> int:
     """
     Sync Vikunja labels to Taskwarrior tags.
     Returns count of tasks updated.
     """
-    token = get_api_token()
-    # Pass project filter to fetch function for efficiency
-    tasks = get_vikunja_tasks_with_labels(base_url, token, project_filter)
+    tasks = get_vikunja_tasks_with_labels(vikunja, project_filter)
 
     if not tasks:
         return 0
@@ -145,7 +80,7 @@ def sync_labels(base_url: str, project_filter: str | None = None) -> int:
             continue
 
         # Get current TW task
-        tw_task = get_tw_task(tw_uuid)
+        tw_task = tw.export_task(tw_uuid)
         if not tw_task:
             continue
 
@@ -153,30 +88,37 @@ def sync_labels(base_url: str, project_filter: str | None = None) -> int:
         current_tags = set(tw_task.get("tags", []))
         new_tags = set(vikunja_labels)
 
-        # Only update if tags differ
-        if new_tags != current_tags:
-            # Merge tags (add new ones, keep existing)
-            merged_tags = list(current_tags | new_tags)
-            if update_tw_tags(tw_uuid, merged_tags):
-                print(f"Updated tags for '{task['title'][:30]}': {merged_tags}")
+        # Only update if there are new tags to add
+        tags_to_add = new_tags - current_tags
+        if tags_to_add:
+            if tw.add_tags(tw_uuid, list(tags_to_add)):
+                merged = list(current_tags | new_tags)
+                logger.info(f"Updated tags for '{task['title'][:30]}': {merged}")
                 updated += 1
 
     return updated
 
 
 def main():
-    base_url = os.environ.get("VIKUNJA_URL", "")
-    if not base_url:
-        print("VIKUNJA_URL not set", file=sys.stderr)
+    logger = SyncLogger("label-sync")
+
+    try:
+        config = Config.from_env()
+    except ConfigError as e:
+        logger.error(str(e))
         sys.exit(1)
+
+    vikunja = VikunjaClient(config)
+    tw = TaskwarriorClient()
+
     project = sys.argv[1] if len(sys.argv) > 1 else None
 
     try:
-        count = sync_labels(base_url, project)
+        count = sync_labels(vikunja, tw, logger, project)
         if count > 0:
-            print(f"Updated {count} task(s) with labels")
+            logger.info(f"Updated {count} task(s) with labels")
     except Exception as e:
-        print(f"Label sync error: {e}", file=sys.stderr)
+        logger.error(f"Label sync error: {e}")
         sys.exit(1)
 
 

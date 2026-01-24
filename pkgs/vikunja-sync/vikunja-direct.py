@@ -17,49 +17,15 @@ import os
 import re
 import subprocess
 import sys
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+
+from vikunja_common import Config, ConfigError, VikunjaClient, TaskwarriorClient
 
 if TYPE_CHECKING:
     from typing import Any
-
-# Prevent hook loops
-TW_ENV = {**os.environ, "VIKUNJA_SYNC_RUNNING": "1"}
-
-
-@dataclass(slots=True)
-class Config:
-    """Sync configuration loaded from environment."""
-
-    vikunja_url: str
-    api_token: str
-    caldav_user: str
-
-    @classmethod
-    def from_env(cls) -> Config:
-        url = os.environ.get("VIKUNJA_URL", "")
-        if not url:
-            raise ValueError("VIKUNJA_URL not set")
-
-        token_file = os.environ.get("VIKUNJA_API_TOKEN_FILE", "")
-        if token_file and Path(token_file).exists():
-            token = Path(token_file).read_text().strip()
-        else:
-            raise ValueError("VIKUNJA_API_TOKEN_FILE not set or not found")
-
-        user = os.environ.get("VIKUNJA_USER", "")
-        if not user:
-            raise ValueError("VIKUNJA_USER not set")
-
-        return cls(
-            vikunja_url=url.rstrip("/"),
-            api_token=token,
-            caldav_user=user,
-        )
 
 
 def log(msg: str) -> None:
@@ -136,44 +102,22 @@ def vikunja_to_tw_task(task: dict, project_title: str) -> dict:
     return tw_task
 
 
-def find_tw_task_by_vikunja_id(vikunja_id: int) -> str | None:
+def find_tw_task_by_vikunja_id(tw: TaskwarriorClient, vikunja_id: int) -> str | None:
     """Find Taskwarrior task UUID by Vikunja ID annotation."""
-    try:
-        result = subprocess.run(
-            ["task", "export"],
-            capture_output=True,
-            text=True,
-            check=True,
-            env=TW_ENV,
-        )
-        tasks = json.loads(result.stdout) if result.stdout.strip() else []
-
-        for task in tasks:
-            for ann in task.get("annotations", []):
-                if f"vikunja_id:{vikunja_id}" in ann.get("description", ""):
-                    return task.get("uuid")
-    except (subprocess.CalledProcessError, json.JSONDecodeError):
-        pass
+    tasks = tw.export_all()
+    for task in tasks:
+        for ann in task.get("annotations", []):
+            if f"vikunja_id:{vikunja_id}" in ann.get("description", ""):
+                return task.get("uuid")
     return None
 
 
-def find_tw_task_by_description(description: str, project: str) -> str | None:
+def find_tw_task_by_description(tw: TaskwarriorClient, description: str, project: str) -> str | None:
     """Find TW task by exact description match in project."""
-    try:
-        result = subprocess.run(
-            ["task", f"project:{project}", "export"],
-            capture_output=True,
-            text=True,
-            check=True,
-            env=TW_ENV,
-        )
-        tasks = json.loads(result.stdout) if result.stdout.strip() else []
-
-        for task in tasks:
-            if task.get("description") == description:
-                return task.get("uuid")
-    except (subprocess.CalledProcessError, json.JSONDecodeError):
-        pass
+    tasks = tw.export_project(project)
+    for task in tasks:
+        if task.get("description") == description:
+            return task.get("uuid")
     return None
 
 
@@ -183,6 +127,8 @@ def handle_webhook(payload: dict) -> dict:
 
     Returns: {"success": bool, "action": str, "uuid": str|None}
     """
+    tw = TaskwarriorClient()
+
     event = payload.get("event_name", "")
     data = payload.get("data", {})
     task = data.get("task", {})
@@ -198,24 +144,18 @@ def handle_webhook(payload: dict) -> dict:
     # Try to find existing TW task
     existing_uuid = None
     if vikunja_id:
-        existing_uuid = find_tw_task_by_vikunja_id(vikunja_id)
+        existing_uuid = find_tw_task_by_vikunja_id(tw, vikunja_id)
     if not existing_uuid and title:
-        existing_uuid = find_tw_task_by_description(title, project_title)
+        existing_uuid = find_tw_task_by_description(tw, title, project_title)
 
     if event == "task.deleted":
         if existing_uuid:
-            try:
-                subprocess.run(
-                    ["task", existing_uuid, "delete"],
-                    input="yes\n",
-                    capture_output=True,
-                    text=True,
-                    env=TW_ENV,
-                )
+            if tw.delete_task(existing_uuid):
                 log(f"Deleted TW task: {existing_uuid}")
                 return {"success": True, "action": "deleted", "uuid": existing_uuid}
-            except subprocess.CalledProcessError:
-                pass
+            else:
+                log(f"Failed to delete TW task {existing_uuid}")
+                return {"success": False, "action": "delete_failed", "uuid": existing_uuid}
         return {"success": True, "action": "delete_skipped", "uuid": None}
 
     elif event in ("task.created", "task.updated"):
@@ -223,58 +163,63 @@ def handle_webhook(payload: dict) -> dict:
 
         if existing_uuid:
             # Update existing task
-            try:
-                args = ["task", existing_uuid, "modify"]
+            existing_task = tw.export_task(existing_uuid)
 
-                if "due" in tw_task:
-                    args.append(f"due:{tw_task['due']}")
-                if "priority" in tw_task:
-                    args.append(f"priority:{tw_task['priority']}")
-                if tw_task.get("tags"):
-                    args.extend(f"+{tag}" for tag in tw_task["tags"])
+            # Build modification changes
+            changes: dict[str, Any] = {}
+            if "due" in tw_task:
+                changes["due"] = tw_task["due"]
+            if "priority" in tw_task:
+                changes["priority"] = tw_task["priority"]
 
-                subprocess.run(args, capture_output=True, text=True, env=TW_ENV)
+            # Compute tag diff: add new tags, remove old tags
+            current_tw_tags = set(existing_task.get("tags", [])) if existing_task else set()
+            new_tags_from_vikunja = set(tw_task.get("tags", []))
 
-                # Handle completion status
-                if tw_task["status"] == "completed":
-                    subprocess.run(
-                        ["task", existing_uuid, "done"],
-                        capture_output=True,
-                        env=TW_ENV,
-                    )
+            tags_to_add = list(new_tags_from_vikunja - current_tw_tags)
+            tags_to_remove = list(current_tw_tags - new_tags_from_vikunja)
 
-                log(f"Updated TW task: {existing_uuid}")
-                return {"success": True, "action": "updated", "uuid": existing_uuid}
-            except subprocess.CalledProcessError as e:
-                log(f"Failed to update task: {e}")
-                return {"success": False, "action": "update_failed", "uuid": existing_uuid}
+            if tags_to_add:
+                changes["tags_add"] = tags_to_add
+            if tags_to_remove:
+                changes["tags_remove"] = tags_to_remove
+
+            if changes:
+                if not tw.modify_task(existing_uuid, **changes):
+                    log(f"Failed to modify TW task {existing_uuid}")
+                    return {"success": False, "action": "modify_failed", "uuid": existing_uuid}
+
+            # Handle completion status
+            if tw_task["status"] == "completed":
+                if not tw.complete_task(existing_uuid):
+                    log(f"Failed to mark TW task {existing_uuid} done")
+                    return {"success": False, "action": "done_failed", "uuid": existing_uuid}
+
+            log(f"Updated TW task: {existing_uuid}")
+            return {"success": True, "action": "updated", "uuid": existing_uuid}
         else:
-            # Create new task via import
-            try:
-                import_json = json.dumps([tw_task])
-                log(f"Importing task: {import_json[:200]}")
+            # Create new task via import (keeping direct subprocess for import)
+            import_json = json.dumps([tw_task])
+            log(f"Importing task: {import_json[:200]}")
 
-                result = subprocess.run(
-                    ["task", "import"],
-                    input=import_json,
-                    capture_output=True,
-                    text=True,
-                    env=TW_ENV,
-                )
+            result = subprocess.run(
+                ["task", "import"],
+                input=import_json,
+                capture_output=True,
+                text=True,
+                env=TaskwarriorClient.SYNC_ENV,
+            )
 
-                if result.returncode != 0:
-                    log(f"Import failed (code {result.returncode}): stdout={result.stdout[:200]}, stderr={result.stderr[:200]}")
-                    return {"success": False, "action": "create_failed", "uuid": None}
-
-                # Extract UUID from import output
-                match = re.search(r"([a-f0-9-]{36})", result.stdout + result.stderr)
-                new_uuid = match.group(1) if match else None
-
-                log(f"Created TW task: {new_uuid or 'unknown'}")
-                return {"success": True, "action": "created", "uuid": new_uuid}
-            except subprocess.CalledProcessError as e:
-                log(f"Failed to create task (exception): {e}")
+            if result.returncode != 0:
+                log(f"Import failed (code {result.returncode}): stdout={result.stdout[:200]}, stderr={result.stderr[:200]}")
                 return {"success": False, "action": "create_failed", "uuid": None}
+
+            # Extract UUID from import output
+            match = re.search(r"([a-f0-9-]{36})", result.stdout + result.stderr)
+            new_uuid = match.group(1) if match else None
+
+            log(f"Created TW task: {new_uuid or 'unknown'}")
+            return {"success": True, "action": "created", "uuid": new_uuid}
 
     return {"success": True, "action": "ignored", "uuid": None}
 
@@ -308,109 +253,6 @@ def tw_to_vikunja_task(tw_task: dict) -> dict:
     return vikunja_task
 
 
-# Label cache to avoid repeated API calls within a single sync
-_label_cache: dict[str, int] = {}
-
-
-def get_all_labels(config: Config) -> list[dict]:
-    """Fetch all Vikunja labels."""
-    try:
-        req = Request(
-            f"{config.vikunja_url}/api/v1/labels",
-            headers={"Authorization": f"Bearer {config.api_token}"},
-        )
-        with urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read().decode())
-    except (URLError, json.JSONDecodeError):
-        return []
-
-
-def get_or_create_label(config: Config, title: str) -> int | None:
-    """Get existing label ID or create new label. Uses cache for efficiency."""
-    # Check cache first
-    if title in _label_cache:
-        return _label_cache[title]
-
-    # Fetch all labels and populate cache
-    if not _label_cache:
-        labels = get_all_labels(config)
-        for label in labels:
-            _label_cache[label.get("title", "")] = label.get("id")
-
-    # Check if label exists now
-    if title in _label_cache:
-        return _label_cache[title]
-
-    # Create new label
-    try:
-        req = Request(
-            f"{config.vikunja_url}/api/v1/labels",
-            data=json.dumps({"title": title}).encode(),
-            headers={
-                "Authorization": f"Bearer {config.api_token}",
-                "Content-Type": "application/json",
-            },
-            method="PUT",
-        )
-        with urlopen(req, timeout=10) as resp:
-            result = json.loads(resp.read().decode())
-            label_id = result.get("id")
-            if label_id:
-                _label_cache[title] = label_id
-                log(f"Created Vikunja label: {title} (ID: {label_id})")
-            return label_id
-    except (URLError, json.JSONDecodeError, HTTPError) as e:
-        log(f"Failed to create label '{title}': {e}")
-        return None
-
-
-def get_vikunja_project_id(config: Config, project_title: str) -> int | None:
-    """Get Vikunja project ID by title."""
-    try:
-        req = Request(
-            f"{config.vikunja_url}/api/v1/projects",
-            headers={"Authorization": f"Bearer {config.api_token}"},
-        )
-        with urlopen(req, timeout=10) as resp:
-            projects = json.loads(resp.read().decode())
-            for p in projects:
-                if p.get("title") == project_title:
-                    return p.get("id")
-    except (URLError, json.JSONDecodeError):
-        pass
-    return None
-
-
-def create_vikunja_project(config: Config, project_title: str) -> int | None:
-    """Create a new Vikunja project and return its ID."""
-    try:
-        req = Request(
-            f"{config.vikunja_url}/api/v1/projects",
-            data=json.dumps({"title": project_title}).encode(),
-            headers={
-                "Authorization": f"Bearer {config.api_token}",
-                "Content-Type": "application/json",
-            },
-            method="PUT",
-        )
-        with urlopen(req, timeout=10) as resp:
-            result = json.loads(resp.read().decode())
-            project_id = result.get("id")
-            log(f"Created Vikunja project: {project_title} (ID: {project_id})")
-            return project_id
-    except (URLError, json.JSONDecodeError, HTTPError) as e:
-        log(f"Failed to create project: {e}")
-        return None
-
-
-def get_or_create_vikunja_project(config: Config, project_title: str) -> int | None:
-    """Get existing project ID or create new project."""
-    project_id = get_vikunja_project_id(config, project_title)
-    if project_id:
-        return project_id
-    return create_vikunja_project(config, project_title)
-
-
 def get_vikunja_task_id_from_tw(tw_task: dict) -> int | None:
     """Extract Vikunja task ID from TW annotations."""
     for ann in tw_task.get("annotations", []):
@@ -420,22 +262,30 @@ def get_vikunja_task_id_from_tw(tw_task: dict) -> int | None:
     return None
 
 
-def find_vikunja_task_by_title(
-    config: Config, project_id: int, title: str
-) -> int | None:
+def get_or_create_project(vikunja: VikunjaClient, project_title: str) -> int | None:
+    """Get existing project ID or create new project."""
+    # Get all projects
+    projects = vikunja.get("/projects")
+    if isinstance(projects, list):
+        for p in projects:
+            if p.get("title") == project_title:
+                return p.get("id")
+
+    # Create new project
+    result = vikunja.put("/projects", {"title": project_title})
+    if result and "id" in result:
+        log(f"Created Vikunja project: {project_title} (ID: {result['id']})")
+        return result["id"]
+    return None
+
+
+def find_vikunja_task_by_title(vikunja: VikunjaClient, project_id: int, title: str) -> int | None:
     """Find Vikunja task by title in project."""
-    try:
-        req = Request(
-            f"{config.vikunja_url}/api/v1/projects/{project_id}/tasks",
-            headers={"Authorization": f"Bearer {config.api_token}"},
-        )
-        with urlopen(req, timeout=10) as resp:
-            tasks = json.loads(resp.read().decode())
-            for t in tasks:
-                if t.get("title") == title:
-                    return t.get("id")
-    except (URLError, json.JSONDecodeError):
-        pass
+    tasks = vikunja.get(f"/projects/{project_id}/tasks")
+    if isinstance(tasks, list):
+        for t in tasks:
+            if t.get("title") == title:
+                return t.get("id")
     return None
 
 
@@ -445,12 +295,14 @@ def push_to_vikunja(tw_task: dict, config: Config) -> dict:
 
     Returns: {"success": bool, "action": str, "vikunja_id": int|None}
     """
+    vikunja = VikunjaClient(config)
+
     project_title = tw_task.get("project", "")
     if not project_title:
         return {"success": False, "action": "no_project", "vikunja_id": None}
 
     # Get or create project in Vikunja
-    project_id = get_or_create_vikunja_project(config, project_title)
+    project_id = get_or_create_project(vikunja, project_title)
     if not project_id:
         log(f"Failed to get/create project '{project_title}' in Vikunja")
         return {"success": False, "action": "project_error", "vikunja_id": None}
@@ -461,7 +313,7 @@ def push_to_vikunja(tw_task: dict, config: Config) -> dict:
     tw_tags = tw_task.get("tags", [])
     label_ids = []
     for tag in tw_tags:
-        label_id = get_or_create_label(config, tag)
+        label_id = vikunja.get_or_create_label(tag)
         if label_id:
             label_ids.append(label_id)
 
@@ -469,65 +321,53 @@ def push_to_vikunja(tw_task: dict, config: Config) -> dict:
 
     # Try to find by title if no ID annotation
     if not vikunja_id:
-        vikunja_id = find_vikunja_task_by_title(
-            config, project_id, tw_task.get("description", "")
-        )
+        vikunja_id = find_vikunja_task_by_title(vikunja, project_id, tw_task.get("description", ""))
 
     try:
         if vikunja_id:
             # Update existing task
-            req = Request(
-                f"{config.vikunja_url}/api/v1/tasks/{vikunja_id}",
-                data=json.dumps(vikunja_task).encode(),
-                headers={
-                    "Authorization": f"Bearer {config.api_token}",
-                    "Content-Type": "application/json",
-                },
-                method="POST",
-            )
-            with urlopen(req, timeout=10) as resp:
-                result = json.loads(resp.read().decode())
+            result = vikunja.post(f"/tasks/{vikunja_id}", vikunja_task)
+            if result:
                 log(f"Updated Vikunja task: {vikunja_id}")
                 task_id = vikunja_id
                 action = "updated"
+            else:
+                return {"success": False, "action": "api_error", "vikunja_id": vikunja_id}
         else:
             # Create new task
             vikunja_task["project_id"] = project_id
-            req = Request(
-                f"{config.vikunja_url}/api/v1/projects/{project_id}/tasks",
-                data=json.dumps(vikunja_task).encode(),
-                headers={
-                    "Authorization": f"Bearer {config.api_token}",
-                    "Content-Type": "application/json",
-                },
-                method="PUT",
-            )
-            with urlopen(req, timeout=10) as resp:
-                result = json.loads(resp.read().decode())
-                task_id = result.get("id")
+            result = vikunja.put(f"/projects/{project_id}/tasks", vikunja_task)
+            if result and "id" in result:
+                task_id = result["id"]
                 log(f"Created Vikunja task: {task_id}")
                 action = "created"
+            else:
+                return {"success": False, "action": "create_failed", "vikunja_id": None}
 
-        # Attach labels to task via separate API calls
+        # Detach labels that are no longer in TW tags (only for updates)
+        if action == "updated" and task_id:
+            current_vikunja_task = vikunja.get_task(task_id)
+            if current_vikunja_task:
+                current_labels = current_vikunja_task.get("labels") or []
+                current_label_titles = {label["title"] for label in current_labels}
+                new_label_titles = set(tw_task.get("tags", []))
+                labels_to_remove = current_label_titles - new_label_titles
+
+                # Build a map of title -> id for removal
+                label_title_to_id = {label["title"]: label["id"] for label in current_labels}
+
+                for title in labels_to_remove:
+                    label_id = label_title_to_id.get(title)
+                    if label_id:
+                        vikunja.detach_label(task_id, label_id)
+
+                if labels_to_remove:
+                    log(f"Detached {len(labels_to_remove)} label(s) from task {task_id}")
+
+        # Attach labels to task
         if label_ids and task_id:
             for label_id in label_ids:
-                try:
-                    req = Request(
-                        f"{config.vikunja_url}/api/v1/tasks/{task_id}/labels",
-                        data=json.dumps({"label_id": label_id}).encode(),
-                        headers={
-                            "Authorization": f"Bearer {config.api_token}",
-                            "Content-Type": "application/json",
-                        },
-                        method="PUT",
-                    )
-                    with urlopen(req, timeout=10):
-                        pass  # Success
-                except HTTPError as e:
-                    # 409 Conflict means label already attached, that's fine
-                    if e.code != 409:
-                        log(f"Failed to attach label {label_id}: {e.code}")
-
+                vikunja.attach_label(task_id, label_id)
             log(f"Attached {len(label_ids)} label(s) to task {task_id}")
 
         return {"success": True, "action": action, "vikunja_id": task_id}
@@ -549,7 +389,7 @@ def handle_tw_hook(added_json: str, modified_json: str) -> dict:
     """
     try:
         config = Config.from_env()
-    except ValueError as e:
+    except ConfigError as e:
         return {"success": False, "action": "config_error", "error": str(e)}
 
     try:
@@ -598,29 +438,20 @@ def cmd_push(args: list[str]) -> int:
         return 1
 
     uuid = args[0]
+    tw = TaskwarriorClient()
+
+    task = tw.export_task(uuid)
+    if not task:
+        log(f"Task {uuid} not found")
+        return 1
 
     try:
-        result = subprocess.run(
-            ["task", uuid, "export"],
-            capture_output=True,
-            text=True,
-            check=True,
-            env=TW_ENV,
-        )
-        tasks = json.loads(result.stdout) if result.stdout.strip() else []
-        if not tasks:
-            log(f"Task {uuid} not found")
-            return 1
-
         config = Config.from_env()
-        push_result = push_to_vikunja(tasks[0], config)
+        push_result = push_to_vikunja(task, config)
         print(json.dumps(push_result))
         return 0 if push_result["success"] else 1
 
-    except subprocess.CalledProcessError:
-        log(f"Failed to export task {uuid}")
-        return 1
-    except ValueError as e:
+    except ConfigError as e:
         log(f"Config error: {e}")
         return 1
 
