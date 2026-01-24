@@ -31,10 +31,10 @@
 
     log() { echo "[$(date -Iseconds)] $*"; }
 
-    # Get all projects
+    # Get all non-archived projects
     PROJECTS=$(${pkgs.curl}/bin/curl -sf \
       -H "Authorization: Bearer $API_TOKEN" \
-      "$VIKUNJA_URL/api/v1/projects" | ${pkgs.jq}/bin/jq -r '.[].id')
+      "$VIKUNJA_URL/api/v1/projects" | ${pkgs.jq}/bin/jq -r '.[] | select(.is_archived == false) | .id')
 
     if [[ -z "$PROJECTS" ]]; then
       log "No projects found or API error"
@@ -49,20 +49,43 @@
         ${pkgs.jq}/bin/jq -r --arg url "$WEBHOOK_URL" '.[] | select(.target_url == $url) | .id')
 
       if [[ -n "$EXISTING" ]]; then
-        log "Project $PROJECT_ID: webhook already exists (id=$EXISTING)"
+        # Check if existing webhook has the secret set
+        HAS_SECRET=$(${pkgs.curl}/bin/curl -sf \
+          -H "Authorization: Bearer $API_TOKEN" \
+          "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks" | \
+          ${pkgs.jq}/bin/jq -r --arg url "$WEBHOOK_URL" '.[] | select(.target_url == $url) | .secret')
+
+        if [[ -z "$HAS_SECRET" ]]; then
+          # Update existing webhook with secret
+          PAYLOAD=$(${pkgs.jq}/bin/jq -n \
+            --arg url "$WEBHOOK_URL" \
+            --arg secret "$WEBHOOK_SECRET" \
+            '{target_url: $url, events: ["task.created", "task.updated", "task.deleted"], secret: $secret}')
+
+          ${pkgs.curl}/bin/curl -sf -X POST \
+            -H "Authorization: Bearer $API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks/$EXISTING" \
+            -d "$PAYLOAD" > /dev/null
+
+          log "Project $PROJECT_ID: updated webhook with secret (id=$EXISTING)"
+        else
+          log "Project $PROJECT_ID: webhook already exists (id=$EXISTING)"
+        fi
         continue
       fi
 
-      # Create webhook
+      # Create webhook (use jq to properly construct JSON with escaping)
+      PAYLOAD=$(${pkgs.jq}/bin/jq -n \
+        --arg url "$WEBHOOK_URL" \
+        --arg secret "$WEBHOOK_SECRET" \
+        '{target_url: $url, events: ["task.created", "task.updated", "task.deleted"], secret: $secret}')
+
       RESULT=$(${pkgs.curl}/bin/curl -sf -X PUT \
         -H "Authorization: Bearer $API_TOKEN" \
         -H "Content-Type: application/json" \
         "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks" \
-        -d "{
-          \"target_url\": \"$WEBHOOK_URL\",
-          \"events\": [\"task.created\", \"task.updated\", \"task.deleted\"],
-          \"secret\": \"$WEBHOOK_SECRET\"
-        }" | ${pkgs.jq}/bin/jq -r '.id // "error"')
+        -d "$PAYLOAD" | ${pkgs.jq}/bin/jq -r '.id // "error"')
 
       if [[ "$RESULT" == "error" ]]; then
         log "Project $PROJECT_ID: failed to create webhook"
