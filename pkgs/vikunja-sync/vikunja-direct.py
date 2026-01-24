@@ -52,6 +52,92 @@ def parse_iso_datetime(dt_str: str) -> datetime | None:
         return None
 
 
+def vikunja_repeat_to_tw_recur(repeat_after: int, repeat_mode: int) -> str | None:
+    """
+    Convert Vikunja repeat_after (seconds) to Taskwarrior recur string.
+
+    Vikunja repeat_after: interval in seconds
+    Vikunja repeat_mode: 0 = from due date, 1 = from completion date
+
+    TW recur: daily, weekly, monthly, yearly, or Ndays/Nweeks/Nmonths
+    """
+    if not repeat_after or repeat_after <= 0:
+        return None
+
+    # Common intervals (with some tolerance for rounding)
+    day = 86400
+    week = 604800
+    month = 2592000  # ~30 days
+    year = 31536000  # ~365 days
+
+    # Check for exact common intervals first
+    if repeat_after == day:
+        return "daily"
+    elif repeat_after == week:
+        return "weekly"
+    elif repeat_after == 14 * day:
+        return "biweekly"
+    elif month - day <= repeat_after <= month + day:
+        return "monthly"
+    elif 3 * month - day <= repeat_after <= 3 * month + day:
+        return "quarterly"
+    elif year - day <= repeat_after <= year + day:
+        return "yearly"
+
+    # For non-standard intervals, calculate in days/weeks
+    days = repeat_after // day
+    if days > 0:
+        if days % 7 == 0:
+            weeks = days // 7
+            return f"{weeks}weeks" if weeks > 1 else "weekly"
+        return f"{days}days" if days > 1 else "daily"
+
+    # Fallback - just use days even if less than a day
+    return "daily"
+
+
+def tw_recur_to_vikunja_repeat(recur: str) -> tuple[int, int]:
+    """
+    Convert Taskwarrior recur to Vikunja repeat_after (seconds) and repeat_mode.
+
+    Returns: (repeat_after, repeat_mode)
+    repeat_mode: 0 = from due date (default)
+    """
+    if not recur:
+        return (0, 0)
+
+    recur = recur.lower().strip()
+    day = 86400
+    week = 604800
+    month = 2592000
+    year = 31536000
+
+    # Named intervals
+    named = {
+        "daily": day,
+        "weekly": week,
+        "biweekly": 2 * week,
+        "monthly": month,
+        "quarterly": 3 * month,
+        "semiannual": 6 * month,
+        "annual": year,
+        "yearly": year,
+    }
+
+    if recur in named:
+        return (named[recur], 0)
+
+    # Parse Ndays, Nweeks, Nmonths, Nyears
+    match = re.match(r"(\d+)\s*(day|week|month|year)s?", recur)
+    if match:
+        n = int(match.group(1))
+        unit = match.group(2)
+        multipliers = {"day": day, "week": week, "month": month, "year": year}
+        return (n * multipliers.get(unit, day), 0)
+
+    return (0, 0)
+
+
 # =============================================================================
 # Vikunja -> Taskwarrior (webhook handler)
 # =============================================================================
@@ -61,8 +147,10 @@ def vikunja_to_tw_task(task: dict, project_title: str) -> dict:
     """
     Convert Vikunja task to Taskwarrior JSON format.
 
-    Vikunja fields: id, title, description, done, due_date, priority, labels, etc.
-    TW fields: uuid, description, project, status, due, priority, tags, annotations
+    Vikunja fields: id, title, description, done, due_date, start_date, end_date,
+                    priority, labels, repeat_after, repeat_mode, etc.
+    TW fields: uuid, description, project, status, due, scheduled, until, recur,
+               priority, tags, annotations
     """
     tw_task: dict[str, Any] = {
         "description": task.get("title", "Untitled"),
@@ -70,20 +158,50 @@ def vikunja_to_tw_task(task: dict, project_title: str) -> dict:
         "status": "completed" if task.get("done") else "pending",
     }
 
+    annotations = []
+
     # Store Vikunja task ID in annotation for correlation
     vikunja_id = task.get("id")
     if vikunja_id:
-        tw_task["annotations"] = [
-            {
-                "entry": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
-                "description": f"vikunja_id:{vikunja_id}",
-            }
-        ]
+        annotations.append({
+            "entry": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
+            "description": f"vikunja_id:{vikunja_id}",
+        })
+
+    # Store Vikunja description (body text) as annotation if non-empty
+    vikunja_desc = task.get("description", "")
+    if vikunja_desc and vikunja_desc.strip():
+        # Prefix to identify it as the body text
+        annotations.append({
+            "entry": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
+            "description": f"note:{vikunja_desc.strip()[:500]}",  # Limit length
+        })
+
+    if annotations:
+        tw_task["annotations"] = annotations
 
     # Due date (Vikunja uses ISO format, TW uses YYYYMMDDTHHMMSSZ)
     due_dt = parse_iso_datetime(task.get("due_date", ""))
     if due_dt:
         tw_task["due"] = due_dt.strftime("%Y%m%dT%H%M%SZ")
+
+    # Start date -> scheduled
+    start_dt = parse_iso_datetime(task.get("start_date", ""))
+    if start_dt:
+        tw_task["scheduled"] = start_dt.strftime("%Y%m%dT%H%M%SZ")
+
+    # End date -> until
+    end_dt = parse_iso_datetime(task.get("end_date", ""))
+    if end_dt:
+        tw_task["until"] = end_dt.strftime("%Y%m%dT%H%M%SZ")
+
+    # Recurrence (repeat_after + repeat_mode -> recur)
+    repeat_after = task.get("repeat_after", 0)
+    repeat_mode = task.get("repeat_mode", 0)
+    if repeat_after:
+        recur = vikunja_repeat_to_tw_recur(repeat_after, repeat_mode)
+        if recur:
+            tw_task["recur"] = recur
 
     # Priority (Vikunja: 1-5, TW: H/M/L)
     priority = task.get("priority", 0)
@@ -173,10 +291,38 @@ def handle_webhook(payload: dict) -> dict:
                 if tw_task["description"] != existing_task.get("description"):
                     changes["description"] = tw_task["description"]
 
+            # Sync due date
             if "due" in tw_task:
                 changes["due"] = tw_task["due"]
+            elif existing_task and existing_task.get("due"):
+                # Due was removed in Vikunja
+                changes["due"] = ""
+
+            # Sync priority
             if "priority" in tw_task:
                 changes["priority"] = tw_task["priority"]
+            elif existing_task and existing_task.get("priority"):
+                # Priority was removed in Vikunja
+                changes["priority"] = ""
+
+            # Sync scheduled (start_date)
+            if "scheduled" in tw_task:
+                changes["scheduled"] = tw_task["scheduled"]
+            elif existing_task and existing_task.get("scheduled"):
+                # Start date was removed in Vikunja
+                changes["scheduled"] = ""
+
+            # Sync until (end_date)
+            if "until" in tw_task:
+                changes["until"] = tw_task["until"]
+            elif existing_task and existing_task.get("until"):
+                # End date was removed in Vikunja
+                changes["until"] = ""
+
+            # Sync recurrence (note: TW doesn't allow removing recur from recurring tasks)
+            if "recur" in tw_task:
+                changes["recur"] = tw_task["recur"]
+            # Don't try to clear recurrence - TW will reject it for recurring tasks
 
             # Compute tag diff: add new tags, remove old tags
             current_tw_tags = set(existing_task.get("tags", [])) if existing_task else set()
@@ -246,6 +392,34 @@ def tw_to_vikunja_task(tw_task: dict) -> dict:
     due_dt = parse_tw_datetime(tw_task.get("due", ""))
     if due_dt:
         vikunja_task["due_date"] = due_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    else:
+        # Clear due date if not set
+        vikunja_task["due_date"] = None
+
+    # Scheduled -> start_date
+    scheduled_dt = parse_tw_datetime(tw_task.get("scheduled", ""))
+    if scheduled_dt:
+        vikunja_task["start_date"] = scheduled_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    else:
+        vikunja_task["start_date"] = None
+
+    # Until -> end_date
+    until_dt = parse_tw_datetime(tw_task.get("until", ""))
+    if until_dt:
+        vikunja_task["end_date"] = until_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    else:
+        vikunja_task["end_date"] = None
+
+    # Recurrence (TW recur -> Vikunja repeat_after/repeat_mode)
+    recur = tw_task.get("recur", "")
+    if recur:
+        repeat_after, repeat_mode = tw_recur_to_vikunja_repeat(recur)
+        if repeat_after > 0:
+            vikunja_task["repeat_after"] = repeat_after
+            vikunja_task["repeat_mode"] = repeat_mode
+    else:
+        # Clear recurrence if not set
+        vikunja_task["repeat_after"] = 0
 
     # Priority (TW: H/M/L -> Vikunja: 1-5)
     priority = tw_task.get("priority", "")
@@ -255,6 +429,8 @@ def tw_to_vikunja_task(tw_task: dict) -> dict:
         vikunja_task["priority"] = 3
     elif priority == "L":
         vikunja_task["priority"] = 1
+    else:
+        vikunja_task["priority"] = 0
 
     return vikunja_task
 
@@ -295,7 +471,7 @@ def find_vikunja_task_by_title(vikunja: VikunjaClient, project_id: int, title: s
     return None
 
 
-def push_to_vikunja(tw_task: dict, config: Config) -> dict:
+def push_to_vikunja(tw_task: dict, config: Config, default_project: str = "inbox") -> dict:
     """
     Push a Taskwarrior task to Vikunja API.
 
@@ -303,9 +479,7 @@ def push_to_vikunja(tw_task: dict, config: Config) -> dict:
     """
     vikunja = VikunjaClient(config)
 
-    project_title = tw_task.get("project", "")
-    if not project_title:
-        return {"success": False, "action": "no_project", "vikunja_id": None}
+    project_title = tw_task.get("project", "") or default_project
 
     # Get or create project in Vikunja
     project_id = get_or_create_project(vikunja, project_title)
@@ -386,6 +560,46 @@ def push_to_vikunja(tw_task: dict, config: Config) -> dict:
         return {"success": False, "action": "network_error", "vikunja_id": vikunja_id}
 
 
+def delete_from_vikunja(tw_task: dict, config: Config, default_project: str = "inbox") -> dict:
+    """
+    Delete a task from Vikunja.
+
+    Returns: {"success": bool, "action": str, "vikunja_id": int|None}
+    """
+    vikunja = VikunjaClient(config)
+
+    vikunja_id = get_vikunja_task_id_from_tw(tw_task)
+
+    if not vikunja_id:
+        # Try to find by title if no ID annotation
+        project_title = tw_task.get("project", "") or default_project
+        if project_title:
+            project_id = get_or_create_project(vikunja, project_title)
+            if project_id:
+                vikunja_id = find_vikunja_task_by_title(
+                    vikunja, project_id, tw_task.get("description", "")
+                )
+
+    if not vikunja_id:
+        log(f"No Vikunja task found for TW task: {tw_task.get('uuid', 'unknown')}")
+        return {"success": True, "action": "not_found", "vikunja_id": None}
+
+    try:
+        result = vikunja.delete(f"/tasks/{vikunja_id}")
+        if result:
+            log(f"Deleted Vikunja task: {vikunja_id}")
+            return {"success": True, "action": "deleted", "vikunja_id": vikunja_id}
+        else:
+            # delete() returns False on HTTPError (including 404)
+            # Treat as success since the task is gone either way
+            log(f"Vikunja task {vikunja_id} delete returned False (may already be deleted)")
+            return {"success": True, "action": "possibly_deleted", "vikunja_id": vikunja_id}
+
+    except URLError as e:
+        log(f"Network error: {e}")
+        return {"success": False, "action": "network_error", "vikunja_id": vikunja_id}
+
+
 def handle_tw_hook(added_json: str, modified_json: str) -> dict:
     """
     Handle Taskwarrior on-modify hook.
@@ -398,6 +612,9 @@ def handle_tw_hook(added_json: str, modified_json: str) -> dict:
     except ConfigError as e:
         return {"success": False, "action": "config_error", "error": str(e)}
 
+    # Default project for tasks without a project (configurable via env)
+    default_project = os.environ.get("VIKUNJA_DEFAULT_PROJECT", "inbox")
+
     try:
         # modified_json contains the task after changes
         if modified_json.strip():
@@ -407,7 +624,30 @@ def handle_tw_hook(added_json: str, modified_json: str) -> dict:
         else:
             return {"success": False, "action": "no_input"}
 
-        return push_to_vikunja(tw_task, config)
+        return push_to_vikunja(tw_task, config, default_project)
+
+    except json.JSONDecodeError as e:
+        return {"success": False, "action": "json_error", "error": str(e)}
+
+
+def handle_tw_delete_hook(task_json: str) -> dict:
+    """
+    Handle Taskwarrior on-delete hook.
+
+    TW on-delete hook receives: task JSON on stdin (single line).
+    We delete the task from Vikunja.
+    """
+    try:
+        config = Config.from_env()
+    except ConfigError as e:
+        return {"success": False, "action": "config_error", "error": str(e)}
+
+    # Default project for tasks without a project (configurable via env)
+    default_project = os.environ.get("VIKUNJA_DEFAULT_PROJECT", "inbox")
+
+    try:
+        tw_task = json.loads(task_json)
+        return delete_from_vikunja(tw_task, config, default_project)
 
     except json.JSONDecodeError as e:
         return {"success": False, "action": "json_error", "error": str(e)}
@@ -453,7 +693,8 @@ def cmd_push(args: list[str]) -> int:
 
     try:
         config = Config.from_env()
-        push_result = push_to_vikunja(task, config)
+        default_project = os.environ.get("VIKUNJA_DEFAULT_PROJECT", "inbox")
+        push_result = push_to_vikunja(task, config, default_project)
         print(json.dumps(push_result))
         return 0 if push_result["success"] else 1
 
@@ -501,12 +742,40 @@ def cmd_hook(_args: list[str]) -> int:
     return 0
 
 
+def cmd_delete_hook(_args: list[str]) -> int:
+    """TW on-delete hook: reads stdin, outputs task, deletes from Vikunja.
+
+    TW on-delete hook protocol:
+    - receives 1 line (task JSON being deleted), must output 1 line (same task)
+    """
+    lines = sys.stdin.readlines()
+
+    if not lines:
+        log("Delete hook received no input")
+        return 1
+
+    # Output the task (required by TW hook protocol)
+    task_json = lines[0].rstrip("\n")
+    print(task_json)
+
+    # Skip delete if we're in a sync (prevent loops)
+    if os.environ.get("VIKUNJA_SYNC_RUNNING"):
+        return 0
+
+    result = handle_tw_delete_hook(task_json)
+    if not result["success"]:
+        log(f"on-delete failed: {result.get('action', 'unknown')}")
+
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) < 2:
-        print("Usage: vikunja-direct <webhook|push|hook> [args...]", file=sys.stderr)
+        print("Usage: vikunja-direct <webhook|push|hook|delete-hook> [args...]", file=sys.stderr)
         print("  webhook [file]  - Handle Vikunja webhook payload", file=sys.stderr)
         print("  push <uuid>     - Push TW task to Vikunja", file=sys.stderr)
-        print("  hook            - TW on-modify hook (stdin)", file=sys.stderr)
+        print("  hook            - TW on-add/on-modify hook (stdin)", file=sys.stderr)
+        print("  delete-hook     - TW on-delete hook (stdin)", file=sys.stderr)
         return 1
 
     cmd = sys.argv[1]
@@ -518,6 +787,8 @@ def main() -> int:
         return cmd_push(args)
     elif cmd == "hook":
         return cmd_hook(args)
+    elif cmd == "delete-hook":
+        return cmd_delete_hook(args)
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)
         return 1

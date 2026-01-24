@@ -267,14 +267,31 @@ class TaskwarriorClient:
             return None
 
     def modify_task(self, uuid: str, **changes) -> bool:
-        """Modify a task. Returns True on success."""
-        args = [uuid, "modify"]
+        """Modify a task. Returns True on success.
+
+        Note: Tags with hyphens must use the tags: attribute format, not +/-,
+        because taskwarrior parses +tag-name as +tag and -name (two operations).
+        """
+        args = [uuid, "modify", "rc.recurrence.confirmation=no"]
+
+        # Handle tags specially - compute final tag list and use tags: attribute
+        # This avoids issues with hyphens being parsed as separate +/- operations
+        tags_to_add = changes.pop("tags_add", [])
+        tags_to_remove = changes.pop("tags_remove", [])
+
+        if tags_to_add or tags_to_remove:
+            # Get current tags from task
+            current = self.export_task(uuid)
+            current_tags = set(current.get("tags") or []) if current else set()
+            final_tags = (current_tags | set(tags_to_add)) - set(tags_to_remove)
+            # Use tags: attribute with comma-separated list
+            if final_tags:
+                args.append(f"tags:{','.join(sorted(final_tags))}")
+            else:
+                args.append("tags:")  # Clear all tags
+
         for key, value in changes.items():
-            if key == "tags_add":
-                args.extend(f"+{tag}" for tag in value)
-            elif key == "tags_remove":
-                args.extend(f"-{tag}" for tag in value)
-            elif key == "project":
+            if key == "project":
                 args.append(f"project:{value}")
             elif key == "priority":
                 args.append(f"priority:{value}")

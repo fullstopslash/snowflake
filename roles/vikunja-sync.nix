@@ -98,6 +98,18 @@ in {
       default = true;
       description = "Enable direct TW<->Vikunja sync via hooks (instant, no full scan)";
     };
+
+    enableTaskChampionSync = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable async TaskChampion sync after any task change";
+    };
+
+    defaultProject = lib.mkOption {
+      type = lib.types.str;
+      default = "inbox";
+      description = "Default Vikunja project for TW tasks without a project";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -269,7 +281,13 @@ in {
         # Read the new task JSON
         read -r task_json
 
-        # Output immediately so TW can continue (CRITICAL for responsiveness)
+        # If task has no project, add the default project before outputting
+        # This ensures TW and Vikunja both have the same project
+        if [[ $(echo "$task_json" | ${pkgs.jq}/bin/jq -r '.project // empty') == "" ]]; then
+          task_json=$(echo "$task_json" | ${pkgs.jq}/bin/jq -c '.project = "${cfg.defaultProject}"')
+        fi
+
+        # Output (potentially modified) task so TW stores it with the project
         echo "$task_json"
 
         # Skip sync if we're already in a sync (prevents loops)
@@ -280,6 +298,7 @@ in {
           export VIKUNJA_URL="${cfg.vikunjaUrl}"
           export VIKUNJA_USER="${cfg.caldavUser}"
           export VIKUNJA_API_TOKEN_FILE="${config.sops.secrets."caldav/vikunja-api".path}"
+          export VIKUNJA_DEFAULT_PROJECT="${cfg.defaultProject}"
 
           echo "$1" | ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1
           exit_code=$?
@@ -289,6 +308,10 @@ in {
             uuid=$(echo "$1" | ${pkgs.jq}/bin/jq -r ".uuid // empty")
             [[ -n "$uuid" ]] && echo "$uuid" >> /tmp/vikunja-sync-queue.txt
           fi
+          ${lib.optionalString cfg.enableTaskChampionSync ''
+          # TaskChampion sync (async, non-blocking)
+          ${pkgs.taskwarrior3}/bin/task sync >> /tmp/taskchampion-sync.log 2>&1 || true
+          ''}
         ' _ "$task_json" </dev/null >/dev/null 2>&1 &
 
         exit 0
@@ -319,6 +342,7 @@ in {
           export VIKUNJA_URL="${cfg.vikunjaUrl}"
           export VIKUNJA_USER="${cfg.caldavUser}"
           export VIKUNJA_API_TOKEN_FILE="${config.sops.secrets."caldav/vikunja-api".path}"
+          export VIKUNJA_DEFAULT_PROJECT="${cfg.defaultProject}"
 
           # Use separate echo commands piped to ensure proper newlines between JSON lines
           { echo "$1"; echo "$2"; } | ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1
@@ -329,7 +353,47 @@ in {
             uuid=$(echo "$2" | ${pkgs.jq}/bin/jq -r ".uuid // empty")
             [[ -n "$uuid" ]] && echo "$uuid" >> /tmp/vikunja-sync-queue.txt
           fi
+          ${lib.optionalString cfg.enableTaskChampionSync ''
+          # TaskChampion sync (async, non-blocking)
+          ${pkgs.taskwarrior3}/bin/task sync >> /tmp/taskchampion-sync.log 2>&1 || true
+          ''}
         ' _ "$original_json" "$modified_json" </dev/null >/dev/null 2>&1 &
+
+        exit 0
+      '';
+    };
+
+    # Taskwarrior on-delete hook - delete from Vikunja API (instant sync)
+    # NON-BLOCKING: outputs task immediately, deletes in background
+    environment.etc."vikunja-sync-hook/on-delete-vikunja" = lib.mkIf cfg.enableDirectSync {
+      mode = "0755";
+      text = ''
+        #!${pkgs.bash}/bin/bash
+        # Taskwarrior on-delete hook - non-blocking delete from Vikunja
+        # Outputs task immediately, syncs deletion in background
+
+        # Read task JSON
+        read -r task_json
+
+        # Output task immediately so TW can continue (CRITICAL)
+        echo "$task_json"
+
+        # Skip sync if we're already in a sync (prevents loops)
+        [[ -n "''${VIKUNJA_SYNC_RUNNING:-}" ]] && exit 0
+
+        # Background the delete via setsid (fully detached from terminal/TW)
+        setsid ${pkgs.bash}/bin/bash -c '
+          export VIKUNJA_URL="${cfg.vikunjaUrl}"
+          export VIKUNJA_USER="${cfg.caldavUser}"
+          export VIKUNJA_API_TOKEN_FILE="${config.sops.secrets."caldav/vikunja-api".path}"
+          export VIKUNJA_DEFAULT_PROJECT="${cfg.defaultProject}"
+
+          echo "$1" | ${vikunjaSync}/bin/vikunja-direct delete-hook >> /tmp/vikunja-direct.log 2>&1
+          ${lib.optionalString cfg.enableTaskChampionSync ''
+          # TaskChampion sync (async, non-blocking)
+          ${pkgs.taskwarrior3}/bin/task sync >> /tmp/taskchampion-sync.log 2>&1 || true
+          ''}
+        ' _ "$task_json" </dev/null >/dev/null 2>&1 &
 
         exit 0
       '';
@@ -358,15 +422,16 @@ in {
           mkdir -p "$HOOK_DIR"
           # Remove old on-exit hook if exists
           rm -f "$HOOK_DIR/on-exit-vikunja"
-          # Install on-add and on-modify hooks for direct sync
+          # Install on-add, on-modify, and on-delete hooks for direct sync
           ln -sf /etc/vikunja-sync-hook/on-add-vikunja "$HOOK_DIR/on-add-vikunja"
           ln -sf /etc/vikunja-sync-hook/on-modify-vikunja "$HOOK_DIR/on-modify-vikunja"
-          chown -h ${username}:users "$HOOK_DIR/on-add-vikunja" "$HOOK_DIR/on-modify-vikunja"
+          ln -sf /etc/vikunja-sync-hook/on-delete-vikunja "$HOOK_DIR/on-delete-vikunja"
+          chown -h ${username}:users "$HOOK_DIR/on-add-vikunja" "$HOOK_DIR/on-modify-vikunja" "$HOOK_DIR/on-delete-vikunja"
         ''
         else ''
           HOOK_DIR="${homeDir}/.config/task/hooks"
           mkdir -p "$HOOK_DIR"
-          rm -f "$HOOK_DIR/on-add-vikunja" "$HOOK_DIR/on-modify-vikunja"
+          rm -f "$HOOK_DIR/on-add-vikunja" "$HOOK_DIR/on-modify-vikunja" "$HOOK_DIR/on-delete-vikunja"
           ln -sf /etc/vikunja-sync-hook/on-exit-vikunja "$HOOK_DIR/on-exit-vikunja"
           chown -h ${username}:users "$HOOK_DIR/on-exit-vikunja"
         '';
