@@ -141,6 +141,7 @@
     enable = true;
     targets = {
       nextcloud = {
+        enable = false; # Disabled - conflicts with vikunja-sync hooks
         caldavUrl = "${inputs.nix-secrets.services.nextcloud.url}${inputs.nix-secrets.services.nextcloud.caldavPath}";
         caldavUser = inputs.nix-secrets.services.nextcloud.user;
         caldavCalendar = "Tasks";
