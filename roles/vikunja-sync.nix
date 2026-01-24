@@ -281,7 +281,7 @@ in {
           export VIKUNJA_USER="${cfg.caldavUser}"
           export VIKUNJA_API_TOKEN_FILE="${config.sops.secrets."caldav/vikunja-api".path}"
 
-          ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1 <<< "$1"
+          echo "$1" | ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1
           exit_code=$?
 
           # On failure, queue for retry
@@ -320,7 +320,8 @@ in {
           export VIKUNJA_USER="${cfg.caldavUser}"
           export VIKUNJA_API_TOKEN_FILE="${config.sops.secrets."caldav/vikunja-api".path}"
 
-          ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1 <<< "$(printf '%s\n%s\n' "$1" "$2")"
+          # Use separate echo commands piped to ensure proper newlines between JSON lines
+          { echo "$1"; echo "$2"; } | ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1
           exit_code=$?
 
           # On failure, queue for retry
