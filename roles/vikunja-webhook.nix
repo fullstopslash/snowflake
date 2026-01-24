@@ -56,19 +56,24 @@
           ${pkgs.jq}/bin/jq -r --arg url "$WEBHOOK_URL" '.[] | select(.target_url == $url) | .secret')
 
         if [[ -z "$HAS_SECRET" ]]; then
-          # Update existing webhook with secret
+          # Vikunja doesn't support updating webhook secrets - must delete and recreate
+          ${pkgs.curl}/bin/curl -sf -X DELETE \
+            -H "Authorization: Bearer $API_TOKEN" \
+            "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks/$EXISTING" > /dev/null
+
+          # Create new webhook with secret
           PAYLOAD=$(${pkgs.jq}/bin/jq -n \
             --arg url "$WEBHOOK_URL" \
             --arg secret "$WEBHOOK_SECRET" \
             '{target_url: $url, events: ["task.created", "task.updated", "task.deleted"], secret: $secret}')
 
-          ${pkgs.curl}/bin/curl -sf -X POST \
+          NEW_ID=$(${pkgs.curl}/bin/curl -sf -X PUT \
             -H "Authorization: Bearer $API_TOKEN" \
             -H "Content-Type: application/json" \
-            "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks/$EXISTING" \
-            -d "$PAYLOAD" > /dev/null
+            "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks" \
+            -d "$PAYLOAD" | ${pkgs.jq}/bin/jq -r '.id // "error"')
 
-          log "Project $PROJECT_ID: updated webhook with secret (id=$EXISTING)"
+          log "Project $PROJECT_ID: recreated webhook with secret (old=$EXISTING, new=$NEW_ID)"
         else
           log "Project $PROJECT_ID: webhook already exists (id=$EXISTING)"
         fi
