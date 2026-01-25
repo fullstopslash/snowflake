@@ -267,6 +267,7 @@ in {
     };
 
     # Retry queue processor service (processes failed syncs)
+    # Uses vikunja-direct process-queue for consolidated queue handling with proper locking
     systemd.user.services.vikunja-sync-retry = lib.mkIf cfg.enableDirectSync {
       description = "Vikunja Sync Retry Queue Processor";
       after = ["network-online.target"];
@@ -282,7 +283,7 @@ in {
         VIKUNJA_API_TOKEN_FILE = config.sops.secrets."caldav/vikunja-api".path;
       };
       script = ''
-        exec ${vikunjaSync}/bin/vikunja-sync-retry
+        exec ${vikunjaSync}/bin/vikunja-direct process-queue
       '';
     };
 

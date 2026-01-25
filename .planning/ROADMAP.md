@@ -13,6 +13,7 @@ Transform the existing single-host NixOS flake into a scalable, self-managing mu
 - [ ] **Phase 5: Auto-Updates** - Systemd timer for flake updates + rebuild
 - [ ] **Phase 6: New Host Onboarding** - Template system, streamlined workflow
 - [ ] **Phase 8: Vikunja Complete Field Sync** - Full bidirectional field parity with project moves
+- [ ] **Phase 9: Vikunja Sync Robustness** - Fix race conditions, add circuit breaker, improve queue handling
 
 ## Phase Details
 
@@ -92,6 +93,17 @@ Plans:
 - [x] 08-02: Description & Status Sync - Bidirectional body text, completion reversals
 - [x] 08-03: Hook Stability & Validation - Ensure hooks survive rebuilds, add self-tests
 
+### Phase 9: Vikunja Sync Robustness
+**Goal**: Fix identified race conditions, add circuit breaker for API resilience, and improve queue handling for reliable sync under adverse conditions.
+**Depends on**: Phase 8 (builds on completed sync infrastructure)
+**Plans**: 4 plans
+
+Plans:
+- [x] 09-01: Deleted Task Filtering & Locking Extension - Filter deleted tasks in lookups, document lock requirements
+- [x] 09-02: Project Validation in Title Fallback - Verify project match before linking tasks by title
+- [x] 09-03: Queue Atomicity & Deduplication - Add file locking to queue operations, consolidate processors
+- [x] 09-04: Circuit Breaker for API Resilience - Fail fast during outages, queue for retry
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -104,3 +116,4 @@ Plans:
 | 6. New Host Onboarding | 0/2 | Not started | - |
 | 7. Vikunja Sync Hardening | 4/4 | Complete | 2026-01-24 |
 | 8. Vikunja Complete Field Sync | 3/3 | Complete | 2026-01-25 |
+| 9. Vikunja Sync Robustness | 4/4 | Complete | 2026-01-25 |

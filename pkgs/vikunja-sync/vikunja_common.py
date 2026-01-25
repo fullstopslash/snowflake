@@ -16,6 +16,8 @@ from urllib.request import Request, urlopen
 __all__ = [
     "Config",
     "ConfigError",
+    "CircuitBreakerOpen",
+    "CircuitBreaker",
     "VikunjaClient",
     "TaskwarriorClient",
     "SyncLogger",
@@ -26,6 +28,106 @@ class ConfigError(Exception):
     """Configuration error."""
 
     pass
+
+
+class CircuitBreakerOpen(Exception):
+    """Raised when circuit breaker is open (API unavailable)."""
+
+    pass
+
+
+class CircuitBreaker:
+    """Simple circuit breaker for API resilience.
+
+    Tracks consecutive failures and "opens" to fail fast when the API
+    appears unavailable, preventing cascading timeouts.
+
+    States:
+    - closed: Normal operation, requests allowed
+    - open: Too many failures, requests blocked (fail fast)
+    - half-open: Testing if API recovered (one request allowed)
+    """
+
+    def __init__(
+        self,
+        failure_threshold: int = 3,
+        recovery_timeout: int = 60,
+    ):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self._state_file = self._get_state_file()
+
+    def _get_state_file(self) -> Path:
+        """Get persistent state file path."""
+        home = os.environ.get("HOME", os.path.expanduser("~"))
+        state_dir = Path(home) / ".local" / "state" / "vikunja-sync"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        return state_dir / "circuit_breaker.json"
+
+    def _load_state(self) -> dict:
+        """Load state from file (for cross-process sharing)."""
+        if self._state_file.exists():
+            try:
+                return json.loads(self._state_file.read_text())
+            except (json.JSONDecodeError, OSError):
+                pass
+        return {"failures": 0, "last_failure_time": 0.0, "state": "closed"}
+
+    def _save_state(self, state: dict) -> None:
+        """Save state to file."""
+        try:
+            self._state_file.write_text(json.dumps(state))
+        except OSError:
+            pass  # Best effort
+
+    def allow_request(self) -> bool:
+        """Check if request should be allowed."""
+        state = self._load_state()
+        current_state = state.get("state", "closed")
+
+        if current_state == "closed":
+            return True
+
+        if current_state == "open":
+            # Check if recovery timeout has passed
+            last_failure = state.get("last_failure_time", 0.0)
+            if time.time() - last_failure > self.recovery_timeout:
+                # Transition to half-open for testing
+                state["state"] = "half-open"
+                self._save_state(state)
+                return True
+            return False
+
+        # half-open: allow one test request
+        return True
+
+    def record_success(self) -> None:
+        """Record successful request - reset to closed state."""
+        state = {"failures": 0, "last_failure_time": 0.0, "state": "closed"}
+        self._save_state(state)
+
+    def record_failure(self) -> None:
+        """Record failed request - may open circuit."""
+        state = self._load_state()
+        state["failures"] = state.get("failures", 0) + 1
+        state["last_failure_time"] = time.time()
+
+        if state["failures"] >= self.failure_threshold:
+            state["state"] = "open"
+
+        self._save_state(state)
+
+    def get_status(self) -> dict:
+        """Get current circuit breaker status for diagnostics."""
+        state = self._load_state()
+        result = {
+            "state": state.get("state", "closed"),
+            "failures": state.get("failures", 0),
+        }
+        if state.get("state") == "open":
+            last_failure = state.get("last_failure_time", 0.0)
+            result["recovery_in"] = max(0, int(self.recovery_timeout - (time.time() - last_failure)))
+        return result
 
 
 @dataclass
@@ -77,7 +179,10 @@ class Config:
 
 
 class VikunjaClient:
-    """HTTP client for Vikunja API."""
+    """HTTP client for Vikunja API with circuit breaker support."""
+
+    # Shared circuit breaker instance across all clients
+    _circuit_breaker: CircuitBreaker | None = None
 
     def __init__(
         self,
@@ -85,17 +190,36 @@ class VikunjaClient:
         timeout: int = 30,
         max_retries: int = 3,
         logger: SyncLogger | None = None,
+        use_circuit_breaker: bool = True,
     ):
         self.config = config
         self.timeout = timeout
         self.max_retries = max_retries
         self.logger = logger
         self._label_cache: dict[str, int] = {}
+        self.use_circuit_breaker = use_circuit_breaker
+
+        # Initialize shared circuit breaker on first use
+        if use_circuit_breaker and VikunjaClient._circuit_breaker is None:
+            VikunjaClient._circuit_breaker = CircuitBreaker()
+
+    @classmethod
+    def get_circuit_breaker(cls) -> CircuitBreaker | None:
+        """Get the shared circuit breaker instance."""
+        return cls._circuit_breaker
 
     def _request(
         self, method: str, endpoint: str, data: dict | None = None
     ) -> dict | list | None:
-        """Make HTTP request with retry on transient failures."""
+        """Make HTTP request with circuit breaker and retry on transient failures."""
+        # Check circuit breaker first
+        cb = VikunjaClient._circuit_breaker
+        if self.use_circuit_breaker and cb:
+            if not cb.allow_request():
+                if self.logger:
+                    self.logger.warning(f"Circuit breaker open, skipping {endpoint}")
+                raise CircuitBreakerOpen("API circuit breaker is open - failing fast")
+
         url = f"{self.config.vikunja_url}/api/v1{endpoint}"
         headers = {"Authorization": f"Bearer {self.config.api_token}"}
 
@@ -104,6 +228,7 @@ class VikunjaClient:
             body = json.dumps(data).encode()
             headers["Content-Type"] = "application/json"
 
+        cb = VikunjaClient._circuit_breaker if self.use_circuit_breaker else None
         last_error = None
         for attempt in range(self.max_retries):
             if self.logger and attempt > 0:
@@ -113,22 +238,36 @@ class VikunjaClient:
             req = Request(url, data=body, headers=headers, method=method)
             try:
                 with urlopen(req, timeout=self.timeout) as resp:
-                    return json.loads(resp.read().decode())
+                    result = json.loads(resp.read().decode())
+                    # Success - reset circuit breaker
+                    if cb:
+                        cb.record_success()
+                    return result
             except HTTPError as e:
                 if e.code == 404:
+                    # 404 is a valid response, not a failure
+                    if cb:
+                        cb.record_success()
                     return None
                 if e.code >= 500:
                     # Server error, retry
                     last_error = e
+                    if cb:
+                        cb.record_failure()
                     time.sleep(2**attempt)  # 1s, 2s, 4s
                     continue
-                raise  # 4xx errors don't retry
+                raise  # 4xx errors don't retry (client errors)
             except URLError as e:
                 # Connection error, retry
                 last_error = e
+                if cb:
+                    cb.record_failure()
                 time.sleep(2**attempt)
                 continue
             except json.JSONDecodeError:
+                # Successful response but invalid JSON
+                if cb:
+                    cb.record_success()
                 return None
 
         # All retries exhausted

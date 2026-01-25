@@ -23,7 +23,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.error import HTTPError, URLError
 
-from vikunja_common import Config, ConfigError, VikunjaClient, TaskwarriorClient
+from vikunja_common import (
+    Config,
+    ConfigError,
+    CircuitBreakerOpen,
+    CircuitBreaker,
+    VikunjaClient,
+    TaskwarriorClient,
+)
 
 if TYPE_CHECKING:
     from typing import Any
@@ -258,9 +265,16 @@ def vikunja_to_tw_task(task: dict, project_title: str) -> dict:
 
 
 def find_tw_task_by_vikunja_id(tw: TaskwarriorClient, vikunja_id: int) -> str | None:
-    """Find Taskwarrior task UUID by Vikunja ID annotation."""
+    """Find Taskwarrior task UUID by Vikunja ID annotation.
+
+    Skips deleted tasks - their vikunja_id annotations are stale and should
+    not match when Vikunja creates or updates tasks.
+    """
     tasks = tw.export_all()
     for task in tasks:
+        # Skip deleted tasks - their vikunja_id annotations are stale
+        if task.get("status") == "deleted":
+            continue
         for ann in task.get("annotations", []):
             if f"vikunja_id:{vikunja_id}" in ann.get("description", ""):
                 return task.get("uuid")
@@ -268,9 +282,15 @@ def find_tw_task_by_vikunja_id(tw: TaskwarriorClient, vikunja_id: int) -> str | 
 
 
 def find_tw_task_by_description(tw: TaskwarriorClient, description: str, project: str) -> str | None:
-    """Find TW task by exact description match in project."""
+    """Find TW task by exact description match in project.
+
+    Skips deleted tasks to prevent matching stale entries.
+    """
     tasks = tw.export_project(project)
     for task in tasks:
+        # Skip deleted tasks
+        if task.get("status") == "deleted":
+            continue
         if task.get("description") == description:
             return task.get("uuid")
     return None
@@ -279,6 +299,10 @@ def find_tw_task_by_description(tw: TaskwarriorClient, description: str, project
 def handle_webhook(payload: dict) -> dict:
     """
     Handle Vikunja webhook payload - direct write to Taskwarrior.
+
+    IMPORTANT: Caller MUST hold the sync lock (via acquire_lock()) before
+    calling this function. The lock prevents race conditions where concurrent
+    webhooks both read "no matching task" and create duplicates.
 
     Returns: {"success": bool, "action": str, "uuid": str|None}
     """
@@ -300,8 +324,25 @@ def handle_webhook(payload: dict) -> dict:
     existing_uuid = None
     if vikunja_id:
         existing_uuid = find_tw_task_by_vikunja_id(tw, vikunja_id)
+
+    # For task.created events, if we couldn't find by vikunja_id but find by title,
+    # this is likely the annotation race condition - the TW task exists but hasn't
+    # been annotated yet. We should update it and add the annotation.
     if not existing_uuid and title:
         existing_uuid = find_tw_task_by_description(tw, title, project_title)
+        if existing_uuid and vikunja_id and event == "task.created":
+            # Verify project actually matches before linking (prevents cross-project phantom matches)
+            found_task = tw.export_task(existing_uuid)
+            if found_task and found_task.get("project") == project_title:
+                # Found task by title during a create event - this is the race condition
+                # Add the missing vikunja_id annotation to prevent future duplicates
+                log(f"Found TW task {existing_uuid} by title, adding missing vikunja_id:{vikunja_id}")
+                annotate_vikunja_id(existing_uuid, vikunja_id)
+            else:
+                # Project mismatch - don't link, let it create a new task
+                found_proj = found_task.get("project") if found_task else "unknown"
+                log(f"Title match {existing_uuid} has wrong project ({found_proj} != {project_title}), not linking")
+                existing_uuid = None
 
     if event == "task.deleted":
         if existing_uuid:
@@ -658,6 +699,9 @@ def push_to_vikunja(tw_task: dict, config: Config, default_project: str = "inbox
 
         return {"success": True, "action": action, "vikunja_id": task_id}
 
+    except CircuitBreakerOpen:
+        log("Circuit breaker open - API unavailable, queueing for retry")
+        return {"success": False, "action": "circuit_breaker_open", "vikunja_id": vikunja_id}
     except HTTPError as e:
         log(f"Vikunja API error: {e.code} {e.reason}")
         return {"success": False, "action": "api_error", "vikunja_id": vikunja_id}
@@ -822,12 +866,26 @@ def cmd_push(args: list[str]) -> int:
         return 1
 
 
+def get_queue_lock_file() -> Path:
+    """Get lock file path for queue operations."""
+    return get_state_dir() / "queue.lock"
+
+
 def queue_for_retry(uuid: str) -> None:
-    """Queue a task UUID for retry processing."""
+    """Queue a task UUID for retry processing with file locking."""
     queue_file = get_state_dir() / "queue.txt"
-    with open(queue_file, "a") as f:
-        f.write(f"{uuid}\n")
-    log(f"Queued task {uuid} for retry")
+    lock_file = get_queue_lock_file()
+
+    # Acquire exclusive lock for atomic append
+    lock_fd = os.open(str(lock_file), os.O_WRONLY | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        with open(queue_file, "a") as f:
+            f.write(f"{uuid}\n")
+        log(f"Queued task {uuid} for retry")
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        os.close(lock_fd)
 
 
 def cmd_hook(_args: list[str]) -> int:
@@ -1028,6 +1086,22 @@ def cmd_diagnose(_args: list[str]) -> int:
         print(f"  Vikunja API: ERROR - {e}")
         errors += 1
 
+    # Circuit breaker status
+    print("\n=== Circuit Breaker ===")
+    cb = CircuitBreaker()
+    status = cb.get_status()
+    state = status["state"]
+    if state == "open":
+        print("  State: OPEN (failing fast)")
+        print(f"  Failures: {status['failures']}")
+        print(f"  Recovery in: {status.get('recovery_in', 0)}s")
+        warnings += 1
+    elif state == "half-open":
+        print("  State: HALF-OPEN (testing recovery)")
+    else:
+        print("  State: CLOSED (normal)")
+    print(f"  Consecutive failures: {status['failures']}")
+
     # Summary
     print("\n=== Summary ===")
     print(f"Errors: {errors}")
@@ -1037,8 +1111,15 @@ def cmd_diagnose(_args: list[str]) -> int:
 
 
 def cmd_process_queue(_args: list[str]) -> int:
-    """Process the retry queue manually."""
+    """Process the retry queue with proper file locking.
+
+    Holds exclusive lock for entire processing to prevent:
+    - Concurrent queue processors from duplicating work
+    - Lost entries from hooks adding while we process
+    """
     queue_file = get_state_dir() / "queue.txt"
+    lock_file = get_queue_lock_file()
+
     if not queue_file.exists():
         print("Queue is empty")
         return 0
@@ -1052,33 +1133,53 @@ def cmd_process_queue(_args: list[str]) -> int:
     default_project = os.environ.get("VIKUNJA_DEFAULT_PROJECT", "inbox")
     tw = TaskwarriorClient()
 
-    lines = queue_file.read_text().strip().split("\n")
-    uuids = [u.strip() for u in lines if u.strip()]
-    processed = 0
-    failed = []
+    # Acquire exclusive lock for entire queue processing
+    lock_fd = os.open(str(lock_file), os.O_WRONLY | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
 
-    for uuid in set(uuids):  # Dedupe
-        task = tw.export_task(uuid)
-        if not task:
-            log(f"Task {uuid} not found in TW, skipping")
-            continue
+        # Re-check queue exists after acquiring lock
+        if not queue_file.exists():
+            print("Queue is empty")
+            return 0
 
-        result = push_to_vikunja(task, config, default_project)
-        if result["success"]:
-            processed += 1
-            log(f"Synced {uuid}: {result['action']}")
+        content = queue_file.read_text().strip()
+        if not content:
+            queue_file.unlink(missing_ok=True)
+            print("Queue is empty")
+            return 0
+
+        # Dedupe while preserving order of first occurrence
+        uuids = list(dict.fromkeys(line.strip() for line in content.split("\n") if line.strip()))
+        processed = 0
+        failed = []
+
+        for uuid in uuids:
+            task = tw.export_task(uuid)
+            if not task:
+                log(f"Task {uuid} not found in TW, removing from queue")
+                continue
+
+            result = push_to_vikunja(task, config, default_project)
+            if result["success"]:
+                processed += 1
+                log(f"Synced {uuid}: {result['action']}")
+            else:
+                failed.append(uuid)
+                log(f"Failed {uuid}: {result['action']}")
+
+        # Atomic update of queue file with only failed UUIDs
+        if failed:
+            queue_file.write_text("\n".join(failed) + "\n")
         else:
-            failed.append(uuid)
-            log(f"Failed {uuid}: {result['action']}")
+            queue_file.unlink(missing_ok=True)
 
-    # Update queue file with only failed UUIDs
-    if failed:
-        queue_file.write_text("\n".join(failed) + "\n")
-    else:
-        queue_file.unlink(missing_ok=True)
+        print(f"Processed: {processed}, Failed: {len(failed)}")
+        return 0 if not failed else 1
 
-    print(f"Processed: {processed}, Failed: {len(failed)}")
-    return 0 if not failed else 1
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        os.close(lock_fd)
 
 
 def cmd_test_project_move(args: list[str]) -> int:
@@ -1116,6 +1217,178 @@ def cmd_test_project_move(args: list[str]) -> int:
         return 1
 
 
+def cmd_cleanup_orphans(args: list[str]) -> int:
+    """Find and delete TW tasks whose vikunja_id no longer exists in Vikunja.
+
+    This handles cases like project deletion in Vikunja where tasks are
+    cascade-deleted without individual webhooks.
+
+    Usage: vikunja-direct cleanup-orphans [--dry-run]
+    """
+    dry_run = "--dry-run" in args
+
+    try:
+        config = Config.from_env()
+    except ConfigError as e:
+        print(f"Config error: {e}", file=sys.stderr)
+        return 1
+
+    vikunja = VikunjaClient(config)
+    tw = TaskwarriorClient()
+
+    # Get all Vikunja task IDs
+    print("Fetching Vikunja tasks...")
+    vikunja_ids: set[int] = set()
+    projects = vikunja.get("/projects") or []
+    for project in projects:
+        project_id = project.get("id")
+        if project_id:
+            tasks = vikunja.get(f"/projects/{project_id}/tasks") or []
+            for task in tasks:
+                if task.get("id"):
+                    vikunja_ids.add(task["id"])
+
+    print(f"Found {len(vikunja_ids)} tasks in Vikunja")
+
+    # Find TW tasks with vikunja_id that no longer exist
+    print("Checking TW tasks...")
+    all_tw_tasks = tw.export_all()
+    orphans = []
+
+    for task in all_tw_tasks:
+        if task.get("status") == "deleted":
+            continue
+        for ann in task.get("annotations", []):
+            match = re.search(r"vikunja_id:(\d+)", ann.get("description", ""))
+            if match:
+                vikunja_id = int(match.group(1))
+                if vikunja_id not in vikunja_ids:
+                    orphans.append({
+                        "uuid": task.get("uuid"),
+                        "description": task.get("description"),
+                        "project": task.get("project"),
+                        "vikunja_id": vikunja_id,
+                    })
+                break
+
+    if not orphans:
+        print("No orphaned tasks found.")
+        return 0
+
+    print(f"\nFound {len(orphans)} orphaned TW tasks:")
+    for orphan in orphans:
+        print(f"  {orphan['uuid'][:8]}  vikunja_id:{orphan['vikunja_id']}  {orphan['description'][:50]}")
+
+    if dry_run:
+        print("\n--dry-run: No tasks deleted")
+        return 0
+
+    print("\nDeleting orphaned tasks...")
+    deleted = 0
+    for orphan in orphans:
+        if tw.delete_task(orphan["uuid"]):
+            print(f"  Deleted: {orphan['uuid'][:8]}")
+            deleted += 1
+        else:
+            print(f"  Failed to delete: {orphan['uuid'][:8]}")
+
+    print(f"\nDeleted {deleted}/{len(orphans)} orphaned tasks")
+    return 0
+
+
+def cmd_dedup(args: list[str]) -> int:
+    """Find and remove duplicate TW tasks (same description, keep the one with vikunja_id).
+
+    Usage: vikunja-direct dedup [--dry-run]
+    """
+    dry_run = "--dry-run" in args
+
+    tw = TaskwarriorClient()
+    all_tasks = tw.export_all()
+
+    # Group pending tasks by description
+    by_description: dict[str, list[dict]] = {}
+    for task in all_tasks:
+        if task.get("status") not in ("pending",):
+            continue
+        desc = task.get("description", "")
+        if desc not in by_description:
+            by_description[desc] = []
+        by_description[desc].append(task)
+
+    # Find duplicates
+    duplicates_to_delete = []
+    for desc, tasks in by_description.items():
+        if len(tasks) <= 1:
+            continue
+
+        # Separate linked (has vikunja_id) from orphans
+        linked = []
+        orphans = []
+        for task in tasks:
+            has_vikunja_id = any(
+                "vikunja_id:" in ann.get("description", "")
+                for ann in task.get("annotations", [])
+            )
+            if has_vikunja_id:
+                linked.append(task)
+            else:
+                orphans.append(task)
+
+        # Strategy: Keep linked tasks, delete orphans
+        # If multiple linked tasks exist, keep the newest one
+        if linked:
+            # Delete all orphans
+            for orphan in orphans:
+                duplicates_to_delete.append({
+                    "uuid": orphan.get("uuid"),
+                    "description": desc,
+                    "reason": "orphan (no vikunja_id)",
+                })
+            # If multiple linked, keep newest (by entry date), delete others
+            if len(linked) > 1:
+                linked.sort(key=lambda t: t.get("entry", ""), reverse=True)
+                for old_task in linked[1:]:
+                    duplicates_to_delete.append({
+                        "uuid": old_task.get("uuid"),
+                        "description": desc,
+                        "reason": "older linked duplicate",
+                    })
+        else:
+            # All are orphans - keep the newest, delete rest
+            orphans.sort(key=lambda t: t.get("entry", ""), reverse=True)
+            for old_task in orphans[1:]:
+                duplicates_to_delete.append({
+                    "uuid": old_task.get("uuid"),
+                    "description": desc,
+                    "reason": "older orphan duplicate",
+                })
+
+    if not duplicates_to_delete:
+        print("No duplicates found.")
+        return 0
+
+    print(f"Found {len(duplicates_to_delete)} duplicate tasks to delete:")
+    for dup in duplicates_to_delete:
+        print(f"  {dup['uuid'][:8]}  [{dup['reason']}]  {dup['description'][:40]}")
+
+    if dry_run:
+        print("\n--dry-run: No tasks deleted")
+        return 0
+
+    print("\nDeleting duplicates...")
+    deleted = 0
+    for dup in duplicates_to_delete:
+        if tw.delete_task(dup["uuid"]):
+            print(f"  Deleted: {dup['uuid'][:8]}")
+            deleted += 1
+        else:
+            print(f"  Failed: {dup['uuid'][:8]}")
+
+    print(f"\nDeleted {deleted}/{len(duplicates_to_delete)} duplicates")
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) < 2:
         print("Usage: vikunja-direct <command> [args...]", file=sys.stderr)
@@ -1128,6 +1401,8 @@ def main() -> int:
         print("  diagnose        - Check system health", file=sys.stderr)
         print("  process-queue   - Retry queued failed syncs", file=sys.stderr)
         print("  test-project-move <uuid> <project> - Test project move", file=sys.stderr)
+        print("  cleanup-orphans [--dry-run] - Delete TW tasks with stale vikunja_id", file=sys.stderr)
+        print("  dedup [--dry-run] - Find and remove duplicate TW tasks", file=sys.stderr)
         return 1
 
     cmd = sys.argv[1]
@@ -1147,6 +1422,10 @@ def main() -> int:
         return cmd_process_queue(args)
     elif cmd == "test-project-move":
         return cmd_test_project_move(args)
+    elif cmd == "cleanup-orphans":
+        return cmd_cleanup_orphans(args)
+    elif cmd == "dedup":
+        return cmd_dedup(args)
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)
         return 1
