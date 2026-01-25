@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
 """Process the vikunja-sync retry queue."""
+import os
 import sys
 from pathlib import Path
 from vikunja_common import SyncLogger
 
-QUEUE_FILE = Path("/tmp/vikunja-sync-queue.txt")
+
+def get_queue_file() -> Path:
+    """Get user-specific queue file path."""
+    home = os.environ.get("HOME", os.path.expanduser("~"))
+    state_dir = Path(home) / ".local" / "state" / "vikunja-sync"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    return state_dir / "queue.txt"
+
+
+QUEUE_FILE = get_queue_file()
 
 
 def main():

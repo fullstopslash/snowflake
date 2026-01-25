@@ -18,6 +18,7 @@
   syncCfg = config.roles.vikunjaSync;
 
   # Webhook provisioning script - ensures webhooks exist on all projects
+  # Uses jaq for faster JSON processing
   provisionWebhooksScript = pkgs.writeShellScript "vikunja-provision-webhooks" ''
     set -euo pipefail
 
@@ -34,9 +35,9 @@
     # Get all non-archived projects
     PROJECTS=$(${pkgs.curl}/bin/curl -sf \
       -H "Authorization: Bearer $API_TOKEN" \
-      "$VIKUNJA_URL/api/v1/projects" | ${pkgs.jq}/bin/jq -r '.[] | select(.is_archived == false) | .id')
+      "$VIKUNJA_URL/api/v1/projects" | ${pkgs.jaq}/bin/jaq -r '.[] | select(.is_archived == false) | .id')
 
-    if [[ -z "$PROJECTS" ]]; then
+    if [ -z "$PROJECTS" ]; then
       log "No projects found or API error"
       exit 1
     fi
@@ -46,23 +47,23 @@
       EXISTING=$(${pkgs.curl}/bin/curl -sf \
         -H "Authorization: Bearer $API_TOKEN" \
         "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks" | \
-        ${pkgs.jq}/bin/jq -r --arg url "$WEBHOOK_URL" '.[] | select(.target_url == $url) | .id')
+        ${pkgs.jaq}/bin/jaq -r --arg url "$WEBHOOK_URL" '.[] | select(.target_url == $url) | .id')
 
-      if [[ -n "$EXISTING" ]]; then
+      if [ -n "$EXISTING" ]; then
         # Check if existing webhook has the secret set
         HAS_SECRET=$(${pkgs.curl}/bin/curl -sf \
           -H "Authorization: Bearer $API_TOKEN" \
           "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks" | \
-          ${pkgs.jq}/bin/jq -r --arg url "$WEBHOOK_URL" '.[] | select(.target_url == $url) | .secret')
+          ${pkgs.jaq}/bin/jaq -r --arg url "$WEBHOOK_URL" '.[] | select(.target_url == $url) | .secret')
 
-        if [[ -z "$HAS_SECRET" ]]; then
+        if [ -z "$HAS_SECRET" ]; then
           # Vikunja doesn't support updating webhook secrets - must delete and recreate
           ${pkgs.curl}/bin/curl -sf -X DELETE \
             -H "Authorization: Bearer $API_TOKEN" \
             "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks/$EXISTING" > /dev/null
 
-          # Create new webhook with secret
-          PAYLOAD=$(${pkgs.jq}/bin/jq -n \
+          # Create new webhook with secret (use jaq --arg for safe interpolation)
+          PAYLOAD=$(${pkgs.jaq}/bin/jaq -n \
             --arg url "$WEBHOOK_URL" \
             --arg secret "$WEBHOOK_SECRET" \
             '{target_url: $url, events: ["task.created", "task.updated", "task.deleted"], secret: $secret}')
@@ -71,7 +72,7 @@
             -H "Authorization: Bearer $API_TOKEN" \
             -H "Content-Type: application/json" \
             "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks" \
-            -d "$PAYLOAD" | ${pkgs.jq}/bin/jq -r '.id // "error"')
+            -d "$PAYLOAD" | ${pkgs.jaq}/bin/jaq -r '.id // "error"')
 
           log "Project $PROJECT_ID: recreated webhook with secret (old=$EXISTING, new=$NEW_ID)"
         else
@@ -80,8 +81,8 @@
         continue
       fi
 
-      # Create webhook (use jq to properly construct JSON with escaping)
-      PAYLOAD=$(${pkgs.jq}/bin/jq -n \
+      # Create webhook (use jaq --arg for safe JSON construction)
+      PAYLOAD=$(${pkgs.jaq}/bin/jaq -n \
         --arg url "$WEBHOOK_URL" \
         --arg secret "$WEBHOOK_SECRET" \
         '{target_url: $url, events: ["task.created", "task.updated", "task.deleted"], secret: $secret}')
@@ -90,9 +91,9 @@
         -H "Authorization: Bearer $API_TOKEN" \
         -H "Content-Type: application/json" \
         "$VIKUNJA_URL/api/v1/projects/$PROJECT_ID/webhooks" \
-        -d "$PAYLOAD" | ${pkgs.jq}/bin/jq -r '.id // "error"')
+        -d "$PAYLOAD" | ${pkgs.jaq}/bin/jaq -r '.id // "error"')
 
-      if [[ "$RESULT" == "error" ]]; then
+      if [ "$RESULT" = "error" ]; then
         log "Project $PROJECT_ID: failed to create webhook"
       else
         log "Project $PROJECT_ID: created webhook (id=$RESULT)"
@@ -263,12 +264,14 @@ in {
     };
 
     # User service template to process webhook payloads
+    # Payload deletion is conditional on success (prevents loss on failure)
     systemd.user.services."vikunja-webhook-process@" = {
       description = "Process Vikunja webhook payload %i";
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${vikunjaDirectPkg}/bin/vikunja-direct webhook ${queueDir}/%i";
-        ExecStartPost = "${pkgs.coreutils}/bin/rm -f ${queueDir}/%i";
+        TimeoutStartSec = 60; # 60s timeout for webhook processing
+        # Payload only deleted on success (&&); preserved on failure for debugging/retry
+        ExecStart = "${pkgs.bash}/bin/bash -c '${vikunjaDirectPkg}/bin/vikunja-direct webhook ${queueDir}/%i && rm -f ${queueDir}/%i'";
       };
       environment = {
         VIKUNJA_URL = syncCfg.vikunjaUrl;
@@ -287,9 +290,10 @@ in {
       description = "Provision Vikunja webhooks on all projects";
       after = ["network-online.target"];
       wants = ["network-online.target"];
-      path = [pkgs.curl pkgs.jq pkgs.coreutils];
+      path = [pkgs.curl pkgs.jaq pkgs.coreutils];
       serviceConfig = {
         Type = "oneshot";
+        TimeoutStartSec = 120; # 2 min for provisioning
         ExecStart = "${provisionWebhooksScript} ${syncCfg.vikunjaUrl} ${config.sops.secrets."caldav/vikunja-api".path} ${config.sops.secrets."webhook/vikunja-user".path} http://${cfg.callbackHost}:${toString cfg.port}/hooks/vikunja-sync";
       };
     };

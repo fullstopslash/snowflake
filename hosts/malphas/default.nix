@@ -137,7 +137,11 @@
     enable = true;
     callbackHost = "100.77.72.15"; # Tailscale IP for this machine
   };
-  roles.vikunjaSync.enable = true;
+  roles.vikunjaSync = {
+    enable = true;
+    enableReconciliation = true;
+    reconcileInterval = 15;
+  };
 
   # Syncall: Taskwarrior <-> CalDAV sync (Nextcloud only - Vikunja uses vikunja-sync)
   roles.syncall = {

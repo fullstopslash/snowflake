@@ -102,6 +102,9 @@ in {
     hyperfine
 
     asciinema_3
+    asciinema-agg
+    terminaltexteffects
+    terminal-toys
 
     qrencode
     fortune-kind

@@ -36,12 +36,13 @@ let
   } (builtins.readFile ./vikunja-sync-retry.py);
 
   # Main vikunja-sync shell script (for reconciliation/full sync)
+  # NOTE: Do NOT include correlateScript/labelSyncScript in runtimeInputs!
+  # They need PYTHONPATH wrapping which happens in the final package.
+  # The wrapped versions are added to PATH via makeWrapper below.
   mainScript = pkgs.writeShellApplication {
-    name = "vikunja-sync";
+    name = "vikunja-sync-unwrapped";
     runtimeInputs = [
       syncallPkg
-      correlateScript
-      labelSyncScript
       pkgs.curl
       pkgs.jq
       pkgs.yq-go
@@ -53,6 +54,7 @@ let
   };
 in
 # Wrap Python scripts to add PYTHONPATH for vikunja_common module
+# and wrap the main script to include the wrapped Python scripts in PATH
 pkgs.runCommand "vikunja-sync" {
   nativeBuildInputs = [ pkgs.makeWrapper ];
   meta = {
@@ -64,9 +66,6 @@ pkgs.runCommand "vikunja-sync" {
 
   # Copy shared module
   cp ${vikunjaCommonModule}/lib/python/vikunja_common.py $out/lib/python/
-
-  # Link main script (shell, no wrapping needed)
-  ln -s ${mainScript}/bin/vikunja-sync $out/bin/vikunja-sync
 
   # Wrap Python scripts with PYTHONPATH
   makeWrapper ${directSyncScript}/bin/vikunja-direct $out/bin/vikunja-direct \
@@ -80,4 +79,8 @@ pkgs.runCommand "vikunja-sync" {
 
   makeWrapper ${labelSyncScript}/bin/vikunja-sync-labels $out/bin/vikunja-sync-labels \
     --prefix PYTHONPATH : "$out/lib/python"
+
+  # Wrap main shell script to include $out/bin in PATH (for wrapped Python scripts)
+  makeWrapper ${mainScript}/bin/vikunja-sync-unwrapped $out/bin/vikunja-sync \
+    --prefix PATH : "$out/bin"
 ''

@@ -12,6 +12,7 @@ Transform the existing single-host NixOS flake into a scalable, self-managing mu
 - [ ] **Phase 4: Darwin Support** - nix-darwin for MacBook, cross-platform modules
 - [ ] **Phase 5: Auto-Updates** - Systemd timer for flake updates + rebuild
 - [ ] **Phase 6: New Host Onboarding** - Template system, streamlined workflow
+- [ ] **Phase 8: Vikunja Complete Field Sync** - Full bidirectional field parity with project moves
 
 ## Phase Details
 
@@ -70,6 +71,27 @@ Plans:
 - [ ] 06-01: Create host template with minimal required config
 - [ ] 06-02: Document onboarding workflow
 
+### Phase 7: Vikunja Sync Hardening
+**Goal**: Bulletproof the vikunja-sync hooks and scripts based on comprehensive audit findings. Fix race conditions, improve resilience to connectivity drops, survive rebuilds, migrate to jaq.
+**Depends on**: None (standalone hardening)
+**Plans**: 4 plans
+
+Plans:
+- [x] 07-01: Queue File Hardening - flock locking, POSIX conversion, user-specific paths
+- [x] 07-02: Hook Validation & jaq Migration - binary checks, jq→jaq, safe interpolation
+- [x] 07-03: Webhook Service Resilience - payload queueing, timeouts, concurrency locking
+- [x] 07-04: Python Script Hardening - vikunja_id annotations, file locking, log paths
+
+### Phase 8: Vikunja Complete Field Sync
+**Goal**: Achieve full bidirectional field parity between Taskwarrior and Vikunja. Fix project move sync, description/body text sync, completion reversals, and optimize for performance.
+**Depends on**: Phase 7 (hardening complete)
+**Plans**: 3 plans
+
+Plans:
+- [x] 08-01: Project Field Sync - Fix project_id not syncing on task updates
+- [x] 08-02: Description & Status Sync - Bidirectional body text, completion reversals
+- [x] 08-03: Hook Stability & Validation - Ensure hooks survive rebuilds, add self-tests
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -80,3 +102,5 @@ Plans:
 | 4. Darwin Support | 0/2 | Not started | - |
 | 5. Auto-Updates | 0/2 | Not started | - |
 | 6. New Host Onboarding | 0/2 | Not started | - |
+| 7. Vikunja Sync Hardening | 4/4 | Complete | 2026-01-24 |
+| 8. Vikunja Complete Field Sync | 3/3 | Complete | 2026-01-25 |

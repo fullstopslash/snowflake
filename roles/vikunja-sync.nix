@@ -18,10 +18,25 @@
 
   vikunjaSync = pkgs.callPackage ../pkgs/vikunja-sync/default.nix {};
 
-  # Script to process failed sync queue
+  # User-specific state directory for queue, logs, and locks
+  stateDir = "${homeDir}/.local/state/vikunja-sync";
+
+  # Script to process failed sync queue (POSIX-compliant with flock locking)
   processQueueScript = pkgs.writeShellScript "vikunja-process-queue" ''
-    QUEUE_FILE="/tmp/vikunja-sync-queue.txt"
-    [[ ! -f "$QUEUE_FILE" ]] && exit 0
+    STATE_DIR="${stateDir}"
+    QUEUE_FILE="$STATE_DIR/queue.txt"
+    LOG_FILE="$STATE_DIR/direct.log"
+    LOCK_FILE="$STATE_DIR/queue.lock"
+
+    # Ensure state directory exists
+    mkdir -p "$STATE_DIR"
+
+    # Exit if no queue file
+    [ ! -f "$QUEUE_FILE" ] && exit 0
+
+    # Acquire exclusive lock (skip if another process has it)
+    exec 9>"$LOCK_FILE"
+    ${pkgs.util-linux}/bin/flock -n 9 || exit 0
 
     export VIKUNJA_URL="${cfg.vikunjaUrl}"
     export VIKUNJA_USER="${cfg.caldavUser}"
@@ -30,20 +45,21 @@
 
     # Process unique UUIDs from queue
     sort -u "$QUEUE_FILE" | while read -r uuid; do
-      [[ -z "$uuid" ]] && continue
-      echo "[$(date -Iseconds)] Retrying sync for $uuid" >> /tmp/vikunja-direct.log
-      ${vikunjaSync}/bin/vikunja-direct push "$uuid" 2>> /tmp/vikunja-direct.log && \
+      [ -z "$uuid" ] && continue
+      echo "[$(date -Iseconds)] Retrying sync for $uuid" >> "$LOG_FILE"
+      if ${vikunjaSync}/bin/vikunja-direct push "$uuid" 2>> "$LOG_FILE"; then
         sed -i "/^$uuid$/d" "$QUEUE_FILE"
+      fi
     done
 
     # Clean up empty queue file
-    [[ ! -s "$QUEUE_FILE" ]] && rm -f "$QUEUE_FILE"
+    [ ! -s "$QUEUE_FILE" ] && rm -f "$QUEUE_FILE"
   '';
 
   # Script to sync a specific project (used by reconciliation)
   syncProjectScript = pkgs.writeShellScript "vikunja-sync-project" ''
     PROJECT="$1"
-    if [[ -z "$PROJECT" ]]; then
+    if [ -z "$PROJECT" ]; then
       echo "Usage: $0 <project-name>"
       exit 1
     fi
@@ -140,29 +156,32 @@ in {
     # Ensure directories exist
     systemd.tmpfiles.rules = [
       "d ${homeDir}/.config/task/hooks 0750 ${username} users -"
-      "d /tmp/vikunja-sync 1777 root root -"
+      "d ${stateDir} 0750 ${username} users -"
     ];
 
     # NetworkManager dispatcher - process queue and reconcile on network-up
     networking.networkmanager.dispatcherScripts = lib.mkIf cfg.enableDirectSync [
       {
         source = pkgs.writeShellScript "vikunja-network-up" ''
-          [[ "$2" != "up" ]] && exit 0
+          [ "$2" != "up" ] && exit 0
 
           # Wait for network to stabilize
           sleep 2
+
+          STATE_DIR="${stateDir}"
+          LOG_FILE="$STATE_DIR/direct.log"
 
           # Process any queued failed syncs (as user)
           ${pkgs.sudo}/bin/sudo -u ${username} ${processQueueScript} &
 
           # Check if we need reconciliation (offline > 30 min)
-          LAST_SYNC="/tmp/vikunja-last-sync"
+          LAST_SYNC="$STATE_DIR/last-sync"
           NOW=$(date +%s)
-          if [[ -f "$LAST_SYNC" ]]; then
+          if [ -f "$LAST_SYNC" ]; then
             LAST=$(cat "$LAST_SYNC")
             OFFLINE_SEC=$((NOW - LAST))
-            if [[ $OFFLINE_SEC -gt 1800 ]]; then
-              echo "[$(date -Iseconds)] Offline for $((OFFLINE_SEC/60))min, triggering reconciliation" >> /tmp/vikunja-direct.log
+            if [ $OFFLINE_SEC -gt 1800 ]; then
+              echo "[$(date -Iseconds)] Offline for $((OFFLINE_SEC/60))min, triggering reconciliation" >> "$LOG_FILE"
               ${pkgs.sudo}/bin/sudo -u ${username} ${pkgs.systemd}/bin/systemctl --user start vikunja-reconcile.service --no-block
             fi
           fi
@@ -188,9 +207,10 @@ in {
       description = "Vikunja full bidirectional sync";
       after = ["network-online.target"];
       wants = ["network-online.target"];
-      path = [pkgs.taskwarrior3 pkgs.curl pkgs.jq pkgs.yq-go pkgs.sops pkgs.bash pkgs.coreutils];
+      path = [pkgs.taskwarrior3 pkgs.curl pkgs.jaq pkgs.yq-go pkgs.sops pkgs.bash pkgs.coreutils];
       serviceConfig = {
         Type = "oneshot";
+        TimeoutStartSec = 300; # 5 min for full sync
         ExecStart = syncAllScript;
       };
     };
@@ -201,15 +221,20 @@ in {
       description = "Vikunja on-demand reconciliation (network recovery)";
       after = ["network-online.target"];
       wants = ["network-online.target"];
-      path = [pkgs.taskwarrior3 pkgs.curl pkgs.jq pkgs.yq-go pkgs.sops pkgs.bash pkgs.coreutils];
+      path = [pkgs.taskwarrior3 pkgs.curl pkgs.jaq pkgs.yq-go pkgs.sops pkgs.bash pkgs.coreutils];
       serviceConfig = {
         Type = "oneshot";
+        TimeoutStartSec = 300; # 5 min for full sync
         # Debounce: don't run if already ran recently
-        ExecCondition = "${pkgs.bash}/bin/bash -c 'test ! -f /tmp/vikunja-reconcile.lock || test $(($(date +%%s) - $(stat -c %%Y /tmp/vikunja-reconcile.lock))) -gt 300'";
+        ExecCondition = "${pkgs.bash}/bin/bash -c 'test ! -f ${stateDir}/reconcile.lock || test $(($(date +%%s) - $(stat -c %%Y ${stateDir}/reconcile.lock))) -gt 300'";
       };
       script = ''
-        touch /tmp/vikunja-reconcile.lock
-        echo "[$(date -Iseconds)] Starting reconciliation" >> /tmp/vikunja-direct.log
+        STATE_DIR="${stateDir}"
+        LOG_FILE="$STATE_DIR/direct.log"
+        mkdir -p "$STATE_DIR"
+
+        touch "$STATE_DIR/reconcile.lock"
+        echo "[$(date -Iseconds)] Starting reconciliation" >> "$LOG_FILE"
 
         # First, process the queue
         ${processQueueScript}
@@ -217,7 +242,7 @@ in {
         # Then run full sync
         ${syncAllScript}
 
-        echo "[$(date -Iseconds)] Reconciliation complete" >> /tmp/vikunja-direct.log
+        echo "[$(date -Iseconds)] Reconciliation complete" >> "$LOG_FILE"
       '';
     };
 
@@ -226,13 +251,14 @@ in {
       description = "Vikunja per-project sync";
       after = ["network-online.target"];
       wants = ["network-online.target"];
-      path = [pkgs.taskwarrior3 pkgs.curl pkgs.jq pkgs.yq-go pkgs.sops pkgs.bash pkgs.coreutils];
+      path = [pkgs.taskwarrior3 pkgs.curl pkgs.jaq pkgs.yq-go pkgs.sops pkgs.bash pkgs.coreutils];
       serviceConfig = {
         Type = "oneshot";
+        TimeoutStartSec = 120; # 2 min for single project
       };
       # Project name passed via VIKUNJA_SYNC_PROJECT env var
       script = ''
-        if [[ -z "''${VIKUNJA_SYNC_PROJECT:-}" ]]; then
+        if [ -z "''${VIKUNJA_SYNC_PROJECT:-}" ]; then
           echo "VIKUNJA_SYNC_PROJECT not set, running full sync"
           exec ${syncAllScript}
         fi
@@ -245,9 +271,10 @@ in {
       description = "Vikunja Sync Retry Queue Processor";
       after = ["network-online.target"];
       wants = ["network-online.target"];
-      path = [vikunjaSync pkgs.taskwarrior3 pkgs.curl pkgs.jq pkgs.bash pkgs.coreutils];
+      path = [vikunjaSync pkgs.taskwarrior3 pkgs.curl pkgs.jaq pkgs.bash pkgs.coreutils];
       serviceConfig = {
         Type = "oneshot";
+        TimeoutStartSec = 120; # 2 min for retry processing
       };
       environment = {
         VIKUNJA_URL = cfg.vikunjaUrl;
@@ -274,45 +301,63 @@ in {
     environment.etc."vikunja-sync-hook/on-add-vikunja" = lib.mkIf cfg.enableDirectSync {
       mode = "0755";
       text = ''
-        #!${pkgs.bash}/bin/bash
+        #!/bin/sh
         # Taskwarrior on-add hook - non-blocking push to Vikunja
         # Outputs task immediately, syncs in background for <10ms latency
+
+        # Ensure system binaries are in PATH
+        PATH="/run/current-system/sw/bin:$PATH"
+        export PATH
+
+        # Resolve binary paths at runtime (survives rebuilds)
+        VIKUNJA_DIRECT=$(command -v vikunja-direct) || true
+        JAQ=$(command -v jaq) || true
+        TASK=$(command -v task) || true
 
         # Read the new task JSON
         read -r task_json
 
+        # If required binaries missing, output task unchanged and exit (fail-open)
+        if [ -z "$VIKUNJA_DIRECT" ] || [ -z "$JAQ" ]; then
+          echo "$task_json"
+          exit 0
+        fi
+
         # If task has no project, add the default project before outputting
         # This ensures TW and Vikunja both have the same project
-        if [[ $(echo "$task_json" | ${pkgs.jq}/bin/jq -r '.project // empty') == "" ]]; then
-          task_json=$(echo "$task_json" | ${pkgs.jq}/bin/jq -c '.project = "${cfg.defaultProject}"')
+        if [ "$(echo "$task_json" | "$JAQ" -r '.project // empty')" = "" ]; then
+          task_json=$(echo "$task_json" | "$JAQ" -c --arg proj "${cfg.defaultProject}" '.project = $proj')
         fi
 
         # Output (potentially modified) task so TW stores it with the project
         echo "$task_json"
 
         # Skip sync if we're already in a sync (prevents loops)
-        [[ -n "''${VIKUNJA_SYNC_RUNNING:-}" ]] && exit 0
+        [ -n "''${VIKUNJA_SYNC_RUNNING:-}" ] && exit 0
 
         # Background the sync via setsid (fully detached from terminal/TW)
-        setsid ${pkgs.bash}/bin/bash -c '
+        # Uses timeout to prevent hung processes
+        STATE_DIR="${stateDir}"
+        setsid sh -c '
           export VIKUNJA_URL="${cfg.vikunjaUrl}"
           export VIKUNJA_USER="${cfg.caldavUser}"
           export VIKUNJA_API_TOKEN_FILE="${config.sops.secrets."caldav/vikunja-api".path}"
           export VIKUNJA_DEFAULT_PROJECT="${cfg.defaultProject}"
 
-          echo "$1" | ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1
+          mkdir -p "$5"
+          timeout 30 sh -c "echo \"\$1\" | \"\$2\" hook" _ "$1" "$2" >> "$5/direct.log" 2>&1
           exit_code=$?
 
           # On failure, queue for retry
-          if [[ $exit_code -ne 0 ]]; then
-            uuid=$(echo "$1" | ${pkgs.jq}/bin/jq -r ".uuid // empty")
-            [[ -n "$uuid" ]] && echo "$uuid" >> /tmp/vikunja-sync-queue.txt
+          if [ $exit_code -ne 0 ]; then
+            uuid=$(echo "$1" | "$3" -r ".uuid // empty")
+            [ -n "$uuid" ] && echo "$uuid" >> "$5/queue.txt"
           fi
           ${lib.optionalString cfg.enableTaskChampionSync ''
           # TaskChampion sync (async, non-blocking)
-          ${pkgs.taskwarrior3}/bin/task sync >> /tmp/taskchampion-sync.log 2>&1 || true
+          timeout 30 "$4" sync >> "$5/taskchampion-sync.log" 2>&1 || true
           ''}
-        ' _ "$task_json" </dev/null >/dev/null 2>&1 &
+        ' _ "$task_json" "$VIKUNJA_DIRECT" "$JAQ" "$TASK" "$STATE_DIR" </dev/null >/dev/null 2>&1 &
 
         exit 0
       '';
@@ -320,12 +365,23 @@ in {
 
     # Taskwarrior on-modify hook - direct push to Vikunja API (instant sync)
     # NON-BLOCKING: outputs task immediately, syncs in background
+    # NOTE: TaskWarrior has no on-delete hook - deletion triggers on-modify with status:deleted
     environment.etc."vikunja-sync-hook/on-modify-vikunja" = lib.mkIf cfg.enableDirectSync {
       mode = "0755";
       text = ''
-        #!${pkgs.bash}/bin/bash
+        #!/bin/sh
         # Taskwarrior on-modify hook - non-blocking push to Vikunja
         # Outputs modified task immediately, syncs in background for <10ms latency
+        # NOTE: TaskWarrior deletion triggers on-modify with status:deleted (no on-delete hook)
+
+        # Ensure system binaries are in PATH
+        PATH="/run/current-system/sw/bin:$PATH"
+        export PATH
+
+        # Resolve binary paths at runtime (survives rebuilds)
+        VIKUNJA_DIRECT=$(command -v vikunja-direct) || true
+        JAQ=$(command -v jaq) || true
+        TASK=$(command -v task) || true
 
         # Read original and modified task JSON
         read -r original_json
@@ -334,99 +390,116 @@ in {
         # Output modified task immediately so TW can continue (CRITICAL)
         echo "$modified_json"
 
+        # If required binaries missing, exit (fail-open - task already output)
+        if [ -z "$VIKUNJA_DIRECT" ] || [ -z "$JAQ" ]; then
+          exit 0
+        fi
+
         # Skip sync if we're already in a sync (prevents loops)
-        [[ -n "''${VIKUNJA_SYNC_RUNNING:-}" ]] && exit 0
+        [ -n "''${VIKUNJA_SYNC_RUNNING:-}" ] && exit 0
+
+        # Check if this is a deletion (status changed to deleted)
+        task_status=$(echo "$modified_json" | "$JAQ" -r '.status // empty')
 
         # Background the sync via setsid (fully detached from terminal/TW)
-        setsid ${pkgs.bash}/bin/bash -c '
+        # Uses timeout to prevent hung processes
+        STATE_DIR="${stateDir}"
+        setsid sh -c '
           export VIKUNJA_URL="${cfg.vikunjaUrl}"
           export VIKUNJA_USER="${cfg.caldavUser}"
           export VIKUNJA_API_TOKEN_FILE="${config.sops.secrets."caldav/vikunja-api".path}"
           export VIKUNJA_DEFAULT_PROJECT="${cfg.defaultProject}"
 
-          # Use separate echo commands piped to ensure proper newlines between JSON lines
-          { echo "$1"; echo "$2"; } | ${vikunjaSync}/bin/vikunja-direct hook >> /tmp/vikunja-direct.log 2>&1
-          exit_code=$?
+          mkdir -p "$7"
+
+          # If task was deleted, use delete-hook command; otherwise use regular hook
+          if [ "$5" = "deleted" ]; then
+            timeout 30 sh -c "echo \"\$1\" | \"\$2\" delete-hook" _ "$2" "$3" >> "$7/direct.log" 2>&1
+            exit_code=$?
+          else
+            # Use separate echo commands piped to ensure proper newlines between JSON lines
+            timeout 30 sh -c "{ echo \"\$1\"; echo \"\$2\"; } | \"\$3\" hook" _ "$1" "$2" "$3" >> "$7/direct.log" 2>&1
+            exit_code=$?
+          fi
 
           # On failure, queue for retry
-          if [[ $exit_code -ne 0 ]]; then
-            uuid=$(echo "$2" | ${pkgs.jq}/bin/jq -r ".uuid // empty")
-            [[ -n "$uuid" ]] && echo "$uuid" >> /tmp/vikunja-sync-queue.txt
+          if [ $exit_code -ne 0 ]; then
+            uuid=$(echo "$2" | "$4" -r ".uuid // empty")
+            [ -n "$uuid" ] && echo "$uuid" >> "$7/queue.txt"
           fi
           ${lib.optionalString cfg.enableTaskChampionSync ''
           # TaskChampion sync (async, non-blocking)
-          ${pkgs.taskwarrior3}/bin/task sync >> /tmp/taskchampion-sync.log 2>&1 || true
+          timeout 30 "$6" sync >> "$7/taskchampion-sync.log" 2>&1 || true
           ''}
-        ' _ "$original_json" "$modified_json" </dev/null >/dev/null 2>&1 &
+        ' _ "$original_json" "$modified_json" "$VIKUNJA_DIRECT" "$JAQ" "$task_status" "$TASK" "$STATE_DIR" </dev/null >/dev/null 2>&1 &
 
         exit 0
       '';
     };
 
-    # Taskwarrior on-delete hook - delete from Vikunja API (instant sync)
-    # NON-BLOCKING: outputs task immediately, deletes in background
-    environment.etc."vikunja-sync-hook/on-delete-vikunja" = lib.mkIf cfg.enableDirectSync {
-      mode = "0755";
-      text = ''
-        #!${pkgs.bash}/bin/bash
-        # Taskwarrior on-delete hook - non-blocking delete from Vikunja
-        # Outputs task immediately, syncs deletion in background
-
-        # Read task JSON
-        read -r task_json
-
-        # Output task immediately so TW can continue (CRITICAL)
-        echo "$task_json"
-
-        # Skip sync if we're already in a sync (prevents loops)
-        [[ -n "''${VIKUNJA_SYNC_RUNNING:-}" ]] && exit 0
-
-        # Background the delete via setsid (fully detached from terminal/TW)
-        setsid ${pkgs.bash}/bin/bash -c '
-          export VIKUNJA_URL="${cfg.vikunjaUrl}"
-          export VIKUNJA_USER="${cfg.caldavUser}"
-          export VIKUNJA_API_TOKEN_FILE="${config.sops.secrets."caldav/vikunja-api".path}"
-          export VIKUNJA_DEFAULT_PROJECT="${cfg.defaultProject}"
-
-          echo "$1" | ${vikunjaSync}/bin/vikunja-direct delete-hook >> /tmp/vikunja-direct.log 2>&1
-          ${lib.optionalString cfg.enableTaskChampionSync ''
-          # TaskChampion sync (async, non-blocking)
-          ${pkgs.taskwarrior3}/bin/task sync >> /tmp/taskchampion-sync.log 2>&1 || true
-          ''}
-        ' _ "$task_json" </dev/null >/dev/null 2>&1 &
-
-        exit 0
-      '';
-    };
+    # NOTE: TaskWarrior has NO on-delete hook. Deletion triggers on-modify with status:deleted.
+    # The on-modify hook above handles deletion by checking for status:deleted.
 
     # Fallback on-exit hook for when direct sync is disabled
     environment.etc."vikunja-sync-hook/on-exit-vikunja" = lib.mkIf (!cfg.enableDirectSync) {
       mode = "0755";
       text = ''
-        #!${pkgs.bash}/bin/bash
+        #!/bin/sh
         # Taskwarrior on-exit hook - trigger full sync (fallback mode)
 
-        [[ -n "''${VIKUNJA_SYNC_RUNNING:-}" ]] && exit 0
+        # Ensure system binaries are in PATH
+        PATH="/run/current-system/sw/bin:$PATH"
+        export PATH
+
+        SYSTEMCTL=$(command -v systemctl) || true
+
+        [ -n "''${VIKUNJA_SYNC_RUNNING:-}" ] && exit 0
         cat > /dev/null
-        ${pkgs.systemd}/bin/systemctl --user start vikunja-sync.service --no-block 2>/dev/null || true
+
+        # Fail-open if systemctl not found
+        [ -z "$SYSTEMCTL" ] && exit 0
+
+        "$SYSTEMCTL" --user start vikunja-sync.service --no-block 2>/dev/null || true
         exit 0
       '';
     };
 
-    # Activation script to symlink hook
+    # Activation script to symlink hook with validation
     system.activationScripts.vikunja-sync-hook = {
       text =
         if cfg.enableDirectSync
         then ''
           HOOK_DIR="${homeDir}/.config/task/hooks"
           mkdir -p "$HOOK_DIR"
-          # Remove old on-exit hook if exists
+
+          # Remove old/unused hooks
           rm -f "$HOOK_DIR/on-exit-vikunja"
-          # Install on-add, on-modify, and on-delete hooks for direct sync
+          rm -f "$HOOK_DIR/on-delete-vikunja"  # TW has no on-delete hook; deletion handled by on-modify
+
+          # Install on-add and on-modify hooks for direct sync
           ln -sf /etc/vikunja-sync-hook/on-add-vikunja "$HOOK_DIR/on-add-vikunja"
           ln -sf /etc/vikunja-sync-hook/on-modify-vikunja "$HOOK_DIR/on-modify-vikunja"
-          ln -sf /etc/vikunja-sync-hook/on-delete-vikunja "$HOOK_DIR/on-delete-vikunja"
-          chown -h ${username}:users "$HOOK_DIR/on-add-vikunja" "$HOOK_DIR/on-modify-vikunja" "$HOOK_DIR/on-delete-vikunja"
+          chown -h ${username}:users "$HOOK_DIR/on-add-vikunja" "$HOOK_DIR/on-modify-vikunja"
+
+          # Validate hooks are correctly linked and executable
+          ERRORS=0
+          for hook in on-add-vikunja on-modify-vikunja; do
+            TARGET=$(readlink -f "$HOOK_DIR/$hook" 2>/dev/null)
+            if [ ! -x "$TARGET" ]; then
+              echo "vikunja-sync: WARNING - Hook $hook not executable or missing: $TARGET" >&2
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+
+          # Check if vikunja-direct is in PATH
+          if ! command -v vikunja-direct >/dev/null 2>&1; then
+            echo "vikunja-sync: WARNING - vikunja-direct not found in PATH" >&2
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "vikunja-sync: $ERRORS validation warning(s) - run 'vikunja-direct diagnose' for details" >&2
+          fi
         ''
         else ''
           HOOK_DIR="${homeDir}/.config/task/hooks"
@@ -436,6 +509,27 @@ in {
           chown -h ${username}:users "$HOOK_DIR/on-exit-vikunja"
         '';
       deps = [];
+    };
+
+    # Self-test service runs diagnostics at login
+    systemd.user.services.vikunja-sync-selftest = lib.mkIf cfg.enableDirectSync {
+      description = "Vikunja Sync Self-Test";
+      wantedBy = ["default.target"];
+      after = ["network-online.target"];
+      wants = ["network-online.target"];
+
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        # Run diagnose but don't fail service on errors (just log)
+        ExecStart = "${pkgs.bash}/bin/bash -c '${vikunjaSync}/bin/vikunja-direct diagnose 2>&1 | head -50 || true'";
+      };
+
+      environment = {
+        VIKUNJA_URL = cfg.vikunjaUrl;
+        VIKUNJA_USER = cfg.caldavUser;
+        VIKUNJA_API_TOKEN_FILE = config.sops.secrets."caldav/vikunja-api".path;
+      };
     };
   };
 }

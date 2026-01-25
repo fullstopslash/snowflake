@@ -11,8 +11,9 @@ CALDAV_URL="${VIKUNJA_URL}/dav"
 VIKUNJA_API_TOKEN_FILE="${VIKUNJA_API_TOKEN_FILE:-}"
 VIKUNJA_CALDAV_PASS_FILE="${VIKUNJA_CALDAV_PASS_FILE:-}"
 
-# Lock file base path
-LOCK_DIR="/tmp/vikunja-sync"
+# State directory (user-specific)
+STATE_DIR="${HOME}/.local/state/vikunja-sync"
+LOCK_DIR="$STATE_DIR"
 mkdir -p "$LOCK_DIR"
 
 # Sync options

@@ -12,6 +12,7 @@ Target latency: <100ms for single-task operations.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import re
@@ -26,6 +27,42 @@ from vikunja_common import Config, ConfigError, VikunjaClient, TaskwarriorClient
 
 if TYPE_CHECKING:
     from typing import Any
+
+
+def get_state_dir() -> Path:
+    """Get user-specific state directory for vikunja-sync."""
+    home = os.environ.get("HOME", os.path.expanduser("~"))
+    state_dir = Path(home) / ".local" / "state" / "vikunja-sync"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    return state_dir
+
+
+def get_lock_file() -> Path:
+    """Get lock file path for sync operations."""
+    return get_state_dir() / "direct.lock"
+
+
+def acquire_lock() -> int | None:
+    """
+    Acquire exclusive lock for sync operations.
+    Returns file descriptor on success, None if lock unavailable.
+    """
+    lock_path = get_lock_file()
+    try:
+        fd = os.open(str(lock_path), os.O_WRONLY | os.O_CREAT, 0o644)
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return fd
+    except (BlockingIOError, OSError):
+        return None
+
+
+def release_lock(fd: int) -> None:
+    """Release lock (also released automatically on file close)."""
+    try:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+    except OSError:
+        pass
 
 
 def log(msg: str) -> None:
@@ -171,10 +208,10 @@ def vikunja_to_tw_task(task: dict, project_title: str) -> dict:
     # Store Vikunja description (body text) as annotation if non-empty
     vikunja_desc = task.get("description", "")
     if vikunja_desc and vikunja_desc.strip():
-        # Prefix to identify it as the body text
+        # Prefix to identify it as the body text (no length limit for bidirectional sync)
         annotations.append({
             "entry": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
-            "description": f"note:{vikunja_desc.strip()[:500]}",  # Limit length
+            "description": f"note:{vikunja_desc.strip()}",
         })
 
     if annotations:
@@ -341,11 +378,19 @@ def handle_webhook(payload: dict) -> dict:
                     log(f"Failed to modify TW task {existing_uuid}")
                     return {"success": False, "action": "modify_failed", "uuid": existing_uuid}
 
-            # Handle completion status
+            # Handle completion status (bidirectional - can complete or uncomplete)
             if tw_task["status"] == "completed":
-                if not tw.complete_task(existing_uuid):
-                    log(f"Failed to mark TW task {existing_uuid} done")
-                    return {"success": False, "action": "done_failed", "uuid": existing_uuid}
+                # Only mark done if not already completed
+                if existing_task and existing_task.get("status") != "completed":
+                    if not tw.complete_task(existing_uuid):
+                        log(f"Failed to mark TW task {existing_uuid} done")
+                        return {"success": False, "action": "done_failed", "uuid": existing_uuid}
+            elif existing_task and existing_task.get("status") == "completed":
+                # Task was completed in TW but is now pending in Vikunja - uncomplete it
+                if not tw.modify_task(existing_uuid, status="pending"):
+                    log(f"Failed to uncomplete TW task {existing_uuid}")
+                    return {"success": False, "action": "uncomplete_failed", "uuid": existing_uuid}
+                log(f"Uncompleted TW task: {existing_uuid}")
 
             log(f"Updated TW task: {existing_uuid}")
             return {"success": True, "action": "updated", "uuid": existing_uuid}
@@ -381,12 +426,21 @@ def handle_webhook(payload: dict) -> dict:
 # =============================================================================
 
 
-def tw_to_vikunja_task(tw_task: dict) -> dict:
-    """Convert Taskwarrior task to Vikunja API format."""
+def tw_to_vikunja_task(tw_task: dict, project_id: int | None = None) -> dict:
+    """Convert Taskwarrior task to Vikunja API format.
+
+    Args:
+        tw_task: Taskwarrior task dict
+        project_id: Optional Vikunja project ID to include (for moves/updates)
+    """
     vikunja_task: dict[str, Any] = {
         "title": tw_task.get("description", "Untitled"),
         "done": tw_task.get("status") == "completed",
     }
+
+    # Include project_id if provided (enables project moves on updates)
+    if project_id is not None:
+        vikunja_task["project_id"] = project_id
 
     # Due date
     due_dt = parse_tw_datetime(tw_task.get("due", ""))
@@ -432,6 +486,19 @@ def tw_to_vikunja_task(tw_task: dict) -> dict:
     else:
         vikunja_task["priority"] = 0
 
+    # Extract note: annotations to sync as Vikunja description
+    # This enables bidirectional body text sync
+    notes = []
+    for ann in tw_task.get("annotations", []):
+        desc = ann.get("description", "")
+        if desc.startswith("note:"):
+            notes.append(desc[5:])  # Remove "note:" prefix
+    # Combine multiple notes with newlines
+    if notes:
+        vikunja_task["description"] = "\n\n".join(notes)
+    else:
+        vikunja_task["description"] = ""
+
     return vikunja_task
 
 
@@ -442,6 +509,32 @@ def get_vikunja_task_id_from_tw(tw_task: dict) -> int | None:
         if match:
             return int(match.group(1))
     return None
+
+
+def annotate_vikunja_id(tw_uuid: str, vikunja_id: int) -> bool:
+    """
+    Add vikunja_id annotation to TaskWarrior task.
+
+    This is called after creating or title-matching a task in Vikunja
+    to ensure future syncs use direct ID lookup instead of title matching.
+    """
+    # Set VIKUNJA_SYNC_RUNNING to prevent hook recursion
+    env = {**os.environ, "VIKUNJA_SYNC_RUNNING": "1"}
+    annotation = f"vikunja_id:{vikunja_id}"
+
+    result = subprocess.run(
+        ["task", tw_uuid, "annotate", annotation],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode == 0:
+        log(f"Annotated TW task {tw_uuid} with vikunja_id:{vikunja_id}")
+        return True
+    else:
+        log(f"Failed to annotate TW task {tw_uuid}: {result.stderr}")
+        return False
 
 
 def get_or_create_project(vikunja: VikunjaClient, project_title: str) -> int | None:
@@ -480,6 +573,7 @@ def push_to_vikunja(tw_task: dict, config: Config, default_project: str = "inbox
     vikunja = VikunjaClient(config)
 
     project_title = tw_task.get("project", "") or default_project
+    tw_uuid = tw_task.get("uuid")
 
     # Get or create project in Vikunja
     project_id = get_or_create_project(vikunja, project_title)
@@ -487,7 +581,8 @@ def push_to_vikunja(tw_task: dict, config: Config, default_project: str = "inbox
         log(f"Failed to get/create project '{project_title}' in Vikunja")
         return {"success": False, "action": "project_error", "vikunja_id": None}
 
-    vikunja_task = tw_to_vikunja_task(tw_task)
+    # Pass project_id to enable project moves on updates
+    vikunja_task = tw_to_vikunja_task(tw_task, project_id)
 
     # Get label IDs for TW tags (will attach after task create/update)
     tw_tags = tw_task.get("tags", [])
@@ -498,10 +593,13 @@ def push_to_vikunja(tw_task: dict, config: Config, default_project: str = "inbox
             label_ids.append(label_id)
 
     vikunja_id = get_vikunja_task_id_from_tw(tw_task)
+    was_title_match = False
 
     # Try to find by title if no ID annotation
     if not vikunja_id:
         vikunja_id = find_vikunja_task_by_title(vikunja, project_id, tw_task.get("description", ""))
+        if vikunja_id:
+            was_title_match = True  # Need to annotate TW task with vikunja_id
 
     try:
         if vikunja_id:
@@ -511,6 +609,10 @@ def push_to_vikunja(tw_task: dict, config: Config, default_project: str = "inbox
                 log(f"Updated Vikunja task: {vikunja_id}")
                 task_id = vikunja_id
                 action = "updated"
+
+                # If this was a title-match, annotate TW task with vikunja_id
+                if was_title_match and tw_uuid:
+                    annotate_vikunja_id(tw_uuid, task_id)
             else:
                 return {"success": False, "action": "api_error", "vikunja_id": vikunja_id}
         else:
@@ -521,6 +623,10 @@ def push_to_vikunja(tw_task: dict, config: Config, default_project: str = "inbox
                 task_id = result["id"]
                 log(f"Created Vikunja task: {task_id}")
                 action = "created"
+
+                # Annotate TW task with the new vikunja_id
+                if tw_uuid:
+                    annotate_vikunja_id(tw_uuid, task_id)
             else:
                 return {"success": False, "action": "create_failed", "vikunja_id": None}
 
@@ -659,7 +765,10 @@ def handle_tw_delete_hook(task_json: str) -> dict:
 
 
 def cmd_webhook(args: list[str]) -> int:
-    """Handle webhook: vikunja-direct webhook [payload-file | -]"""
+    """Handle webhook: vikunja-direct webhook [payload-file | -]
+
+    Uses file locking to prevent concurrent webhook processing from creating duplicates.
+    """
     if args and args[0] not in ("-", ""):
         payload_str = Path(args[0]).read_text()
     else:
@@ -672,9 +781,19 @@ def cmd_webhook(args: list[str]) -> int:
         log(f"Invalid JSON payload: {e}")
         return 1
 
-    result = handle_webhook(payload)
-    print(json.dumps(result))
-    return 0 if result["success"] else 1
+    # Acquire lock to prevent concurrent webhook processing
+    lock_fd = acquire_lock()
+    if lock_fd is None:
+        log("Could not acquire lock, another sync is running")
+        # Return success but log - the systemd service will be retried
+        return 1
+
+    try:
+        result = handle_webhook(payload)
+        print(json.dumps(result))
+        return 0 if result["success"] else 1
+    finally:
+        release_lock(lock_fd)
 
 
 def cmd_push(args: list[str]) -> int:
@@ -703,12 +822,22 @@ def cmd_push(args: list[str]) -> int:
         return 1
 
 
+def queue_for_retry(uuid: str) -> None:
+    """Queue a task UUID for retry processing."""
+    queue_file = get_state_dir() / "queue.txt"
+    with open(queue_file, "a") as f:
+        f.write(f"{uuid}\n")
+    log(f"Queued task {uuid} for retry")
+
+
 def cmd_hook(_args: list[str]) -> int:
     """TW hook: reads stdin, outputs task, pushes to Vikunja.
 
     TW hooks protocol:
     - on-add: receives 1 line (new task JSON), must output 1 line
     - on-modify: receives 2 lines (original, modified), must output 1 line (modified)
+
+    Uses file locking to prevent concurrent sync operations from creating duplicates.
     """
     lines = sys.stdin.readlines()
 
@@ -725,19 +854,49 @@ def cmd_hook(_args: list[str]) -> int:
         print(modified)
 
         if not skip_push:
-            result = handle_tw_hook(lines[0], modified)
-            if not result["success"]:
-                log(f"on-modify push failed: {result.get('action', 'unknown')}")
+            # Try to acquire lock to prevent concurrent syncs
+            lock_fd = acquire_lock()
+            if lock_fd is None:
+                # Another sync is running, queue for retry
+                try:
+                    task_data = json.loads(modified)
+                    uuid = task_data.get("uuid")
+                    if uuid:
+                        queue_for_retry(uuid)
+                except json.JSONDecodeError:
+                    log("Failed to parse task JSON for retry queue")
+            else:
+                try:
+                    result = handle_tw_hook(lines[0], modified)
+                    if not result["success"]:
+                        log(f"on-modify push failed: {result.get('action', 'unknown')}")
+                finally:
+                    release_lock(lock_fd)
     else:
         # on-add: output the new task AND push to Vikunja
         new_task = lines[0].rstrip("\n")
         print(new_task)
 
         if not skip_push:
-            # For on-add, pass new task as first arg, empty as second
-            result = handle_tw_hook(new_task, "")
-            if not result["success"]:
-                log(f"on-add push failed: {result.get('action', 'unknown')}")
+            # Try to acquire lock to prevent concurrent syncs
+            lock_fd = acquire_lock()
+            if lock_fd is None:
+                # Another sync is running, queue for retry
+                try:
+                    task_data = json.loads(new_task)
+                    uuid = task_data.get("uuid")
+                    if uuid:
+                        queue_for_retry(uuid)
+                except json.JSONDecodeError:
+                    log("Failed to parse task JSON for retry queue")
+            else:
+                try:
+                    # For on-add, pass new task as first arg, empty as second
+                    result = handle_tw_hook(new_task, "")
+                    if not result["success"]:
+                        log(f"on-add push failed: {result.get('action', 'unknown')}")
+                finally:
+                    release_lock(lock_fd)
 
     return 0
 
@@ -769,13 +928,206 @@ def cmd_delete_hook(_args: list[str]) -> int:
     return 0
 
 
+def cmd_diagnose(_args: list[str]) -> int:
+    """Diagnose vikunja-sync system health."""
+    import shutil
+
+    errors = 0
+    warnings = 0
+
+    print("=== Vikunja Sync Diagnostics ===\n")
+
+    # 1. Check environment variables
+    print("Environment:")
+    for var in ["VIKUNJA_URL", "VIKUNJA_API_TOKEN_FILE", "VIKUNJA_USER"]:
+        val = os.environ.get(var, "")
+        if val:
+            if "TOKEN" in var or "PASS" in var:
+                print(f"  {var}: [set]")
+            else:
+                print(f"  {var}: {val}")
+        else:
+            print(f"  {var}: NOT SET")
+            errors += 1
+
+    # 2. Check token file readability
+    token_file = os.environ.get("VIKUNJA_API_TOKEN_FILE")
+    if token_file:
+        try:
+            Path(token_file).read_text()
+            print("\nToken file: readable")
+        except Exception as e:
+            print(f"\nToken file: ERROR - {e}")
+            errors += 1
+
+    # 3. Check TW hooks
+    print("\nTaskwarrior hooks:")
+    hook_dir = Path.home() / ".config" / "task" / "hooks"
+    for hook in ["on-add-vikunja", "on-modify-vikunja"]:
+        hook_path = hook_dir / hook
+        if hook_path.is_symlink():
+            target = hook_path.resolve()
+            if target.exists() and os.access(target, os.X_OK):
+                print(f"  {hook}: OK -> {target}")
+            else:
+                print(f"  {hook}: BROKEN -> {target}")
+                errors += 1
+        elif hook_path.exists():
+            print(f"  {hook}: OK (regular file)")
+        else:
+            print(f"  {hook}: MISSING")
+            errors += 1
+
+    # 4. Check required binaries
+    print("\nBinaries:")
+    for binary in ["task", "jaq", "curl"]:
+        path = shutil.which(binary)
+        if path:
+            print(f"  {binary}: {path}")
+        else:
+            print(f"  {binary}: NOT FOUND")
+            errors += 1
+
+    # 5. Check state directory
+    state_dir = get_state_dir()
+    print(f"\nState directory: {state_dir}")
+    queue_file = state_dir / "queue.txt"
+    if queue_file.exists():
+        lines = [line for line in queue_file.read_text().strip().split("\n") if line.strip()]
+        count = len(lines)
+        print(f"  Queue file: {count} pending items")
+        if count > 0:
+            warnings += 1
+            print("\n  Queued task UUIDs:")
+            for line in lines[:10]:  # Show first 10
+                print(f"    {line.strip()}")
+            if count > 10:
+                print(f"    ... and {count - 10} more")
+            print("\n  Run 'vikunja-direct process-queue' to retry these tasks")
+    else:
+        print("  Queue file: empty")
+
+    lock_file = state_dir / "direct.lock"
+    print(f"  Lock file: {'exists' if lock_file.exists() else 'not present'}")
+
+    # 6. Test API connectivity
+    print("\nAPI connectivity:")
+    try:
+        config = Config.from_env()
+        vikunja = VikunjaClient(config)
+        projects = vikunja.get("/projects")
+        if projects:
+            print(f"  Vikunja API: OK ({len(projects)} projects)")
+        else:
+            print("  Vikunja API: ERROR (no projects returned)")
+            errors += 1
+    except ConfigError as e:
+        print(f"  Vikunja API: CONFIG ERROR - {e}")
+        errors += 1
+    except Exception as e:
+        print(f"  Vikunja API: ERROR - {e}")
+        errors += 1
+
+    # Summary
+    print("\n=== Summary ===")
+    print(f"Errors: {errors}")
+    print(f"Warnings: {warnings}")
+
+    return 1 if errors > 0 else 0
+
+
+def cmd_process_queue(_args: list[str]) -> int:
+    """Process the retry queue manually."""
+    queue_file = get_state_dir() / "queue.txt"
+    if not queue_file.exists():
+        print("Queue is empty")
+        return 0
+
+    try:
+        config = Config.from_env()
+    except ConfigError as e:
+        log(f"Config error: {e}")
+        return 1
+
+    default_project = os.environ.get("VIKUNJA_DEFAULT_PROJECT", "inbox")
+    tw = TaskwarriorClient()
+
+    lines = queue_file.read_text().strip().split("\n")
+    uuids = [u.strip() for u in lines if u.strip()]
+    processed = 0
+    failed = []
+
+    for uuid in set(uuids):  # Dedupe
+        task = tw.export_task(uuid)
+        if not task:
+            log(f"Task {uuid} not found in TW, skipping")
+            continue
+
+        result = push_to_vikunja(task, config, default_project)
+        if result["success"]:
+            processed += 1
+            log(f"Synced {uuid}: {result['action']}")
+        else:
+            failed.append(uuid)
+            log(f"Failed {uuid}: {result['action']}")
+
+    # Update queue file with only failed UUIDs
+    if failed:
+        queue_file.write_text("\n".join(failed) + "\n")
+    else:
+        queue_file.unlink(missing_ok=True)
+
+    print(f"Processed: {processed}, Failed: {len(failed)}")
+    return 0 if not failed else 1
+
+
+def cmd_test_project_move(args: list[str]) -> int:
+    """Test project move sync: vikunja-direct test-project-move <uuid> <new-project>
+
+    Tests that changing a task's project in TW correctly moves it in Vikunja.
+    Does NOT modify the TW task - only tests the Vikunja push.
+    """
+    if len(args) < 2:
+        print("Usage: vikunja-direct test-project-move <uuid> <new-project>", file=sys.stderr)
+        return 1
+
+    uuid = args[0]
+    new_project = args[1]
+
+    tw = TaskwarriorClient()
+    task = tw.export_task(uuid)
+    if not task:
+        log(f"Task {uuid} not found")
+        return 1
+
+    old_project = task.get("project", "inbox")
+
+    # Temporarily set the new project for testing
+    task["project"] = new_project
+
+    try:
+        config = Config.from_env()
+        result = push_to_vikunja(task, config, "inbox")
+        print(f"Project move test: {old_project} -> {new_project}")
+        print(json.dumps(result, indent=2))
+        return 0 if result["success"] else 1
+    except ConfigError as e:
+        log(f"Config error: {e}")
+        return 1
+
+
 def main() -> int:
     if len(sys.argv) < 2:
-        print("Usage: vikunja-direct <webhook|push|hook|delete-hook> [args...]", file=sys.stderr)
+        print("Usage: vikunja-direct <command> [args...]", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Commands:", file=sys.stderr)
         print("  webhook [file]  - Handle Vikunja webhook payload", file=sys.stderr)
         print("  push <uuid>     - Push TW task to Vikunja", file=sys.stderr)
         print("  hook            - TW on-add/on-modify hook (stdin)", file=sys.stderr)
         print("  delete-hook     - TW on-delete hook (stdin)", file=sys.stderr)
+        print("  diagnose        - Check system health", file=sys.stderr)
+        print("  process-queue   - Retry queued failed syncs", file=sys.stderr)
+        print("  test-project-move <uuid> <project> - Test project move", file=sys.stderr)
         return 1
 
     cmd = sys.argv[1]
@@ -789,6 +1141,12 @@ def main() -> int:
         return cmd_hook(args)
     elif cmd == "delete-hook":
         return cmd_delete_hook(args)
+    elif cmd == "diagnose":
+        return cmd_diagnose(args)
+    elif cmd == "process-queue":
+        return cmd_process_queue(args)
+    elif cmd == "test-project-move":
+        return cmd_test_project_move(args)
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)
         return 1
