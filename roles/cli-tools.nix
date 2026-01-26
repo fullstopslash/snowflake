@@ -124,7 +124,9 @@ in {
     # Communication and news
     neomutt
     taskwarrior3
+    timewarrior
     taskwarrior-tui
+    python314Packages.bugwarrior
     todoman
     # procmail  # Fails to build with modern GCC
     newsboat

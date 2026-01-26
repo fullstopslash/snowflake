@@ -39,9 +39,6 @@
     ../../roles/vpn.nix
     ../../roles/tailscale.nix
     ../../roles/syncthing.nix
-    ../../roles/syncall.nix
-    ../../roles/vikunja-sync.nix
-    ../../roles/vikunja-webhook.nix
     ../../roles/network-storage.nix
     ../../roles/bitwarden-automation.nix
     # ../../roles/latex.nix
@@ -62,6 +59,7 @@
     ../../roles/ollama.nix
     # ../../modules/hdr.nix
     ../../modules/ssh-no-sleep.nix
+    ../../roles/tasksync-secrets.nix
   ];
 
   # Host-specific configuration
@@ -132,30 +130,8 @@
     enablePush = true; # Automatically push built packages to cache
   };
 
-  # Vikunja: bidirectional multi-project sync with instant webhook triggers
-  roles.vikunjaWebhook = {
-    enable = true;
-    callbackHost = "100.77.72.15"; # Tailscale IP for this machine
-  };
-  roles.vikunjaSync = {
-    enable = true;
-    enableReconciliation = true;
-    reconcileInterval = 15;
-  };
-
-  # Syncall: Taskwarrior <-> CalDAV sync (Nextcloud only - Vikunja uses vikunja-sync)
-  roles.syncall = {
-    enable = true;
-    targets = {
-      nextcloud = {
-        enable = false; # Disabled - conflicts with vikunja-sync hooks
-        caldavUrl = "${inputs.nix-secrets.services.nextcloud.url}${inputs.nix-secrets.services.nextcloud.caldavPath}";
-        caldavUser = inputs.nix-secrets.services.nextcloud.user;
-        caldavCalendar = "Tasks";
-        secretKey = "caldav/nextcloud";
-      };
-    };
-  };
+  # Tasksync secrets for Vikunja integration
+  roles.tasksyncSecrets.enable = true;
 
   # Trust Caddy's internal CA for local services (forgejo, etc.)
   security.pki.certificateFiles = [
