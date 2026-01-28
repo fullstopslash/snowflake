@@ -236,6 +236,7 @@ in {
   # Unlock KWallet at login for Hyprland sessions too
   security.pam.services = {
     login.kwallet.enable = true;
+    ly.kwallet.enable = true;
     sddm.kwallet.enable = true;
     sddm-greeter.kwallet.enable = true;
   };

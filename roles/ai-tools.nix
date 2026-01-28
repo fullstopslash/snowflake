@@ -10,7 +10,7 @@
     lmstudio
 
     # Development AI tools
-    code-cursor-fhs
+    # code-cursor-fhs
     claude-code
     stable.gemini-cli
     codex
@@ -22,7 +22,7 @@
     # Google Antigravity - AI-native IDE for autonomous development
     inputs.antigravity-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
     # Beads - Git-backed graph issue tracker for AI agents
-    inputs.beads.packages.${pkgs.stdenv.hostPlatform.system}.default
+    # inputs.beads.packages.${pkgs.stdenv.hostPlatform.system}.default
     # Crush from nix-ai-tools flake (configured for Ollama)
     # inputs.nix-ai-tools.packages.${pkgs.stdenv.hostPlatform.system}.crush
 

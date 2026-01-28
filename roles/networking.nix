@@ -42,20 +42,8 @@
   # DNSSEC enabled: Technitium validates upstream, systemd-resolved validates locally
   # Defense-in-depth: dual validation for enhanced security
   # Core network services; split others into dedicated roles
+  # evaluation warning: The option `services.resolved.dnssec' defined in `/nix/store/lqn9av2qr88ca708h2jw54kjfjh8jr1j-source/roles/networking.nix' has been renamed to `services.resolved.settings.Resolve.DNSSEC'.
   services = {
-    # avahi = {
-    #   enable = true;
-    #   nssmdns4 = true;
-    #   publish = {
-    #     enable = true;
-    #     addresses = true;
-    #     domain = true;
-    #     hinfo = true;
-    #     userServices = true;
-    #     workstation = true;
-    #   };
-    #   allowInterfaces = ["tailscale0"]; # optimized startup
-    # };
     resolved = {
       enable = true;
       dnssec = "allow-downgrade"; # Validate DNSSEC when available, fallback if not

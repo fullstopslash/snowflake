@@ -1,4 +1,4 @@
-# Todo
+z# Todo
 
 ## Project Overview
 Create a comprehensive NixOS deployment system that enables single-command deployment with custom ISO generation, secure secret management via SOPS, and automated configuration deployment from a public git repository while keeping private keys separate for maximum security.

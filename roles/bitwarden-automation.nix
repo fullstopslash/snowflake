@@ -84,7 +84,7 @@
       echo "Attempting to unlock using KDE Wallet..."
 
       # Try to get password from KDE Wallet
-      STORED_PASSWORD=$(${pkgs.kdePackages.kwallet}/bin/kwallet-query -f bitwarden -e bitwarden-master-password 2>/dev/null || echo "")
+      STORED_PASSWORD=$(${pkgs.kdePackages.kwallet}/bin/kwallet-query -f bitwarden -r bitwarden-master-password kdewallet 2>/dev/null || echo "")
 
       if [ -n "$STORED_PASSWORD" ]; then
         echo "Found stored password in KDE Wallet, attempting unlock..."
@@ -113,7 +113,7 @@
         echo "After unlocking, run this script again to store the password in KDE Wallet."
         echo ""
         echo "To store password for future use, run:"
-        echo "echo 'your-master-password' | ${pkgs.kdePackages.kwallet}/bin/kwallet-query -f bitwarden -w bitwarden-master-password"
+        echo "kwalletcli -f bitwarden -e bitwarden-master-password -p 'your-master-password'"
         exit 0
       fi
     fi
@@ -140,6 +140,45 @@
       exit 0
     fi
   '';
+
+  # Create a script to auto-unlock rbw using KDE Wallet
+  rbw-autounlock = pkgs.writeShellScript "rbw-autounlock" ''
+    #!/usr/bin/env sh
+    set -eu
+
+    echo "Starting rbw auto-unlock..."
+
+    # Check if rbw is already unlocked
+    if ${pkgs.rbw}/bin/rbw unlocked 2>/dev/null; then
+      echo "rbw vault is already unlocked, nothing to do"
+      exit 0
+    fi
+
+    # Try to get password from KDE Wallet
+    STORED_PASSWORD=$(${pkgs.kdePackages.kwallet}/bin/kwallet-query -f bitwarden -r rbw-master-password kdewallet 2>/dev/null || echo "")
+
+    if [ -z "$STORED_PASSWORD" ]; then
+      echo "No rbw password found in KDE Wallet."
+      echo ""
+      echo "To enable automatic rbw unlock, store your master password:"
+      echo "  kwalletcli -f bitwarden -e rbw-master-password -p 'your-master-password'"
+      echo ""
+      echo "After storing the password, rbw will unlock automatically on next login."
+      exit 0
+    fi
+
+    echo "Found stored password in KDE Wallet, attempting unlock..."
+
+    # Unlock rbw with the stored password
+    if echo "$STORED_PASSWORD" | ${pkgs.rbw}/bin/rbw unlock; then
+      echo "Successfully unlocked rbw vault"
+    else
+      echo "Failed to unlock rbw vault with stored password" 1>&2
+      echo "The stored password may be incorrect. Update it with:"
+      echo "  kwalletcli -f bitwarden -e rbw-master-password -p 'your-master-password'"
+      exit 1
+    fi
+  '';
 in {
   options.roles.bitwardenAutomation = {
     enable = lib.mkEnableOption "Enable Bitwarden automation";
@@ -158,6 +197,7 @@ in {
       bitwarden-cli
       jq
       kdePackages.kwallet
+      kwalletcli
     ];
 
     # SOPS secrets for Bitwarden automation
@@ -206,6 +246,19 @@ in {
           serviceConfig = {
             Type = "oneshot";
             ExecStart = rbw-sync;
+          };
+        };
+
+        rbw-autounlock = {
+          description = "Automatically unlock rbw vault using KDE Wallet";
+          wantedBy = ["graphical-session.target"];
+          after = ["graphical-session.target" "kwalletd.service"];
+          before = ["rbw-sync.timer"];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            Restart = "no";
+            ExecStart = rbw-autounlock;
           };
         };
       };

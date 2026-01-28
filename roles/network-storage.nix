@@ -65,13 +65,13 @@ _: {
   in [
     (commonMountOptions
       // {
-        what = "waterbug.lan:/mnt/apps/apps";
-        where = "/mnt/apps";
+        what = "waterbug.lan:/mnt/storage/storage";
+        where = "/mnt/storage";
       })
     (commonMountOptions
       // {
-        what = "waterbug.lan:/mnt/storage/storage";
-        where = "/mnt/storage";
+        what = "waterbug.lan:/mnt/apps/apps";
+        where = "/mnt/apps";
       })
   ];
 
