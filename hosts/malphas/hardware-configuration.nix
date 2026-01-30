@@ -104,6 +104,14 @@
 
   # Hardware configuration
   hardware = {
+    amdgpu = {
+      initrd = {
+        enable = true;
+      };
+      opencl = {
+        enable = true;
+      };
+    };
     cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
     graphics = {
       enable = true;

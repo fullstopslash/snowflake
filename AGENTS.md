@@ -14,7 +14,7 @@ bd sync               # Sync with git
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `jj git push` succeeds.
 
 **MANDATORY WORKFLOW:**
 
@@ -38,3 +38,42 @@ bd sync               # Sync with git
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 
+
+# Claude Instructions for this Repository
+
+## FIRST THING: Check Beads
+
+Before doing any work, run:
+```bash
+cd ~/nix && bd ready
+```
+
+This shows standing reminders and open tasks. Do this EVERY session.
+
+## Version Control: Use jj, NOT git
+
+This repo uses **jj (jujutsu)** for version control. NEVER use git commands directly.
+
+| Instead of | Use |
+|------------|-----|
+| `git status` | `jj status` |
+| `git add` | (not needed, jj tracks automatically) |
+| `git commit` | `jj commit` or `jj describe` |
+| `git push` | `jj git push` |
+| `git pull` | `jj git fetch` then `jj rebase` |
+| `git log` | `jj log` |
+| `git diff` | `jj diff` |
+
+## NixOS Rebuilds
+
+Use `nh` for NixOS operations:
+```bash
+nh os switch .
+```
+
+## Adding Reminders
+
+To add persistent reminders for future sessions:
+```bash
+bd create "Your reminder" -p 0 --description "Details here"
+```
