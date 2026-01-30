@@ -113,6 +113,7 @@ in {
     khard
     khal
     vdirsyncer
+    isync
     sqlite
     exiftool
     exiv2
