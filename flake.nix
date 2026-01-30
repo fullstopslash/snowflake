@@ -57,8 +57,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     beads = {
-      # Pinned to d08c1b5 - later commits have go.mod/vendor mismatch (go.mod bumped but vendor not re-synced)
-      url = "github:steveyegge/beads/d08c1b5";
+      # Pinned to v0.49.1 tag - HEAD has go.mod/vendor mismatch (see #1373)
+      url = "github:steveyegge/beads/v0.49.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Fix Dolphin OpenURI behavior via overlay
