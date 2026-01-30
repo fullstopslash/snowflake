@@ -75,6 +75,8 @@ in {
     fastfetch
     git-lfs
     gitFull
+    gitleaks
+    git-filter-repo
     kwalletcli
     moor
     tmux-sessionizer
