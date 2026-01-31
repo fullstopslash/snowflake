@@ -77,6 +77,7 @@ in {
     gitFull
     gitleaks
     git-filter-repo
+    k3s
     kwalletcli
     moor
     tmux-sessionizer
